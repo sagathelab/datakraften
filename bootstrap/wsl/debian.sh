@@ -53,21 +53,21 @@ run_step() {
     if "$@"; then
         log_ok "${name}"
     else
-        log_err "${name} feilet"
+        log_err "${name} failed"
         return 1
     fi
 }
 
 check_not_root() {
     if [[ $EUID -eq 0 ]]; then
-        log_err "Skriptet skal ikke kjøres som root. Kjør som vanlig bruker."
+        log_err "This script should not be run as root. Run as a regular user."
         exit 1
     fi
 }
 
 check_wsl() {
     if ! grep -qi microsoft /proc/version 2>/dev/null; then
-        log_info "Dette skriptet er optimalisert for WSL, men kjører fint på native Linux også."
+        log_info "This script is optimized for WSL, but works fine on native Linux too."
     fi
 }
 
@@ -89,27 +89,27 @@ LOGO
 # ── System ───────────────────────────────────────────────────
 system_update() {
     sudo apt-get update -qq && sudo apt-get upgrade -y -qq
-    log_ok "Systempakker oppdatert"
+    log_ok "System packages updated"
 }
 
 install_system_deps() {
     local deps=(build-essential curl wget git ca-certificates gnupg lsb-release software-properties-common)
     sudo apt-get install -y -qq "${deps[@]}"
-    log_ok "Systemavhengigheter installert"
+    log_ok "System dependencies installed"
 }
 
 # ── Homebrew ─────────────────────────────────────────────────
 install_homebrew() {
     if command -v brew &>/dev/null; then
-        log_skip "Homebrew $(brew --version 2>/dev/null | head -1) — allerede installert"
+        log_skip "Homebrew $(brew --version 2>/dev/null | head -1) — already installed"
         return 0
     fi
 
-    log "Installerer Homebrew..."
+    log "Installing Homebrew..."
     NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-    log_ok "Homebrew $(brew --version | head -1) installert"
+    log_ok "Homebrew $(brew --version | head -1) installed"
 }
 
 setup_homebrew_path() {
@@ -125,7 +125,7 @@ install_brew_packages() {
     local to_install=()
     for pkg in "${BREW_PACKAGES[@]}"; do
         if brew list "$pkg" &>/dev/null 2>&1; then
-            log_skip "$pkg — allerede installert"
+            log_skip "$pkg — already installed"
         else
             to_install+=("$pkg")
         fi
@@ -133,7 +133,7 @@ install_brew_packages() {
 
     if [[ ${#to_install[@]} -gt 0 ]]; then
         brew install "${to_install[@]}"
-        log_ok "${#to_install[@]} Homebrew-pakker installert"
+        log_ok "${#to_install[@]} Homebrew packages installed"
     fi
 }
 
@@ -142,15 +142,15 @@ setup_node() {
     eval "$(fnm env --use-on-cd --shell bash 2>/dev/null)" || true
 
     if command -v node &>/dev/null; then
-        log_skip "Node.js $(node --version) — allerede installert"
+        log_skip "Node.js $(node --version) — already installed"
         return 0
     fi
 
-    log "Installerer Node.js LTS..."
+    log "Installing Node.js LTS..."
     fnm install --lts
     fnm default lts-latest
     eval "$(fnm env --use-on-cd --shell bash)"
-    log_ok "Node.js $(node --version) / npm $(npm --version) installert"
+    log_ok "Node.js $(node --version) / npm $(npm --version) installed"
 }
 
 # ── Python / uv ──────────────────────────────────────────────
@@ -158,66 +158,66 @@ setup_python() {
     if uv python list 2>/dev/null | grep -q .; then
         local py_ver
         py_ver=$(uv python list 2>/dev/null | head -1 | awk '{print $1}')
-        log_skip "Python ${py_ver} via uv — allerede installert"
+        log_skip "Python ${py_ver} via uv — already installed"
         return 0
     fi
 
-    log "Installerer Python via uv..."
+    log "Installing Python via uv..."
     uv python install
     local py_ver
     py_ver=$(uv python list | head -1 | awk '{print $1}')
-    log_ok "Python ${py_ver} installert via uv"
+    log_ok "Python ${py_ver} installed via uv"
 }
 
 # ── OpenCode ─────────────────────────────────────────────────
 install_opencode() {
     if command -v opencode &>/dev/null; then
-        log_skip "OpenCode — allerede installert"
+        log_skip "OpenCode — already installed"
         return 0
     fi
 
     curl -fsSL https://opencode.ai/install | bash
-    log_ok "OpenCode installert"
+    log_ok "OpenCode installed"
 }
 
 # ── Zed ──────────────────────────────────────────────────────
 install_zed() {
     if command -v zed &>/dev/null; then
-        log_skip "Zed — allerede installert"
+        log_skip "Zed — already installed"
         return 0
     fi
 
     curl -f https://zed.dev/install.sh | sh
     export PATH="$HOME/.local/bin:$PATH"
-    log_ok "Zed installert"
+    log_ok "Zed installed"
 }
 
 # ── OpenAI Codex CLI ─────────────────────────────────────────
 install_codex() {
     if command -v codex &>/dev/null; then
-        log_skip "OpenAI Codex — allerede installert"
+        log_skip "OpenAI Codex — already installed"
         return 0
     fi
 
     npm install -g @openai/codex
-    log_ok "OpenAI Codex CLI installert"
+    log_ok "OpenAI Codex CLI installed"
 }
 
 # ── GitHub Copilot CLI ───────────────────────────────────────
 setup_gh_copilot() {
     if gh extension list 2>/dev/null | grep -q "gh-copilot"; then
-        log_skip "GitHub Copilot CLI — allerede installert"
+        log_skip "GitHub Copilot CLI — already installed"
         return 0
     fi
 
     gh extension install github/gh-copilot
-    log_ok "GitHub Copilot CLI installert"
+    log_ok "GitHub Copilot CLI installed"
 }
 
 # ── VS Code ──────────────────────────────────────────────────
 install_vscode_cli() {
     if command -v code &>/dev/null; then
-        log_skip "VS Code CLI — allerede installert"
+        log_skip "VS Code CLI — already installed"
         return 0
     fi
 
@@ -232,16 +232,16 @@ install_vscode_cli() {
 
     sudo apt-get update -qq
     sudo apt-get install -y -qq code
-    log_ok "VS Code CLI installert"
+    log_ok "VS Code CLI installed"
 }
 
 install_vscode_extensions() {
     for ext in "${VSCODE_EXTENSIONS[@]}"; do
         if code --list-extensions 2>/dev/null | grep -qiFx "$ext"; then
-            log_skip "${ext} — allerede installert"
+            log_skip "${ext} — already installed"
         else
             code --install-extension "$ext" --force
-            log_ok "${ext} installert"
+            log_ok "${ext} installed"
         fi
     done
 }
@@ -249,33 +249,33 @@ install_vscode_extensions() {
 # ── Docker ───────────────────────────────────────────────────
 setup_docker() {
     if ! command -v docker &>/dev/null; then
-        log_info "Docker CLI mangler — skal være installert via Homebrew"
+        log_info "Docker CLI missing — should be installed via Homebrew"
         return 1
     fi
 
     if [[ -S /var/run/docker.sock ]]; then
-        log_info "Docker Desktop WSL-integrasjon oppdaget"
+        log_info "Docker Desktop WSL integration detected"
 
         if groups "$USER" 2>/dev/null | grep -q docker; then
-            log_skip "docker-gruppe — allerede medlem"
+            log_skip "docker group — already a member"
         else
             sudo usermod -aG docker "$USER"
-            log_info "Bruker lagt til docker-gruppen (start shell på nytt for å aktivere)"
+            log_info "User added to docker group (restart shell to activate)"
         fi
 
         log_ok "Docker klar"
     else
-        log_info "Docker Desktop WSL-integrasjon ikke oppdaget"
+        log_info "Docker Desktop WSL integration not detected"
         log_info "Installer Docker Desktop på Windows og aktiver WSL2-integrasjon:"
         log_info "  https://docs.docker.com/desktop/wsl/"
-        log_skip "Docker (venter på Docker Desktop)"
+        log_skip "Docker (waiting for Docker Desktop)"
     fi
 }
 
 # ── Fish ─────────────────────────────────────────────────────
 setup_fish() {
     if ! command -v fish &>/dev/null; then
-        log_err "Fish shell ble ikke installert"
+        log_err "Fish shell was not installed"
         return 1
     fi
 
@@ -283,12 +283,12 @@ setup_fish() {
     fish_path="$(command -v fish)"
 
     if [[ "$SHELL" == "$fish_path" ]]; then
-        log_skip "Fish som standard shell — allerede satt"
+        log_skip "Fish as default shell — already set"
     else
         if chsh -s "$fish_path" 2>/dev/null; then
-            log_ok "Fish satt som standard shell (krever ny pålogging)"
+            log_ok "Fish set as default shell (requires re-login)"
         else
-            log_info "Kunne ikke endre shell — kjør manuelt: chsh -s ${fish_path}"
+            log_info "Could not change shell — run manually: chsh -s ${fish_path}"
         fi
     fi
 
@@ -298,7 +298,7 @@ setup_fish() {
     mkdir -p "$config_dir"
 
     if [[ -f "$config_file" ]]; then
-        log_skip "Fish config.fish — finnes allerede"
+        log_skip "Fish config.fish — already exists"
     else
         cat >"$config_file" <<'FISH_CONFIG'
 # ── DATAKRAFTEN WSL Bootstrap ────────────────────────────────
@@ -361,7 +361,7 @@ alias gd  'git diff'
 set -x EDITOR "zed --wait"
 set -x VISUAL "zed --wait"
 FISH_CONFIG
-        log_ok "Fish config skrevet til ${config_file}"
+        log_ok "Fish config written to ${config_file}"
     fi
 }
 
@@ -376,26 +376,26 @@ print_summary() {
 
     echo
     printf "${MAGENTA}${BOLD}╔══════════════════════════════════════════════════════════╗${NC}\n"
-    printf "${MAGENTA}${BOLD}║        ✅  DATAKRAFTEN WSL Bootstrap fullført!          ║${NC}\n"
+    printf "${MAGENTA}${BOLD}║        ✅  DATAKRAFTEN WSL Bootstrap complete!           ║${NC}\n"
     printf "${MAGENTA}${BOLD}╚══════════════════════════════════════════════════════════╝${NC}\n"
     echo
-    log_info "Start et nytt shell for å aktivere alle endringer:"
+    log_info "Start a new shell to activate all changes:"
     log_info "  ${shell_cmd}"
     echo
-    log_info "Verifiser installasjonen (oversikt):"
+    log_info "Installation overview:"
     for cmd in node python3 az dotnet gh opencode zed; do
         if command -v "$cmd" &>/dev/null; then
             printf "  ${GREEN}✓${NC} %s\n" "$cmd"
         else
-            printf "  ${YELLOW}–${NC} %s (ikke installert)\n" "$cmd"
+            printf "  ${YELLOW}–${NC} %s (not installed)\n" "$cmd"
         fi
     done
     echo
-    log_info "Neste steg:"
-    log_info "  1. Åpne VS Code og logg inn på GitHub"
-    log_info "  2. Kjør 'gh auth login' for å autentisere GitHub CLI"
-    log_info "  3. Kjør 'az login' for å autentisere Azure CLI"
-    log_info "  4. Kjør 'opencode' for å starte OpenCode"
+    log_info "Next steps:"
+    log_info "  1. Open VS Code and sign in to GitHub"
+    log_info "  2. Run 'gh auth login' to authenticate GitHub CLI"
+    log_info "  3. Run 'az login' to authenticate Azure CLI"
+    log_info "  4. Run 'opencode' to start OpenCode"
     echo
 }
 
@@ -405,23 +405,23 @@ main() {
     check_not_root
     check_wsl
 
-    run_step "Systemoppdatering"   "Oppdaterer systempakker..."        system_update
-    run_step "Systemavhengigheter" "Installerer systemavhengigheter..." install_system_deps
-    run_step "Homebrew"            "Installerer Homebrew..."            install_homebrew
+    run_step "System update"       "Updating system packages..."       system_update
+    run_step "System dependencies" "Installing system dependencies..."  install_system_deps
+    run_step "Homebrew"            "Installing Homebrew..."            install_homebrew
 
     setup_homebrew_path
 
-    run_step "Homebrew-pakker"     "Installerer Homebrew-pakker..."     install_brew_packages
-    run_step "Node.js"             "Setter opp Node.js LTS via fnm..."  setup_node
-    run_step "Python"              "Setter opp Python via uv..."       setup_python
-    run_step "OpenCode"            "Installerer OpenCode..."            install_opencode
-    run_step "Zed Editor"          "Installerer Zed Editor..."          install_zed
-    run_step "OpenAI Codex"        "Installerer OpenAI Codex CLI..."    install_codex
-    run_step "GitHub Copilot"      "Installerer GitHub Copilot CLI..."  setup_gh_copilot
-    run_step "VS Code"             "Installerer VS Code CLI..."         install_vscode_cli
-    run_step "VS Code Extensions"  "Installerer VS Code extensions..."  install_vscode_extensions
-    run_step "Docker"              "Setter opp Docker WSL..."          setup_docker
-    run_step "Fish shell"          "Setter opp Fish shell..."           setup_fish
+    run_step "Homebrew packages"   "Installing Homebrew packages..."    install_brew_packages
+    run_step "Node.js"             "Setting up Node.js LTS via fnm..."  setup_node
+    run_step "Python"              "Setting up Python via uv..."       setup_python
+    run_step "OpenCode"            "Installing OpenCode..."             install_opencode
+    run_step "Zed Editor"          "Installing Zed Editor..."           install_zed
+    run_step "OpenAI Codex"        "Installing OpenAI Codex CLI..."     install_codex
+    run_step "GitHub Copilot"      "Installing GitHub Copilot CLI..."   setup_gh_copilot
+    run_step "VS Code"             "Installing VS Code CLI..."          install_vscode_cli
+    run_step "VS Code Extensions"  "Installing VS Code extensions..."   install_vscode_extensions
+    run_step "Docker"              "Setting up Docker WSL..."           setup_docker
+    run_step "Fish shell"          "Setting up Fish shell..."           setup_fish
 
     print_summary
 }
