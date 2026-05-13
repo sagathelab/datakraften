@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Datakraften — Developer Tooling</title>
+  <meta name="description" content="WSL Developer Bootstrapper. Én kommando, alt du trenger.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <div class="scanlines"></div>
+
+  <header class="hero">
+    <pre class="logo" aria-label="Datakraften logo">██████╗  █████╗ ████████╗ █████╗ ██╗  ██╗██████╗  █████╗ ███████╗████████╗███████╗███╗   ██╗
+██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗██║ ██╔╝██╔══██╗██╔══██╗██╔════╝╚══██╔══╝██╔════╝████╗  ██║
+██║  ██║███████║   ██║   ███████║█████╔╝ ██████╔╝███████║███████╗   ██║   █████╗  ██╔██╗ ██║
+██║  ██║██╔══██║   ██║   ██╔══██║██╔═██╗ ██╔══██╗██╔══██║╚════██║   ██║   ██╔══╝  ██║╚██╗██║
+██████╔╝██║  ██║   ██║   ██║  ██║██║  ██╗██║  ██║██║  ██║███████║   ██║   ███████╗██║ ╚████║
+╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚═══╝</pre>
+    <p class="tagline">Developer Tooling<span class="accent"> — </span>fra utvikler til utvikler</p>
+  </header>
+
+  <section class="install-section">
+    <div class="terminal-window">
+      <div class="terminal-header">
+        <span class="dot dot-red"></span>
+        <span class="dot dot-yellow"></span>
+        <span class="dot dot-green"></span>
+        <span class="terminal-title">bash — datakraften.no</span>
+      </div>
+      <div class="terminal-body">
+        <span class="prompt">$</span>
+        <span id="install-cmd">curl -fsSL https://datakraften.no/bootstrap/wsl/debian.sh | bash</span>
+        <span class="cursor">▊</span>
+        <button class="copy-btn" onclick="copyCommand()" aria-label="Kopier kommando">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+      </div>
+    </div>
+    <p class="install-hint">Én kommando. Idempotent. Kjør så mange ganger du vil.</p>
+  </section>
+
+  <section class="features">
+    <h2 class="section-title">Hva får du i WSL-en din?</h2>
+    <div class="feature-grid">
+
+      <div class="feature-card">
+        <h3>Runtimes</h3>
+        <ul>
+          <li>Node.js + npm <span class="via">via fnm</span></li>
+          <li>Python + uv / uvx</li>
+          <li>.NET SDK</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3>Shell &amp; CLI</h3>
+        <ul>
+          <li>Fish shell + Starship</li>
+          <li>atuin / fzf / broot / fd</li>
+          <li>bottom</li>
+          <li>Homebrew</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3>Cloud &amp; Dev</h3>
+        <ul>
+          <li>GitHub CLI + Copilot</li>
+          <li>Azure CLI</li>
+          <li>OpenAI Codex CLI</li>
+          <li>PowerShell</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h3>Editorer &amp; Verktøy</h3>
+        <ul>
+          <li>VS Code + CLI + ekstensjoner</li>
+          <li>Zed Editor</li>
+          <li>OpenCode</li>
+          <li>Docker WSL-integrasjon</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="howto">
+    <h2 class="section-title">Slik bruker du det</h2>
+    <div class="steps">
+      <div class="step">
+        <span class="step-num">01</span>
+        <p>Åpne WSL-terminalen</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <span class="step-num">02</span>
+        <p>Lim inn kommandoen <span class="accent">☝</span></p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <span class="step-num">03</span>
+        <p>La skriptet gjøre resten</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <a href="https://github.com/sagathelab/datakraften" class="github-link" target="_blank" rel="noopener">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        <span>sagathelab/datakraften</span>
+      </a>
+    </div>
+    <p class="copyright">© 2026 Datakraften</p>
+  </footer>
+
+  <div id="toast" class="toast hidden">📋 Kopiert!</div>
+
+  <script src="/script.js"></script>
+</body>
+</html>
