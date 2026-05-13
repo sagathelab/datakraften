@@ -149,7 +149,7 @@ setup_homebrew_path() {
     fi
 }
 
-setup_brew_env_for_bash() {
+persist_homebrew_env() {
     local brew_prefix
     if [[ -f /home/linuxbrew/.linuxbrew/bin/brew ]]; then
         brew_prefix=/home/linuxbrew/.linuxbrew
@@ -157,15 +157,25 @@ setup_brew_env_for_bash() {
         return 0
     fi
 
-    local rc_file="$HOME/.bashrc"
-    local line='eval "$('"${brew_prefix}"'/bin/brew shellenv)"'
+    local bash_line='eval "$('"${brew_prefix}"'/bin/brew shellenv)"'
+    local fish_line='eval ('"${brew_prefix}"'/bin/brew shellenv)'
 
-    if [[ -f "$rc_file" ]] && grep -qF "$line" "$rc_file" 2>/dev/null; then
-        return 0
+    for rc_file in "$HOME/.profile" "$HOME/.bashrc"; do
+        if [[ -f "$rc_file" ]] && grep -qF "$bash_line" "$rc_file" 2>/dev/null; then
+            continue
+        fi
+        echo "$bash_line" >> "$rc_file"
+        log_info "Added Homebrew to ${rc_file}"
+    done
+
+    local fish_config="$HOME/.config/fish/config.fish"
+    if [[ -f "$fish_config" ]]; then
+        if ! grep -qF "brew shellenv" "$fish_config" 2>/dev/null; then
+            echo -e "\n# Homebrew (added by DATAKRAFTEN bootstrap)" >> "$fish_config"
+            echo "$fish_line" >> "$fish_config"
+            log_info "Added Homebrew to ${fish_config}"
+        fi
     fi
-
-    echo "$line" >> "$rc_file"
-    log_info "Added Homebrew to ${rc_file}"
 }
 
 # ── Brew Packages ────────────────────────────────────────────
@@ -462,7 +472,7 @@ main() {
     setup_homebrew_path
 
     run_step "Homebrew packages"   "Installing Homebrew packages..."    install_brew_packages
-    setup_brew_env_for_bash
+    persist_homebrew_env
     run_step "Node.js"             "Setting up Node.js LTS via fnm..."  setup_node
     run_step "Python"              "Setting up Python via uv..."       setup_python
     run_step "OpenCode"            "Installing OpenCode..."             install_opencode
