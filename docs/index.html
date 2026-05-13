@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Docs — Datakraften Developer Tooling</title>
-  <meta name="description" content="Documentation and usage guides for all bootstrapped developer tools.">
+  <meta name="description" content="Usage guides for all bootstrapped developer tools, grouped by category.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -21,115 +21,145 @@
   </nav>
 
   <main class="doc-content">
+
     <h1>Developer Tools</h1>
-    <p class="doc-subtitle">Usage guides and tips for every tool installed by the DATAKRAFTEN WSL Bootstrapper</p>
+    <p class="doc-subtitle">Usage guides and tips for every tool installed by the DATAKRAFTEN bootstrapper</p>
 
-    <p>Click any tool below to open its guide.</p>
+    <section id="runtimes">
+      <h2>Runtimes</h2>
+      <div class="doc-grid">
 
-    <div class="doc-grid">
+        <a href="node.html" class="doc-card">
+          <span class="cmd">node</span>
+          <span class="desc">Node.js + fnm</span>
+        </a>
 
-      <a href="fish.html" class="doc-card">
-        <span class="cmd">fish</span>
-        <span class="desc">Fish Shell</span>
-        <span class="badge">default shell</span>
-      </a>
+        <a href="python.html" class="doc-card">
+          <span class="cmd">python</span>
+          <span class="desc">Python + uv</span>
+        </a>
 
-      <a href="starship.html" class="doc-card">
-        <span class="cmd">starship</span>
-        <span class="desc">Prompt</span>
-      </a>
+        <a href="dotnet.html" class="doc-card">
+          <span class="cmd">dotnet</span>
+          <span class="desc">.NET SDK</span>
+        </a>
 
-      <a href="brew.html" class="doc-card">
-        <span class="cmd">brew</span>
-        <span class="desc">Homebrew</span>
-      </a>
+      </div>
+    </section>
 
-      <a href="node.html" class="doc-card">
-        <span class="cmd">node</span>
-        <span class="desc">Node.js + fnm</span>
-      </a>
+    <section id="shell-cli">
+      <h2>Shell &amp; CLI</h2>
+      <div class="doc-grid">
 
-      <a href="python.html" class="doc-card">
-        <span class="cmd">python</span>
-        <span class="desc">Python + uv</span>
-      </a>
+        <a href="fish.html" class="doc-card">
+          <span class="cmd">fish</span>
+          <span class="desc">Fish Shell</span>
+          <span class="badge">default shell</span>
+        </a>
 
-      <a href="dotnet.html" class="doc-card">
-        <span class="cmd">dotnet</span>
-        <span class="desc">.NET SDK</span>
-      </a>
+        <a href="starship.html" class="doc-card">
+          <span class="cmd">starship</span>
+          <span class="desc">Prompt</span>
+        </a>
 
-      <a href="az.html" class="doc-card">
-        <span class="cmd">az</span>
-        <span class="desc">Azure CLI</span>
-      </a>
+        <a href="atuin.html" class="doc-card">
+          <span class="cmd">atuin</span>
+          <span class="desc">Shell History</span>
+        </a>
 
-      <a href="gh.html" class="doc-card">
-        <span class="cmd">gh</span>
-        <span class="desc">GitHub CLI</span>
-      </a>
+        <a href="fzf.html" class="doc-card">
+          <span class="cmd">fzf</span>
+          <span class="desc">Fuzzy Finder</span>
+        </a>
 
-      <a href="docker.html" class="doc-card">
-        <span class="cmd">docker</span>
-        <span class="desc">Docker</span>
-      </a>
+        <a href="fd.html" class="doc-card">
+          <span class="cmd">fd</span>
+          <span class="desc">File Search</span>
+        </a>
 
-      <a href="atuin.html" class="doc-card">
-        <span class="cmd">atuin</span>
-        <span class="desc">Shell History</span>
-      </a>
+        <a href="broot.html" class="doc-card">
+          <span class="cmd">broot</span>
+          <span class="desc">Directory Tree</span>
+        </a>
 
-      <a href="fzf.html" class="doc-card">
-        <span class="cmd">fzf</span>
-        <span class="desc">Fuzzy Finder</span>
-      </a>
+        <a href="btm.html" class="doc-card">
+          <span class="cmd">btm</span>
+          <span class="desc">System Monitor</span>
+        </a>
 
-      <a href="fd.html" class="doc-card">
-        <span class="cmd">fd</span>
-        <span class="desc">File Search</span>
-      </a>
+        <a href="brew.html" class="doc-card">
+          <span class="cmd">brew</span>
+          <span class="desc">Homebrew</span>
+        </a>
 
-      <a href="broot.html" class="doc-card">
-        <span class="cmd">broot</span>
-        <span class="desc">Directory Tree</span>
-      </a>
+      </div>
+    </section>
 
-      <a href="btm.html" class="doc-card">
-        <span class="cmd">btm</span>
-        <span class="desc">System Monitor</span>
-      </a>
+    <section id="cloud-dev">
+      <h2>Cloud &amp; Dev</h2>
+      <div class="doc-grid">
 
-      <a href="opencode.html" class="doc-card">
-        <span class="cmd">opencode</span>
-        <span class="desc">AI Coding</span>
-      </a>
+        <a href="gh.html" class="doc-card">
+          <span class="cmd">gh</span>
+          <span class="desc">GitHub CLI</span>
+        </a>
 
-      <a href="zed.html" class="doc-card">
-        <span class="cmd">zed</span>
-        <span class="desc">Zed Editor</span>
-      </a>
+        <a href="gh-copilot.html" class="doc-card">
+          <span class="cmd">gh copilot</span>
+          <span class="desc">GitHub Copilot</span>
+        </a>
 
-      <a href="codex.html" class="doc-card">
-        <span class="cmd">codex</span>
-        <span class="desc">OpenAI Codex</span>
-      </a>
+        <a href="az.html" class="doc-card">
+          <span class="cmd">az</span>
+          <span class="desc">Azure CLI</span>
+        </a>
 
-      <a href="gh-copilot.html" class="doc-card">
-        <span class="cmd">gh copilot</span>
-        <span class="desc">GitHub Copilot</span>
-      </a>
+        <a href="codex.html" class="doc-card">
+          <span class="cmd">codex</span>
+          <span class="desc">OpenAI Codex</span>
+        </a>
 
-      <a href="vscode.html" class="doc-card">
-        <span class="cmd">code</span>
-        <span class="desc">VS Code WSL</span>
-      </a>
+        <a href="pwsh.html" class="doc-card">
+          <span class="cmd">pwsh</span>
+          <span class="desc">PowerShell</span>
+        </a>
 
-      <a href="pwsh.html" class="doc-card">
-        <span class="cmd">pwsh</span>
-        <span class="desc">PowerShell</span>
-      </a>
+      </div>
+    </section>
 
-    </div>
+    <section id="editors-tools">
+      <h2>Editors &amp; Tools</h2>
+      <div class="doc-grid">
+
+        <a href="vscode.html" class="doc-card">
+          <span class="cmd">code</span>
+          <span class="desc">VS Code WSL</span>
+        </a>
+
+        <a href="zed.html" class="doc-card">
+          <span class="cmd">zed</span>
+          <span class="desc">Zed Editor</span>
+        </a>
+
+        <a href="opencode.html" class="doc-card">
+          <span class="cmd">opencode</span>
+          <span class="desc">AI Coding</span>
+        </a>
+
+        <a href="docker.html" class="doc-card">
+          <span class="cmd">docker</span>
+          <span class="desc">Docker</span>
+        </a>
+
+      </div>
+    </section>
+
+    <hr>
+
+    <section class="disclaimer">
+      <p><strong>Disclaimer.</strong> Datakraften does not own, maintain, or endorse any of the tools listed on this site. All trademarks, logos, and brand names belong to their respective owners. These guides are provided as a community resource to help developers get started quickly — we simply present the tools in a conventional way and share command references. Always refer to the official documentation of each tool for authoritative information.</p>
+    </section>
+
   </main>
 
   <footer class="footer">

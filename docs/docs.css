@@ -231,6 +231,21 @@
   color: #fff;
 }
 
+/* ── Disclaimer ────────────────────────────────────────────── */
+.disclaimer {
+  margin: 2rem 0;
+}
+
+.disclaimer p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.disclaimer strong {
+  color: var(--text-dim);
+}
+
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 600px) {
   .doc-nav {
