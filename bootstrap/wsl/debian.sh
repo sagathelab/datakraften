@@ -35,11 +35,6 @@ BREW_PACKAGES=(
     docker-compose
 )
 
-VSCODE_EXTENSIONS=(
-    ms-azuretools.vscode-azurecli
-    ms-dotnettools.csharp
-    GitHub.vscode-pull-request-github
-)
 
 # ── Helpers ──────────────────────────────────────────────────
 log()      { printf "${MAGENTA}==>${NC} %s\n" "$*"; }
@@ -266,37 +261,14 @@ setup_gh_copilot() {
 }
 
 # ── VS Code ──────────────────────────────────────────────────
-install_vscode_cli() {
-    if is_linux_command code; then
-        log_skip "VS Code CLI — already installed"
-        return 0
+check_vscode() {
+    if command -v code &>/dev/null; then
+        log_ok "VS Code CLI available (from Windows + WSL extension)"
+    else
+        log_info "VS Code CLI not found in WSL"
+        log_info "Install VS Code on Windows and add the WSL extension"
+        log_info "  https://code.visualstudio.com/"
     fi
-
-    local arch
-    arch=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
-
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc |
-        sudo gpg --dearmor -o /etc/apt/keyrings/packages.microsoft.gpg || return 1
-
-    sudo tee /etc/apt/sources.list.d/vscode.list >/dev/null <<<"deb [arch=${arch} signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main"
-
-    sudo apt-get update -qq || return 1
-    sudo apt-get install -y -qq code || return 1
-    refresh_shell_command_cache
-    log_ok "VS Code CLI installed"
-}
-
-install_vscode_extensions() {
-    verify_linux_command code || return 1
-    for ext in "${VSCODE_EXTENSIONS[@]}"; do
-        if code --list-extensions 2>/dev/null | grep -qiFx "$ext"; then
-            log_skip "${ext} — already installed"
-        else
-            code --install-extension "$ext" --force || return 1
-            log_ok "${ext} installed"
-        fi
-    done
 }
 
 # ── Docker ───────────────────────────────────────────────────
@@ -447,7 +419,7 @@ print_summary() {
     done
     echo
     log_info "Next steps:"
-    log_info "  1. Open VS Code and sign in to GitHub"
+    log_info "  1. Install VS Code on Windows with the WSL extension"
     log_info "  2. Run 'gh auth login' to authenticate GitHub CLI"
     log_info "  3. Run 'az login' to authenticate Azure CLI"
     log_info "  4. Run 'opencode' to start OpenCode"
@@ -475,8 +447,7 @@ main() {
     run_step "Zed Editor"          "Installing Zed Editor..."           install_zed
     run_step "OpenAI Codex"        "Installing OpenAI Codex CLI..."     install_codex
     run_step "GitHub Copilot"      "Installing GitHub Copilot CLI..."   setup_gh_copilot
-    run_step "VS Code"             "Installing VS Code CLI..."          install_vscode_cli
-    run_step "VS Code Extensions"  "Installing VS Code extensions..."   install_vscode_extensions
+    run_step "VS Code"             "Checking VS Code WSL setup..."      check_vscode
     run_step "Docker"              "Setting up Docker WSL..."           setup_docker
     run_step "Fish shell"          "Setting up Fish shell..."           setup_fish
 
