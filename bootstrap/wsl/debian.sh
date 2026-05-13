@@ -19,6 +19,7 @@ NC='\033[0m'
 
 # ── Configuration ───────────────────────────────────────────
 BREW_PACKAGES=(
+    fish
     azure-cli
     dotnet
     gh
