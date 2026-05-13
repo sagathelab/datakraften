@@ -183,18 +183,30 @@ a:hover {
 }
 
 .terminal-window {
-  overflow-x: auto;
+  overflow: hidden;
 }
 
 .terminal-body {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 12px;
   padding: 20px;
   font-family: var(--font-code);
   font-size: clamp(0.8rem, 2vw, 1rem);
   color: var(--text-primary);
   min-height: 64px;
+}
+
+.terminal-command {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  white-space: nowrap;
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
 .prompt {
