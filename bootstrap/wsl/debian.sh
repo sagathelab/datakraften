@@ -431,6 +431,44 @@ FISH_CONFIG
 }
 
 # ── Summary ──────────────────────────────────────────────────
+ALL_TOOLS=(
+    node
+    npm
+    python3
+    az
+    dotnet
+    gh
+    fnm
+    uv
+    atuin
+    fzf
+    fd
+    broot
+    btm
+    starship
+    pwsh
+    docker
+    docker-compose
+    opencode
+    zed
+    codex
+)
+
+verify_all_tools() {
+    local missing=0
+    for cmd in "${ALL_TOOLS[@]}"; do
+        if is_linux_command "$cmd"; then
+            printf "  ${GREEN}✓${NC} %s\n" "$cmd"
+        elif command -v "$cmd" &>/dev/null; then
+            printf "  ${YELLOW}–${NC} %s (Windows path — use Linux version)\n" "$cmd"
+        else
+            printf "  ${RED}✗${NC} %s (not installed)\n" "$cmd"
+            missing=$((missing + 1))
+        fi
+    done
+    return $missing
+}
+
 print_summary() {
     local shell_cmd
     if is_linux_command fish; then
@@ -448,15 +486,7 @@ print_summary() {
     log_info "  ${shell_cmd}"
     echo
     log_info "Installation overview:"
-    for cmd in node python3 az dotnet gh opencode zed; do
-        if is_linux_command "$cmd"; then
-            printf "  ${GREEN}✓${NC} %s\n" "$cmd"
-        elif command -v "$cmd" &>/dev/null; then
-            printf "  ${YELLOW}–${NC} %s (Windows path — use Linux version)\n" "$cmd"
-        else
-            printf "  ${YELLOW}–${NC} %s (not installed)\n" "$cmd"
-        fi
-    done
+    verify_all_tools || true
     echo
     log_info "Next steps:"
     log_info "  1. Restart your shell: exec bash -l (or: exec fish)"
