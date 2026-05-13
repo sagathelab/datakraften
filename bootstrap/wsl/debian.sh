@@ -120,7 +120,7 @@ system_update() {
 }
 
 install_system_deps() {
-    local deps=(build-essential curl wget git ca-certificates gnupg lsb-release software-properties-common)
+    local deps=(build-essential curl wget git ca-certificates gnupg lsb-release)
     sudo apt-get install -y -qq "${deps[@]}" || return 1
     refresh_shell_command_cache
     log_ok "System dependencies installed"
