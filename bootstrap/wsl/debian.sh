@@ -149,6 +149,25 @@ setup_homebrew_path() {
     fi
 }
 
+setup_brew_env_for_bash() {
+    local brew_prefix
+    if [[ -f /home/linuxbrew/.linuxbrew/bin/brew ]]; then
+        brew_prefix=/home/linuxbrew/.linuxbrew
+    else
+        return 0
+    fi
+
+    local rc_file="$HOME/.bashrc"
+    local line='eval "$('"${brew_prefix}"'/bin/brew shellenv)"'
+
+    if [[ -f "$rc_file" ]] && grep -qF "$line" "$rc_file" 2>/dev/null; then
+        return 0
+    fi
+
+    echo "$line" >> "$rc_file"
+    log_info "Added Homebrew to ${rc_file}"
+}
+
 # ── Brew Packages ────────────────────────────────────────────
 install_brew_packages() {
     setup_homebrew_path
@@ -420,10 +439,11 @@ print_summary() {
     done
     echo
     log_info "Next steps:"
-    log_info "  1. Install VS Code on Windows with the WSL extension"
-    log_info "  2. Run 'gh auth login' to authenticate GitHub CLI"
-    log_info "  3. Run 'az login' to authenticate Azure CLI"
-    log_info "  4. Run 'opencode' to start OpenCode"
+    log_info "  1. Restart your shell: exec bash -l (or: exec fish)"
+    log_info "  2. Install VS Code on Windows with the WSL extension"
+    log_info "  3. Run 'gh auth login' to authenticate GitHub CLI"
+    log_info "  4. Run 'az login' to authenticate Azure CLI"
+    log_info "  5. Run 'opencode' to start OpenCode"
     echo
 }
 
@@ -442,6 +462,7 @@ main() {
     setup_homebrew_path
 
     run_step "Homebrew packages"   "Installing Homebrew packages..."    install_brew_packages
+    setup_brew_env_for_bash
     run_step "Node.js"             "Setting up Node.js LTS via fnm..."  setup_node
     run_step "Python"              "Setting up Python via uv..."       setup_python
     run_step "OpenCode"            "Installing OpenCode..."             install_opencode
