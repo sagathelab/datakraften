@@ -149,7 +149,7 @@ setup_homebrew_path() {
     fi
 }
 
-persist_homebrew_env() {
+persist_shell_envs() {
     local brew_prefix
     if [[ -f /home/linuxbrew/.linuxbrew/bin/brew ]]; then
         brew_prefix=/home/linuxbrew/.linuxbrew
@@ -157,23 +157,33 @@ persist_homebrew_env() {
         return 0
     fi
 
-    local bash_line='eval "$('"${brew_prefix}"'/bin/brew shellenv)"'
-    local fish_line='eval ('"${brew_prefix}"'/bin/brew shellenv)'
+    local brew_bash_line='eval "$('"${brew_prefix}"'/bin/brew shellenv)"'
+    local brew_fish_line='eval ('"${brew_prefix}"'/bin/brew shellenv)'
+    local fnm_bash_line='eval "$(fnm env --use-on-cd --shell bash)"'
+    local fnm_fish_block="fnm env --use-on-cd | source"
 
     for rc_file in "$HOME/.profile" "$HOME/.bashrc"; do
-        if [[ -f "$rc_file" ]] && grep -qF "$bash_line" "$rc_file" 2>/dev/null; then
-            continue
+        if ! grep -qF "brew shellenv" "$rc_file" 2>/dev/null; then
+            echo "$brew_bash_line" >> "$rc_file"
+            log_info "Added Homebrew to ${rc_file}"
         fi
-        echo "$bash_line" >> "$rc_file"
-        log_info "Added Homebrew to ${rc_file}"
+        if ! grep -qF "fnm env" "$rc_file" 2>/dev/null; then
+            echo "$fnm_bash_line" >> "$rc_file"
+            log_info "Added fnm to ${rc_file}"
+        fi
     done
 
     local fish_config="$HOME/.config/fish/config.fish"
     if [[ -f "$fish_config" ]]; then
         if ! grep -qF "brew shellenv" "$fish_config" 2>/dev/null; then
             echo -e "\n# Homebrew (added by DATAKRAFTEN bootstrap)" >> "$fish_config"
-            echo "$fish_line" >> "$fish_config"
+            echo "$brew_fish_line" >> "$fish_config"
             log_info "Added Homebrew to ${fish_config}"
+        fi
+        if ! grep -qF "fnm env" "$fish_config" 2>/dev/null; then
+            echo -e "\n# fnm (added by DATAKRAFTEN bootstrap)" >> "$fish_config"
+            echo "$fnm_fish_block" >> "$fish_config"
+            log_info "Added fnm to ${fish_config}"
         fi
     fi
 }
@@ -472,7 +482,7 @@ main() {
     setup_homebrew_path
 
     run_step "Homebrew packages"   "Installing Homebrew packages..."    install_brew_packages
-    persist_homebrew_env
+    persist_shell_envs
     run_step "Node.js"             "Setting up Node.js LTS via fnm..."  setup_node
     run_step "Python"              "Setting up Python via uv..."       setup_python
     run_step "OpenCode"            "Installing OpenCode..."             install_opencode
