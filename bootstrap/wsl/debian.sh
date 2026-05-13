@@ -4,7 +4,9 @@
 # =======================================
 # Usage: curl -fsSL https://datakraften.no/bootstrap/wsl | bash
 #
-set -euo pipefail
+set -Eeuo pipefail
+
+export DEBIAN_FRONTEND=noninteractive
 
 # ── Colors ──────────────────────────────────────────────────
 MAGENTA='\033[0;35m'
@@ -71,6 +73,29 @@ check_wsl() {
     fi
 }
 
+refresh_shell_command_cache() {
+    hash -r 2>/dev/null || true
+}
+
+command_is_windows_backed() {
+    local resolved
+    resolved="$(command -v "$1" 2>/dev/null)" || return 1
+    [[ "$resolved" == /mnt/[a-zA-Z]/* ]]
+}
+
+is_linux_command() {
+    local resolved
+    resolved="$(command -v "$1" 2>/dev/null)" || return 1
+    [[ "$resolved" != /mnt/[a-zA-Z]/* ]]
+}
+
+verify_linux_command() {
+    if ! is_linux_command "$1"; then
+        log_err "$1 points to Windows path: $(command -v "$1")"
+        return 1
+    fi
+}
+
 # ── Logo ─────────────────────────────────────────────────────
 show_logo() {
     printf "${MAGENTA}${BOLD}"
@@ -100,15 +125,20 @@ install_system_deps() {
 
 # ── Homebrew ─────────────────────────────────────────────────
 install_homebrew() {
-    if command -v brew &>/dev/null; then
+    if is_linux_command brew; then
         log_skip "Homebrew $(brew --version 2>/dev/null | head -1) — already installed"
         return 0
+    fi
+
+    if command -v brew &>/dev/null && command_is_windows_backed brew; then
+        log_info "brew points to Windows path — will install Linux version"
     fi
 
     log "Installing Homebrew..."
     NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    refresh_shell_command_cache
     log_ok "Homebrew $(brew --version | head -1) installed"
 }
 
@@ -122,7 +152,9 @@ setup_homebrew_path() {
 
 # ── Brew Packages ────────────────────────────────────────────
 install_brew_packages() {
-    local to_install=()
+    setup_homebrew_path
+    refresh_shell_command_cache
+
     for pkg in "${BREW_PACKAGES[@]}"; do
         if brew list "$pkg" &>/dev/null 2>&1; then
             log_skip "$pkg — already installed"
@@ -133,6 +165,7 @@ install_brew_packages() {
 
     if [[ ${#to_install[@]} -gt 0 ]]; then
         brew install "${to_install[@]}"
+        refresh_shell_command_cache
         log_ok "${#to_install[@]} Homebrew packages installed"
     fi
 }
@@ -140,16 +173,22 @@ install_brew_packages() {
 # ── Node.js / fnm ────────────────────────────────────────────
 setup_node() {
     eval "$(fnm env --use-on-cd --shell bash 2>/dev/null)" || true
+    refresh_shell_command_cache
 
-    if command -v node &>/dev/null; then
+    if is_linux_command node; then
         log_skip "Node.js $(node --version) — already installed"
         return 0
+    fi
+
+    if command -v node &>/dev/null && command_is_windows_backed node; then
+        log_info "node points to Windows path — installing Linux version"
     fi
 
     log "Installing Node.js LTS..."
     fnm install --lts
     fnm default lts-latest
     eval "$(fnm env --use-on-cd --shell bash)"
+    refresh_shell_command_cache
     log_ok "Node.js $(node --version) / npm $(npm --version) installed"
 }
 
@@ -171,40 +210,48 @@ setup_python() {
 
 # ── OpenCode ─────────────────────────────────────────────────
 install_opencode() {
-    if command -v opencode &>/dev/null; then
+    if is_linux_command opencode; then
         log_skip "OpenCode — already installed"
         return 0
     fi
 
     curl -fsSL https://opencode.ai/install | bash
+    refresh_shell_command_cache
     log_ok "OpenCode installed"
 }
 
 # ── Zed ──────────────────────────────────────────────────────
 install_zed() {
-    if command -v zed &>/dev/null; then
+    if is_linux_command zed; then
         log_skip "Zed — already installed"
         return 0
     fi
 
     curl -f https://zed.dev/install.sh | sh
     export PATH="$HOME/.local/bin:$PATH"
+    refresh_shell_command_cache
     log_ok "Zed installed"
 }
 
 # ── OpenAI Codex CLI ─────────────────────────────────────────
 install_codex() {
-    if command -v codex &>/dev/null; then
+    if is_linux_command codex; then
         log_skip "OpenAI Codex — already installed"
         return 0
     fi
 
     npm install -g @openai/codex
+    refresh_shell_command_cache
     log_ok "OpenAI Codex CLI installed"
 }
 
 # ── GitHub Copilot CLI ───────────────────────────────────────
 setup_gh_copilot() {
+    if ! is_linux_command gh; then
+        log_err "gh is not a Linux command — cannot install Copilot extension"
+        return 1
+    fi
+
     if gh extension list 2>/dev/null | grep -q "gh-copilot"; then
         log_skip "GitHub Copilot CLI — already installed"
         return 0
@@ -216,7 +263,7 @@ setup_gh_copilot() {
 
 # ── VS Code ──────────────────────────────────────────────────
 install_vscode_cli() {
-    if command -v code &>/dev/null; then
+    if is_linux_command code; then
         log_skip "VS Code CLI — already installed"
         return 0
     fi
@@ -232,10 +279,12 @@ install_vscode_cli() {
 
     sudo apt-get update -qq
     sudo apt-get install -y -qq code
+    refresh_shell_command_cache
     log_ok "VS Code CLI installed"
 }
 
 install_vscode_extensions() {
+    verify_linux_command code || return 1
     for ext in "${VSCODE_EXTENSIONS[@]}"; do
         if code --list-extensions 2>/dev/null | grep -qiFx "$ext"; then
             log_skip "${ext} — already installed"
@@ -248,7 +297,7 @@ install_vscode_extensions() {
 
 # ── Docker ───────────────────────────────────────────────────
 setup_docker() {
-    if ! command -v docker &>/dev/null; then
+    if ! is_linux_command docker; then
         log_info "Docker CLI missing — should be installed via Homebrew"
         return 1
     fi
@@ -274,7 +323,7 @@ setup_docker() {
 
 # ── Fish ─────────────────────────────────────────────────────
 setup_fish() {
-    if ! command -v fish &>/dev/null; then
+    if ! is_linux_command fish; then
         log_err "Fish shell was not installed"
         return 1
     fi
@@ -368,7 +417,7 @@ FISH_CONFIG
 # ── Summary ──────────────────────────────────────────────────
 print_summary() {
     local shell_cmd
-    if command -v fish &>/dev/null; then
+    if is_linux_command fish; then
         shell_cmd="exec fish"
     else
         shell_cmd="exec bash -l"
@@ -384,8 +433,10 @@ print_summary() {
     echo
     log_info "Installation overview:"
     for cmd in node python3 az dotnet gh opencode zed; do
-        if command -v "$cmd" &>/dev/null; then
+        if is_linux_command "$cmd"; then
             printf "  ${GREEN}✓${NC} %s\n" "$cmd"
+        elif command -v "$cmd" &>/dev/null; then
+            printf "  ${YELLOW}–${NC} %s (Windows path — use Linux version)\n" "$cmd"
         else
             printf "  ${YELLOW}–${NC} %s (not installed)\n" "$cmd"
         fi
@@ -404,6 +455,8 @@ main() {
     show_logo
     check_not_root
     check_wsl
+
+    refresh_shell_command_cache
 
     run_step "System update"       "Updating system packages..."       system_update
     run_step "System dependencies" "Installing system dependencies..."  install_system_deps
