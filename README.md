@@ -5,7 +5,7 @@ Developer Tooling — fra utvikler til utvikler.
 ## WSL Developer Bootstrapper
 
 ```bash
-curl -fsSL https://datakraften.no/bootstrap/wsl/debian.sh | bash
+curl -fsSL https://datakraften.no/wsl/debian.sh | bash
 ```
 
 ## Struktur

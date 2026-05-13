@@ -2,7 +2,7 @@
 #
 # DATAKRAFTEN WSL Developer Bootstrapper
 # =======================================
-# Usage: curl -fsSL https://datakraften.no/bootstrap/wsl | bash
+# Usage: curl -fsSL https://datakraften.no/wsl/debian.sh | bash
 #
 set -Eeuo pipefail
 
