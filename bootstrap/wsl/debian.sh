@@ -49,15 +49,16 @@ log_info() { printf "${CYAN}  ℹ${NC} %s\n" "$*"; }
 log_err()  { printf "${RED}  ✗${NC} %s\n" "$*" >&2; }
 
 run_step() {
-    local name="$1" desc="$2"
+    local name="$1" desc="$2" rc=0
     shift 2
     log "${desc}"
-    if "$@"; then
+    "$@" || rc=$?
+    if [[ $rc -eq 0 ]]; then
         log_ok "${name}"
     else
         log_err "${name} failed"
-        return 1
     fi
+    return $rc
 }
 
 check_not_root() {
@@ -113,13 +114,15 @@ LOGO
 
 # ── System ───────────────────────────────────────────────────
 system_update() {
-    sudo apt-get update -qq && sudo apt-get upgrade -y -qq
+    sudo apt-get update -qq && sudo apt-get upgrade -y -qq || return 1
+    refresh_shell_command_cache
     log_ok "System packages updated"
 }
 
 install_system_deps() {
     local deps=(build-essential curl wget git ca-certificates gnupg lsb-release software-properties-common)
-    sudo apt-get install -y -qq "${deps[@]}"
+    sudo apt-get install -y -qq "${deps[@]}" || return 1
+    refresh_shell_command_cache
     log_ok "System dependencies installed"
 }
 
@@ -135,7 +138,7 @@ install_homebrew() {
     fi
 
     log "Installing Homebrew..."
-    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || return 1
 
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
     refresh_shell_command_cache
@@ -155,6 +158,7 @@ install_brew_packages() {
     setup_homebrew_path
     refresh_shell_command_cache
 
+    local to_install=()
     for pkg in "${BREW_PACKAGES[@]}"; do
         if brew list "$pkg" &>/dev/null 2>&1; then
             log_skip "$pkg — already installed"
@@ -164,7 +168,7 @@ install_brew_packages() {
     done
 
     if [[ ${#to_install[@]} -gt 0 ]]; then
-        brew install "${to_install[@]}"
+        brew install "${to_install[@]}" || return 1
         refresh_shell_command_cache
         log_ok "${#to_install[@]} Homebrew packages installed"
     fi
@@ -185,8 +189,8 @@ setup_node() {
     fi
 
     log "Installing Node.js LTS..."
-    fnm install --lts
-    fnm default lts-latest
+    fnm install --lts || return 1
+    fnm default lts-latest || return 1
     eval "$(fnm env --use-on-cd --shell bash)"
     refresh_shell_command_cache
     log_ok "Node.js $(node --version) / npm $(npm --version) installed"
@@ -202,7 +206,7 @@ setup_python() {
     fi
 
     log "Installing Python via uv..."
-    uv python install
+    uv python install || return 1
     local py_ver
     py_ver=$(uv python list | head -1 | awk '{print $1}')
     log_ok "Python ${py_ver} installed via uv"
@@ -215,7 +219,7 @@ install_opencode() {
         return 0
     fi
 
-    curl -fsSL https://opencode.ai/install | bash
+    curl -fsSL https://opencode.ai/install | bash || return 1
     refresh_shell_command_cache
     log_ok "OpenCode installed"
 }
@@ -227,7 +231,7 @@ install_zed() {
         return 0
     fi
 
-    curl -f https://zed.dev/install.sh | sh
+    curl -f https://zed.dev/install.sh | sh || return 1
     export PATH="$HOME/.local/bin:$PATH"
     refresh_shell_command_cache
     log_ok "Zed installed"
@@ -240,7 +244,7 @@ install_codex() {
         return 0
     fi
 
-    npm install -g @openai/codex
+    npm install -g @openai/codex || return 1
     refresh_shell_command_cache
     log_ok "OpenAI Codex CLI installed"
 }
@@ -273,12 +277,12 @@ install_vscode_cli() {
 
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://packages.microsoft.com/keys/microsoft.asc |
-        sudo gpg --dearmor -o /etc/apt/keyrings/packages.microsoft.gpg
+        sudo gpg --dearmor -o /etc/apt/keyrings/packages.microsoft.gpg || return 1
 
     sudo tee /etc/apt/sources.list.d/vscode.list >/dev/null <<<"deb [arch=${arch} signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main"
 
-    sudo apt-get update -qq
-    sudo apt-get install -y -qq code
+    sudo apt-get update -qq || return 1
+    sudo apt-get install -y -qq code || return 1
     refresh_shell_command_cache
     log_ok "VS Code CLI installed"
 }
@@ -289,7 +293,7 @@ install_vscode_extensions() {
         if code --list-extensions 2>/dev/null | grep -qiFx "$ext"; then
             log_skip "${ext} — already installed"
         else
-            code --install-extension "$ext" --force
+            code --install-extension "$ext" --force || return 1
             log_ok "${ext} installed"
         fi
     done
@@ -312,10 +316,10 @@ setup_docker() {
             log_info "User added to docker group (restart shell to activate)"
         fi
 
-        log_ok "Docker klar"
+        log_ok "Docker ready"
     else
         log_info "Docker Desktop WSL integration not detected"
-        log_info "Installer Docker Desktop på Windows og aktiver WSL2-integrasjon:"
+        log_info "Install Docker Desktop on Windows and enable WSL2 integration:"
         log_info "  https://docs.docker.com/desktop/wsl/"
         log_skip "Docker (waiting for Docker Desktop)"
     fi
