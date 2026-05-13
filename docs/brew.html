@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homebrew — Datakraften Docs</title>
+  <meta name="description" content="Homebrew package manager usage guide for Linux and WSL.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="docs.css">
+</head>
+<body>
+  <div class="scanlines"></div>
+  <nav class="doc-nav">
+    <a href="/" class="doc-nav-link">← Home</a>
+    <a href="/docs/" class="doc-nav-link">Docs</a>
+    <span class="doc-nav-title">Homebrew</span>
+  </nav>
+  <main class="doc-content">
+    <h1>Homebrew</h1>
+    <p class="doc-subtitle">The missing package manager for Linux — most tools are installed via brew</p>
+
+    <section>
+      <h2>What is it?</h2>
+      <p>Homebrew is a package manager that started on macOS and now fully supports Linux (Linuxbrew). It installs packages to <code>/home/linuxbrew/.linuxbrew</code> and keeps them isolated from system packages.</p>
+      <p>The bootstrapper uses Homebrew as the primary package manager for all developer tools.</p>
+    </section>
+
+    <section>
+      <h2>Basic Usage</h2>
+
+      <h3>Install a package</h3>
+      <div class="doc-code-block"><pre><code>$ brew install gh</code></pre></div>
+
+      <h3>Search for packages</h3>
+      <div class="doc-code-block"><pre><code>$ brew search gh</code></pre></div>
+
+      <h3>Update all packages</h3>
+      <div class="doc-code-block"><pre><code>$ brew update && brew upgrade</code></pre></div>
+
+      <h3>List installed packages</h3>
+      <div class="doc-code-block"><pre><code>$ brew list</code></pre></div>
+
+      <h3>Check for outdated packages</h3>
+      <div class="doc-code-block"><pre><code>$ brew outdated</code></pre></div>
+
+      <h3>Get info about a package</h3>
+      <div class="doc-code-block"><pre><code>$ brew info gh</code></pre></div>
+    </section>
+
+    <section>
+      <h2>Tips</h2>
+      <div class="doc-tip">
+        <p><strong>💡</strong> brew formulas are updated frequently. Run <code>brew update</code> once a week to stay current.</p>
+      </div>
+      <div class="doc-tip">
+        <p><strong>💡</strong> Use <code>brew doctor</code> if something isn't working — it diagnoses common issues.</p>
+      </div>
+      <div class="doc-tip">
+        <p><strong>💡</strong> The bootstrapper adds brew to <code>~/.profile</code> and <code>~/.bashrc</code>. Run <code>exec bash -l</code> if brew commands are not found.</p>
+      </div>
+    </section>
+  </main>
+  <footer class="footer">
+    <div class="footer-content">
+      <a href="https://github.com/sagathelab/datakraften" class="github-link" target="_blank" rel="noopener">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        <span>sagathelab/datakraften</span>
+      </a>
+    </div>
+    <p class="copyright">© 2026 Datakraften</p>
+  </footer>
+</body>
+</html>

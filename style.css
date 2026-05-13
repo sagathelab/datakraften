@@ -63,6 +63,32 @@ a:hover {
   );
 }
 
+/* ── Top Navigation ─────────────────────────────────────────── */
+.top-nav {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1.5rem 1rem 0;
+}
+
+.top-nav-link {
+  font-family: var(--font-logo);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid transparent;
+}
+
+.top-nav-link:hover,
+.top-nav-link.active {
+  color: var(--magenta);
+  border-bottom-color: var(--magenta);
+  text-shadow: 0 0 10px var(--magenta-glow);
+}
+
 /* ── Hero ───────────────────────────────────────────────────── */
 .hero {
   text-align: center;

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>fzf — Datakraften Docs</title>
+  <meta name="description" content="General-purpose command-line fuzzy finder.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="docs.css">
+</head>
+<body>
+  <div class="scanlines"></div>
+  <nav class="doc-nav">
+    <a href="/" class="doc-nav-link">← Home</a>
+    <a href="/docs/" class="doc-nav-link">Docs</a>
+    <span class="doc-nav-title">fzf</span>
+  </nav>
+  <main class="doc-content">
+    <h1>fzf</h1>
+    <p class="doc-subtitle">General-purpose command-line fuzzy finder</p>
+
+    <section>
+      <h2>What is it?</h2>
+      <p>fzf is a general-purpose command-line fuzzy finder. It interactively filters lines from stdin or files. Integrated into Fish shell via key bindings (Ctrl+T for files, Ctrl+R for history, Alt+C for cd). Used by many other tools in the ecosystem.</p>
+    </section>
+
+    <section>
+      <h2>Basic Usage</h2>
+
+      <h3>Search files (Ctrl+T)</h3>
+      <div class="doc-code-block"><pre><code># Press Ctrl+T, type to filter, select with Tab/Enter</code></pre></div>
+
+      <h3>Reverse history search (Ctrl+R)</h3>
+      <div class="doc-code-block"><pre><code># Press Ctrl+R, type any part of a past command to find it</code></pre></div>
+
+      <h3>cd into subdirectory (Alt+C)</h3>
+      <div class="doc-code-block"><pre><code># Press Alt+C, select a directory to cd into it</code></pre></div>
+
+      <h3>Pipe to fzf</h3>
+      <div class="doc-code-block"><pre><code>$ find . -type f | fzf</code></pre></div>
+
+      <h3>With preview</h3>
+      <div class="doc-code-block"><pre><code>$ fzf --preview 'cat {}'</code></pre></div>
+    </section>
+
+    <section>
+      <h2>Tips</h2>
+      <div class="doc-tip">
+        <p><strong>💡</strong> Use <code>fzf --preview 'cat {}'</code> to preview file contents as you filter.</p>
+      </div>
+      <div class="doc-tip">
+        <p><strong>💡</strong> Set <code>FZF_DEFAULT_COMMAND</code> to use <code>fd</code> for faster and smarter file search: <code>set -Ux FZF_DEFAULT_COMMAND 'fd --type f'</code></p>
+      </div>
+      <div class="doc-tip">
+        <p><strong>💡</strong> fzf is integrated into Fish shell by default via the bootstrapper — no manual setup needed.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <a href="https://github.com/sagathelab/datakraften" class="github-link" target="_blank" rel="noopener">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        <span>sagathelab/datakraften</span>
+      </a>
+    </div>
+    <p class="copyright">© 2026 Datakraften</p>
+  </footer>
+</body>
+</html>

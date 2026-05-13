@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docker + Compose — Datakraften Docs</title>
+  <meta name="description" content="Container platform — Docker CLI and Docker Compose installed via Homebrew.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="docs.css">
+</head>
+<body>
+  <div class="scanlines"></div>
+  <nav class="doc-nav">
+    <a href="/" class="doc-nav-link">← Home</a>
+    <a href="/docs/" class="doc-nav-link">Docs</a>
+    <span class="doc-nav-title">Docker + Compose</span>
+  </nav>
+  <main class="doc-content">
+    <h1>Docker + Docker Compose</h1>
+    <p class="doc-subtitle">Container platform — Docker CLI and Compose installed via Homebrew</p>
+
+    <section>
+      <h2>What is it?</h2>
+      <p>Docker is a platform for developing, shipping, and running applications in containers. Docker Compose lets you define and run multi-container applications with a single <code>docker compose</code> command. The Docker CLI is installed via Homebrew and connects to Docker Desktop through WSL2 integration.</p>
+    </section>
+
+    <section>
+      <h2>Basic Usage</h2>
+
+      <h3>List running containers</h3>
+      <div class="doc-code-block"><pre><code>$ docker ps
+$ docker ps -a</code></pre></div>
+
+      <h3>Manage images</h3>
+      <div class="doc-code-block"><pre><code>$ docker images
+$ docker pull ubuntu:latest
+$ docker rmi ubuntu:latest</code></pre></div>
+
+      <h3>Start and stop Compose services</h3>
+      <div class="doc-code-block"><pre><code>$ docker compose up -d
+$ docker compose down
+$ docker compose logs -f</code></pre></div>
+
+      <h3>Execute commands in a running container</h3>
+      <div class="doc-code-block"><pre><code>$ docker exec -it my-container bash
+$ docker exec my-container ls -la</code></pre></div>
+
+      <h3>View container logs</h3>
+      <div class="doc-code-block"><pre><code>$ docker logs my-container
+$ docker logs -f my-container</code></pre></div>
+    </section>
+
+    <section>
+      <h2>Tips</h2>
+      <div class="doc-tip">
+        <p><strong>💡</strong> Enable Docker Desktop WSL2 integration in Docker Desktop Settings → Resources → WSL Integration. Select your WSL distro and apply.</p>
+      </div>
+      <div class="doc-tip">
+        <p><strong>💡</strong> The bootstrapper script adds your user to the <code>docker</code> group so you can run Docker commands without <code>sudo</code>. Log out and back in for the change to take effect.</p>
+      </div>
+      <div class="doc-tip">
+        <p><strong>💡</strong> The Docker socket at <code>/var/run/docker.sock</code> must exist for the CLI to connect. If you get "Cannot connect to Docker daemon", ensure Docker Desktop is running and WSL2 integration is enabled.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <a href="https://github.com/sagathelab/datakraften" class="github-link" target="_blank" rel="noopener">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        <span>sagathelab/datakraften</span>
+      </a>
+    </div>
+    <p class="copyright">© 2026 Datakraften</p>
+  </footer>
+</body>
+</html>
