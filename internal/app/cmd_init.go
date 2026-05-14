@@ -1,9 +1,11 @@
 package app
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sagathelab/datakraften/internal/installers"
 	"github.com/sagathelab/datakraften/internal/system"
@@ -31,9 +33,11 @@ func newInitCmd() *cobra.Command {
 				return nil
 			}
 
+			profiles := []string{"minimal", "default", "ai", "dotnet", "frontend", "platform"}
+
 			profile := profileFlag
 			if profile == "" {
-				profile = "default"
+				profile = promptProfile(profiles)
 			}
 
 			if err := os.MkdirAll(configDir, 0755); err != nil {
@@ -126,4 +130,30 @@ ai:
 	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to initialize (minimal, default, ai, dotnet, frontend, platform)")
 
 	return cmd
+}
+
+func promptProfile(profiles []string) string {
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Println()
+	fmt.Println("  Select a profile:")
+	for i, p := range profiles {
+		fmt.Printf("    [%d] %s\n", i+1, p)
+	}
+	fmt.Print("  Enter number [3]: ")
+
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+
+	if input == "" {
+		return "default"
+	}
+
+	var idx int
+	if _, err := fmt.Sscanf(input, "%d", &idx); err != nil || idx < 1 || idx > len(profiles) {
+		fmt.Println("  Invalid selection, using default.")
+		return "default"
+	}
+
+	return profiles[idx-1]
 }
