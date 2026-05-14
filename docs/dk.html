@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>dk CLI — Datakraften Docs</title>
-  <meta name="description" content="Usage guide for the Datakraften CLI — init, apply, doctor, status, profile.">
+  <meta name="description" content="Usage guide for the Datakraften CLI — init, apply, doctor, status, profile, update.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -141,6 +141,34 @@ ai:
 
       <div class="doc-tip">
         <p><strong>Tip:</strong> The built-in profile definitions live in the <code>profiles/</code> directory of the <a href="https://github.com/sagathelab/datakraften/tree/main/profiles" target="_blank" rel="noopener">Datakraften repository</a>. Use them as a starting point.</p>
+      </div>
+    </section>
+
+    <section id="update">
+      <h2>dk update</h2>
+      <p>Self-update the Datakraften CLI to the latest release. Downloads the correct binary for your platform from GitHub, verifies the SHA256 checksum, and performs an atomic replacement.</p>
+
+      <div class="doc-code-block"><pre><code><span class="prompt">$</span> dk update</code></pre></div>
+
+      <div class="doc-code-block"><pre><code><span class="output">Current version: v0.1.0
+Latest version:  v0.2.0
+Downloading dk-linux-amd64...
+Checksum verified ✓
+Updated to v0.2.0</span></code></pre></div>
+
+      <h3>How it works</h3>
+      <ul>
+        <li>Fetches the latest release from <code>api.github.com/repos/sagathelab/datakraften/releases/latest</code></li>
+        <li>Detects your OS and architecture to download the matching binary</li>
+        <li>Verifies the binary against its SHA256 checksum</li>
+        <li>Replaces the current binary atomically — safe to interrupt</li>
+      </ul>
+
+      <h3>Authentication</h3>
+      <p>For private repositories or higher API rate limits, set the <code>GH_TOKEN</code> or <code>GITHUB_TOKEN</code> environment variable before running <code>dk update</code>.</p>
+
+      <div class="doc-tip">
+        <p><strong>Tip:</strong> Run <code>dk update</code> periodically to get the latest features and fixes. Already up-to-date? The command will tell you and exit cleanly.</p>
       </div>
     </section>
 
