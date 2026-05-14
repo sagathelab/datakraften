@@ -3,6 +3,11 @@ package app
 import (
 	"fmt"
 
+	"github.com/sagathelab/datakraften/internal/docker"
+	"github.com/sagathelab/datakraften/internal/editors"
+	"github.com/sagathelab/datakraften/internal/exec"
+	"github.com/sagathelab/datakraften/internal/runtimes"
+	"github.com/sagathelab/datakraften/internal/system"
 	"github.com/spf13/cobra"
 )
 
@@ -12,35 +17,75 @@ func newStatusCmd() *cobra.Command {
 		Short: "Show a friendly overview of your environment",
 		Long:  `Display a summary of installed tools, runtimes, AI tools, and editors.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("Datakraften status")
+			state := LoadState()
+			wsl, wslVer := system.DetectWSL()
+			distro, distroVer := system.Distro()
+
+			fmt.Println("  Datakraften status")
 			fmt.Println()
+
 			fmt.Println("  WSL")
-			fmt.Println("    ✓ WSL2 detected")
-			fmt.Println("    ✓ Ubuntu 24.04")
-			fmt.Println("    ✓ systemd available")
+			if wsl {
+				fmt.Printf("    ✓ WSL%d detected\n", wslVer)
+			} else {
+				fmt.Println("    – Not running in WSL")
+			}
+			if distro != "" {
+				fmt.Printf("    ✓ %s %s\n", distro, distroVer)
+			}
+			if system.HasSystemd() {
+				fmt.Println("    ✓ systemd available")
+			}
 			fmt.Println()
+
 			fmt.Println("  Tools")
-			fmt.Println("    ✓ git")
-			fmt.Println("    – gh not found")
-			fmt.Println("    – az not found")
-			fmt.Println("    – docker not found")
+			for _, name := range []string{"git", "gh", "az", "docker", "fnm", "uv"} {
+				if exec.CommandExists(name) {
+					fmt.Printf("    ✓ %s\n", name)
+				} else {
+					fmt.Printf("    – %s not found\n", name)
+				}
+			}
 			fmt.Println()
+
 			fmt.Println("  Runtimes")
-			fmt.Println("    – Node.js not installed")
-			fmt.Println("    – Python not installed")
-			fmt.Println("    – .NET not installed")
+			if v := runtimes.NodeVersion(); v != "" {
+				fmt.Printf("    ✓ Node.js %s\n", v)
+			} else {
+				fmt.Println("    – Node.js not installed")
+			}
+			if v := runtimes.PythonVersion(); v != "" {
+				fmt.Printf("    ✓ Python %s\n", v)
+			} else {
+				fmt.Println("    – Python not installed")
+			}
 			fmt.Println()
-			fmt.Println("  AI")
-			fmt.Println("    – codex not installed")
-			fmt.Println("    – opencode not installed")
-			fmt.Println()
+
 			fmt.Println("  Editors")
-			fmt.Println("    – code not found")
-			fmt.Println("    – zed not found")
+			for _, ed := range editors.DetectAll() {
+				if ed.Installed {
+					fmt.Printf("    ✓ %s\n", ed.Name)
+				} else {
+					fmt.Printf("    – %s not found\n", ed.Name)
+				}
+			}
 			fmt.Println()
-			fmt.Println("  (full status checks not yet implemented)")
+
+			fmt.Println("  Docker")
+			dockerStatus := docker.Detect()
+			if dockerStatus.DaemonRunning {
+				fmt.Println("    ✓ Docker running")
+			} else if dockerStatus.CliInstalled {
+				fmt.Println("    – Docker daemon not running")
+			} else {
+				fmt.Println("    – Docker CLI not found")
+			}
 			fmt.Println()
-			fmt.Println("  Run 'dk doctor' for detailed diagnostics.")
+
+			if state.LastApply != "" {
+				fmt.Printf("  Last apply: %s\n", state.LastApply)
+				fmt.Printf("  Profile: %s\n", state.ActiveProfile)
+			}
 
 			return nil
 		},

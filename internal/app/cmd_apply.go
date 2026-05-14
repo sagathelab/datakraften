@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 
+	"github.com/sagathelab/datakraften/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -16,24 +17,60 @@ func newApplyCmd() *cobra.Command {
 		Short: "Apply Datakraften configuration",
 		Long:  `Install missing tools, configure shell, runtimes, editors, and AI tooling based on the current profile.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if dryRun {
-				fmt.Println("Datakraften apply (dry-run)")
+			state := LoadState()
+
+			cfg, err := config.Load()
+			if err != nil {
+				fmt.Println("  No configuration found. Run 'dk init' first.")
 				fmt.Println()
-				fmt.Println("  Would install and configure tools based on current profile.")
-				fmt.Println("  (not yet implemented)")
 				return nil
 			}
 
-			fmt.Println("Datakraften apply")
-			fmt.Println()
-			fmt.Println("  Applying configuration...")
+			activeProfile := cfg.Profile
 			if profileFlag != "" {
-				fmt.Printf("  Profile: %s\n", profileFlag)
+				activeProfile = profileFlag
 			}
+
+			if dryRun {
+				fmt.Printf("  Datakraften apply (dry-run) — profile: %s\n", activeProfile)
+			} else {
+				fmt.Printf("  Datakraften apply — profile: %s\n", activeProfile)
+				fmt.Println()
+			}
+
+			report := RunApply(cfg, dryRun)
+
+			if dryRun {
+				fmt.Println("  (dry-run — no changes made)")
+				return nil
+			}
+
+			state.RecordApply(activeProfile)
+			WriteLog("apply", fmt.Sprintf("Applied profile: %s\n", activeProfile))
+
+			fmt.Println("  Summary")
+			fmt.Println("  -------")
+			fmt.Printf("    System packages: %d installed\n", report.System)
+			fmt.Printf("    Brew packages: %d installed\n", report.BrewPkgs)
+			if report.Node {
+				fmt.Println("    Node.js: installed")
+			}
+			if report.Python {
+				fmt.Println("    Python: installed")
+			}
+			if len(report.Errors) > 0 {
+				fmt.Println()
+				fmt.Println("  Errors:")
+				for _, e := range report.Errors {
+					fmt.Printf("    ✗ %s\n", e)
+				}
+			}
+
 			fmt.Println()
-			fmt.Println("  (not yet implemented)")
+			fmt.Println("  Next steps:")
+			fmt.Println("    1. Restart your shell or run: exec fish")
+			fmt.Println("    2. Run 'dk doctor' to verify everything")
 			fmt.Println()
-			fmt.Println("  Run 'dk doctor' to check the status.")
 
 			return nil
 		},

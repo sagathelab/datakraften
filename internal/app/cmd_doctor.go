@@ -16,43 +16,69 @@ func newDoctorCmd() *cobra.Command {
 		Short: "Diagnose your development environment",
 		Long:  `Check WSL status, tools, runtimes, editors, Docker, AI tooling, and more.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			wsl, wslVer := system.DetectWSL()
-			distro, distroVer := system.Distro()
-			systemd := system.HasSystemd()
-			shell := system.CurrentShell()
+			state := LoadState()
 
-			fmt.Println("Datakraften Doctor")
+			fmt.Println("  Datakraften Doctor")
 			fmt.Println()
 
-			fmt.Println("System")
-			if wsl {
-				fmt.Printf("  ✓ WSL%d detected\n", wslVer)
-			} else {
-				fmt.Println("  – Not running in WSL")
-			}
-			if distro != "" {
-				fmt.Printf("  ✓ %s %s\n", distro, distroVer)
-			}
-			if systemd {
-				fmt.Println("  ✓ systemd available")
-			} else {
-				fmt.Println("  – systemd not detected")
-			}
-			if shell != "" {
-				fmt.Printf("  ✓ Shell: %s\n", shell)
-			}
-			fmt.Println()
-
-			if category != "" {
-				fmt.Printf("  Category filter: %s\n", category)
-				fmt.Printf("  (filtered checks not yet implemented)\n")
+			if state.LastApply != "" {
+				fmt.Printf("  Last apply: %s\n", state.LastApply)
+				fmt.Printf("  Profile: %s", state.ActiveProfile)
+				fmt.Println()
 				fmt.Println()
 			}
 
-			fmt.Println("  (full doctor checks not yet implemented)")
-			fmt.Println()
-			fmt.Println("  Run 'dk doctor --fix' to attempt automatic fixes.")
-			fmt.Println("  Run 'dk doctor --json' for machine-readable output.")
+			wsl, wslVer := system.DetectWSL()
+			distro, distroVer := system.Distro()
+
+			if category == "" || category == "system" {
+				RunDoctorSystem()
+
+				if wsl {
+					fmt.Println()
+					fmt.Println("  WSL Details")
+					fmt.Printf("    ✓ WSL%d\n", wslVer)
+					fmt.Printf("    ✓ %s %s\n", distro, distroVer)
+				}
+				fmt.Println()
+			}
+
+			if category == "" || category == "tools" {
+				RunDoctorTools()
+				fmt.Println()
+			}
+
+			if category == "" || category == "runtimes" {
+				RunDoctorRuntimes()
+				fmt.Println()
+			}
+
+			if category == "" || category == "editors" {
+				RunDoctorEditors()
+				fmt.Println()
+			}
+
+			if category == "" || category == "docker" {
+				RunDoctorDocker()
+				fmt.Println()
+			}
+
+			if category == "" || category == "shell" {
+				fmt.Println("  Shell")
+				fmt.Printf("    ✓ Current shell: %s\n", system.CurrentShell())
+				if state.ManagedShell {
+					fmt.Println("    ✓ Managed config active")
+				} else {
+					fmt.Println("    – Run 'dk apply' to configure shell")
+				}
+				fmt.Println()
+			}
+
+			if fix {
+				fmt.Println("  Auto-fix mode (not yet implemented)")
+				fmt.Println("  Run 'dk apply' to apply the full configuration.")
+				fmt.Println()
+			}
 
 			return nil
 		},

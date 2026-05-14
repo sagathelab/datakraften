@@ -2,7 +2,10 @@ package app
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/sagathelab/datakraften/internal/system"
 	"github.com/spf13/cobra"
 )
 
@@ -12,34 +15,112 @@ func newInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Initialize Datakraften configuration",
-		Long: `Initialize Datakraften by creating a configuration file
-and detecting the current system state.
-
-Profiles: minimal, default, ai, dotnet, frontend`,
+		Long:  `Initialize Datakraften by creating a configuration file and detecting the current system state.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("Datakraften init")
-			fmt.Println()
-			fmt.Println("  Initializing Datakraften configuration...")
+			home, _ := os.UserHomeDir()
+			configDir := filepath.Join(home, ".config", "datakraften")
+			configPath := filepath.Join(configDir, "config.yaml")
+
+			if _, err := os.Stat(configPath); err == nil {
+				fmt.Println("  Datakraften is already initialized.")
+				fmt.Printf("  Config: %s\n", configPath)
+				fmt.Println()
+				fmt.Println("  Run 'dk apply' to apply the configuration.")
+				fmt.Println("  Run 'dk doctor' to check your environment.")
+				return nil
+			}
+
+			profile := profileFlag
+			if profile == "" {
+				profile = "default"
+			}
+
+			if err := os.MkdirAll(configDir, 0755); err != nil {
+				return fmt.Errorf("failed to create config dir: %w", err)
+			}
+
+			wsl, wslVer := system.DetectWSL()
+			distro, distroVer := system.Distro()
+
+			fmt.Println("  Datakraften init")
 			fmt.Println()
 			fmt.Println("  Detected:")
-			fmt.Println("    ✓ WSL2")
-			fmt.Println("    ✓ Ubuntu 24.04")
-			fmt.Println()
-			if profileFlag != "" {
-				fmt.Printf("  Profile: %s\n", profileFlag)
+			if wsl {
+				fmt.Printf("    ✓ WSL%d\n", wslVer)
 			} else {
-				fmt.Println("  No profile specified. Use --profile or run 'dk profile use'")
+				fmt.Println("    – Not in WSL")
 			}
+			if distro != "" {
+				fmt.Printf("    ✓ %s %s\n", distro, distroVer)
+			}
+			fmt.Printf("    ✓ Profile: %s\n", profile)
 			fmt.Println()
-			fmt.Println("  Run 'dk apply' to apply the configuration.")
-			fmt.Println("  Run 'dk doctor' to check your environment.")
+			fmt.Printf("  Writing config to: %s\n", configPath)
 			fmt.Println()
-			fmt.Println("  (not yet implemented)")
+
+			cfg := fmt.Sprintf(`version: 1
+profile: %s
+
+system:
+  package_manager: apt
+
+tooling:
+  package_manager: brew
+
+shell:
+  default: fish
+  prompt: starship
+  history: atuin
+  fuzzy_finder: fzf
+
+tools:
+  github_cli: true
+  azure_cli: true
+  docker: true
+
+runtimes:
+  node:
+    enabled: true
+    manager: fnm
+    version: lts
+  python:
+    enabled: true
+    manager: uv
+    version: latest
+  dotnet:
+    enabled: false
+
+editors:
+  vscode: true
+  zed: true
+  cursor: optional
+
+ai:
+  codex: false
+  opencode: false
+  github_copilot: false
+`, profile)
+
+			if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
+				return fmt.Errorf("failed to write config: %w", err)
+			}
+
+			state := LoadState()
+			state.ActiveProfile = profile
+			state.Save()
+
+			fmt.Println("  ✓ Config created")
+			fmt.Println()
+			fmt.Println("  Next steps:")
+			fmt.Println("    1. Run 'dk apply' to install tools")
+			fmt.Println("    2. Run 'dk doctor' to verify")
+			fmt.Println()
+
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to initialize (minimal, default, ai, dotnet, frontend)")
+	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to initialize (minimal, default, ai, dotnet, frontend, platform)")
 
 	return cmd
 }
