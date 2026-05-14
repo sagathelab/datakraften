@@ -126,6 +126,15 @@ body {
   line-height: 1.6;
 }
 
+.doc-content ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+
+.doc-content ul li::marker {
+  color: #ff00ff;
+}
+
 .code-prompt {
   color: #ff00ff;
   font-weight: 700;

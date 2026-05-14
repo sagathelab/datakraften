@@ -26,13 +26,14 @@ function renderInlineCode(text: string) {
 
 function renderBody(body: string) {
   const lines = body.split('\n')
-  const blocks: { type: 'code' | 'text' | 'tip'; lines: string[] }[] = []
-  let current: { type: 'code' | 'text' | 'tip'; lines: string[] } | null = null
+  const blocks: { type: 'code' | 'text' | 'tip' | 'list'; lines: string[] }[] = []
+  let current: { type: 'code' | 'text' | 'tip' | 'list'; lines: string[] } | null = null
 
   const codePrefixes = ['$ ', '# ', '// ', '<!-- ', '> ']
   const isCode = (l: string) => codePrefixes.some(p => l.startsWith(p))
   const isTip = (l: string) => l.startsWith('TIP:')
   const isEmpty = (l: string) => l.trim() === ''
+  const isListItem = (l: string) => l.startsWith('- ')
 
   for (const line of lines) {
     if (isTip(line)) {
@@ -43,6 +44,10 @@ function renderBody(body: string) {
       if (current && current.type !== 'code') { blocks.push(current); current = null }
       if (!current) current = { type: 'code', lines: [] }
       current.lines.push(line)
+    } else if (isListItem(line)) {
+      if (current && current.type !== 'list') { blocks.push(current); current = null }
+      if (!current) current = { type: 'list', lines: [] }
+      current.lines.push(line.slice(2))
     } else {
       if (current && current.type !== 'text') { blocks.push(current); current = null }
       if (isEmpty(line)) {
@@ -97,6 +102,16 @@ function renderBody(body: string) {
             </Fragment>
           ))}
         </div>
+      )
+    }
+
+    if (block.type === 'list') {
+      return (
+        <ul key={bi} className="list-disc list-inside text-sm text-text-body leading-relaxed mb-3 space-y-1">
+          {block.lines.map((l, li) => (
+            <li key={li}>{renderInlineCode(l)}</li>
+          ))}
+        </ul>
       )
     }
 
