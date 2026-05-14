@@ -2,19 +2,18 @@
 set -euo pipefail
 
 # Datakraften Installer
-# Installs the 'dk' CLI.
+# Downloads the latest 'dk' CLI binary from GitHub Releases,
+# with a fallback to building from source.
 #
 # Usage:
 #   curl -fsSL https://datakraften.no/install | bash
 #   curl -fsSL https://datakraften.no/install | bash -s -- --version
 
-DATARKAFTEN_REPO="https://github.com/sagathelab/datakraften.git"
-DATARKAFTEN_DIR="${HOME}/.local/share/datakraften/source"
+REPO="sagathelab/datakraften"
 BIN_DIR="${HOME}/.local/bin"
 BINARY="${BIN_DIR}/dk"
 VERSION="dev"
 
-# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -26,146 +25,180 @@ ok()    { echo -e "${GREEN}  ✓ ${1}${NC}"; }
 warn()  { echo -e "${YELLOW}  ⚠ ${1}${NC}"; }
 err()   { echo -e "${RED}  ✗ ${1}${NC}"; }
 
+# --- Fallback: build from source ---
+install_from_source() {
+	info "Building dk from source..."
+
+	if ! command -v git &>/dev/null && ! command -v curl &>/dev/null; then
+		err "Need curl or git to download source."
+		exit 1
+	fi
+
+	if ! command -v go &>/dev/null; then
+		warn "Installing Go..."
+		GO_VERSION="1.22.5"
+		GO_TARBALL="go${GO_VERSION}.linux-amd64.tar.gz"
+		curl -fsSL "https://go.dev/dl/${GO_TARBALL}" -o "/tmp/${GO_TARBALL}"
+		sudo tar -C /usr/local -xzf "/tmp/${GO_TARBALL}"
+		rm "/tmp/${GO_TARBALL}"
+		export PATH="/usr/local/go/bin:${PATH}"
+		ok "Go $(go version) installed"
+	fi
+
+	SOURCE_DIR="${HOME}/.local/share/datakraften/source"
+	mkdir -p "$(dirname "${SOURCE_DIR}")"
+
+	if [ -d "${SOURCE_DIR}/.git" ]; then
+		cd "${SOURCE_DIR}" && git pull --ff-only
+	else
+		git clone --depth 1 "https://github.com/${REPO}.git" "${SOURCE_DIR}"
+	fi
+
+	cd "${SOURCE_DIR}"
+	mkdir -p bin
+	CGO_ENABLED=0 go build -o bin/dk ./cmd/dk/
+	mkdir -p "${BIN_DIR}"
+	cp bin/dk "${BINARY}"
+	chmod +x "${BINARY}"
+	ok "dk built and installed from source"
+}
+
+# ============================================================
+# Main
+# ============================================================
+
 echo ""
 echo -e "${CYAN}Datakraften Installer${NC}"
 echo ""
 
-# --- Pre-flight checks ---
+# --- Flags ---
 
-# Check for --version flag
 if [ "${1:-}" = "--version" ]; then
 	echo "Datakraften installer ${VERSION}"
 	exit 0
 fi
 
-# Must not be root
+# --- Pre-flight ---
+
 if [ "$(id -u)" = "0" ]; then
 	err "Do not run this installer as root."
 	err "Run it as a regular user with sudo privileges."
 	exit 1
 fi
 
-# Platform detection (informational only)
 if grep -qi microsoft /proc/version 2>/dev/null || grep -qi wsl /proc/version 2>/dev/null; then
 	info "WSL environment detected"
 else
 	info "Native Linux environment detected"
 fi
 
-# --- Dependencies ---
+# --- Detect platform ---
 
-info "Checking dependencies..."
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
 
-HAVE_GO=false
-if command -v go &>/dev/null; then
-	HAVE_GO=true
-	ok "Go found: $(go version)"
+case "$ARCH" in
+	x86_64|amd64)  ARCH="amd64" ;;
+	aarch64|arm64) ARCH="arm64" ;;
+	*)
+		err "Unsupported architecture: $ARCH"
+		exit 1
+		;;
+esac
+
+case "$OS" in
+	linux|darwin) ;;
+	*)
+		err "Unsupported OS: $OS"
+		exit 1
+		;;
+esac
+
+ASSET="dk-${OS}-${ARCH}"
+
+# --- Fetch latest release ---
+
+API_URL="https://api.github.com/repos/${REPO}/releases/latest"
+info "Fetching latest release..."
+
+RELEASE_JSON=""
+TAG_NAME=""
+
+if command -v curl &>/dev/null; then
+	RELEASE_JSON=$(curl -fsSL "${API_URL}" 2>/dev/null || true)
+elif command -v wget &>/dev/null; then
+	RELEASE_JSON=$(wget -qO- "${API_URL}" 2>/dev/null || true)
 fi
 
-# Detect package manager
-install_pkg() {
-	if command -v apt-get &>/dev/null; then
-		sudo apt-get update -qq
-		sudo apt-get install -y -qq "$@"
-	elif command -v dnf &>/dev/null; then
-		sudo dnf install -y "$@"
-	elif command -v yum &>/dev/null; then
-		sudo yum install -y "$@"
-	elif command -v pacman &>/dev/null; then
-		sudo pacman -S --noconfirm "$@"
-	elif command -v brew &>/dev/null; then
-		brew install "$@"
+if [ -n "${RELEASE_JSON}" ]; then
+	TAG_NAME=$(echo "${RELEASE_JSON}" | grep '"tag_name"' | cut -d'"' -f4)
+fi
+
+if [ -z "${TAG_NAME}" ]; then
+	warn "No release found. Falling back to source build."
+	echo ""
+	install_from_source
+	exit 0
+fi
+
+ok "Latest release: ${TAG_NAME}"
+
+# --- Download binary ---
+
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG_NAME}/${ASSET}"
+CHECKSUM_URL="${DOWNLOAD_URL}.sha256"
+
+# Remove any old temp files
+rm -f "/tmp/${ASSET}" "/tmp/${ASSET}.sha256"
+
+info "Downloading ${ASSET}..."
+
+if command -v curl &>/dev/null; then
+	curl -fsSL "${DOWNLOAD_URL}" -o "/tmp/${ASSET}"
+else
+	wget -qO "/tmp/${ASSET}" "${DOWNLOAD_URL}"
+fi
+
+ok "Binary downloaded"
+
+# --- Verify checksum ---
+
+CHECKSUM_OK=false
+if command -v curl &>/dev/null; then
+	CHECKSUM_RESPONSE=$(curl -fsSL "${CHECKSUM_URL}" 2>/dev/null || true)
+else
+	CHECKSUM_RESPONSE=$(wget -qO- "${CHECKSUM_URL}" 2>/dev/null || true)
+fi
+
+if [ -n "${CHECKSUM_RESPONSE}" ]; then
+	EXPECTED=$(echo "${CHECKSUM_RESPONSE}" | awk '{print $1}')
+	if [ -n "${EXPECTED}" ]; then
+		GOT=$(sha256sum "/tmp/${ASSET}" | awk '{print $1}')
+		if [ "${GOT}" = "${EXPECTED}" ]; then
+			CHECKSUM_OK=true
+			ok "Checksum verified"
+		else
+			err "Checksum mismatch!"
+			err "  expected: ${EXPECTED}"
+			err "  got:      ${GOT}"
+			rm -f "/tmp/${ASSET}"
+			exit 1
+		fi
 	else
-		warn "No known package manager found. Please install manually: $*"
-		return 1
+		warn "Could not parse checksum, skipping verification"
 	fi
-}
-
-# Map dk dependency names to distro-specific packages
-git_pkg()   { echo "git"; }
-curl_pkg()  { echo "curl"; }
-make_pkg()  {
-	if command -v apt-get &>/dev/null; then echo "build-essential make"
-	elif command -v dnf &>/dev/null || command -v yum &>/dev/null; then echo "make"
-	else echo "make"; fi
-}
-
-if ! command -v git &>/dev/null; then
-	info "Installing git..."
-	install_pkg "$(git_pkg)" && ok "git installed"
 else
-	ok "git found"
+	warn "No checksum file found, skipping verification"
 fi
-
-if ! command -v curl &>/dev/null; then
-	info "Installing curl..."
-	install_pkg "$(curl_pkg)" && ok "curl installed"
-else
-	ok "curl found"
-fi
-
-if ! command -v make &>/dev/null; then
-	info "Installing build tools..."
-	install_pkg "$(make_pkg)" && ok "build tools installed"
-else
-	ok "make found"
-fi
-
-# --- Go installation ---
-
-if [ "${HAVE_GO}" = false ]; then
-	info "Installing Go..."
-	GO_VERSION="1.22.5"
-	GO_TARBALL="go${GO_VERSION}.linux-amd64.tar.gz"
-	GO_URL="https://go.dev/dl/${GO_TARBALL}"
-
-	curl -fsSL "${GO_URL}" -o "/tmp/${GO_TARBALL}"
-	sudo tar -C /usr/local -xzf "/tmp/${GO_TARBALL}"
-	rm "/tmp/${GO_TARBALL}"
-
-	export PATH="/usr/local/go/bin:${PATH}"
-	ok "Go $(go version) installed"
-fi
-
-# Ensure go is in PATH for the rest of the script
-if ! command -v go &>/dev/null; then
-	export PATH="/usr/local/go/bin:${PATH}"
-fi
-
-# --- Clone or update source ---
-
-info "Setting up Datakraften source..."
-
-mkdir -p "${DATARKAFTEN_DIR}"
-
-if [ -d "${DATARKAFTEN_DIR}/.git" ]; then
-	info "Updating existing source..."
-	cd "${DATARKAFTEN_DIR}"
-	git pull --ff-only
-	ok "Source updated"
-else
-	info "Cloning Datakraften repository..."
-	git clone --depth 1 "${DATARKAFTEN_REPO}" "${DATARKAFTEN_DIR}"
-	ok "Source cloned"
-fi
-
-# --- Build ---
-
-info "Building dk CLI..."
-cd "${DATARKAFTEN_DIR}"
-if command -v make &>/dev/null; then
-	make build
-else
-	go build -o bin/dk ./cmd/dk/
-fi
-ok "dk built"
 
 # --- Install ---
 
 info "Installing dk to ${BIN_DIR}..."
 mkdir -p "${BIN_DIR}"
-cp "${DATARKAFTEN_DIR}/bin/dk" "${BINARY}"
-ok "dk installed to ${BINARY}"
+cp "/tmp/${ASSET}" "${BINARY}"
+chmod +x "${BINARY}"
+rm -f "/tmp/${ASSET}"
+ok "dk installed to ${BINARY} (${TAG_NAME})"
 
 # --- Add to PATH ---
 
