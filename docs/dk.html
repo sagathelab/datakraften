@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dk CLI — Datakraften Docs</title>
+  <meta name="description" content="Usage guide for the Datakraften CLI — init, apply, doctor, status, profile.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="docs.css">
+</head>
+<body>
+  <div class="scanlines"></div>
+  <nav class="doc-nav">
+    <a href="/" class="doc-nav-link">← Home</a>
+    <a href="/docs/" class="doc-nav-link">Docs</a>
+    <span class="doc-nav-title">dk CLI</span>
+  </nav>
+  <main class="doc-content">
+    <h1>dk CLI</h1>
+    <p class="doc-subtitle">Bootstrap, configure, and diagnose your developer workstation</p>
+
+    <section id="init">
+      <h2>dk init</h2>
+      <p>Generate your Datakraften configuration file. Detects your operating system, package manager, and preferred shell, then writes <code>~/.config/datakraften/config.yaml</code>.</p>
+
+      <div class="doc-code-block"><pre><code><span class="prompt">$</span> dk init</code></pre></div>
+
+      <h3>What it does</h3>
+      <ul>
+        <li>Detects platform (WSL, Linux, macOS)</li>
+        <li>Identifies native package manager (apt, dnf, yum, pacman, brew)</li>
+        <li>Generates a YAML config with default profile</li>
+        <li>Safe to re-run — won't overwrite existing config unless forced</li>
+      </ul>
+    </section>
+
+    <section id="apply">
+      <h2>dk apply</h2>
+      <p>Install everything defined in your active profile. Idempotent — safe to run repeatedly.</p>
+
+      <div class="doc-code-block"><pre><code><span class="prompt">$</span> dk apply
+<span class="prompt">$</span> dk apply --dry-run    <span class="comment"># Preview without installing</span></code></pre></div>
+
+      <h3>What it installs</h3>
+      <ul>
+        <li><strong>System packages</strong> — via apt, dnf, yum, pacman, or brew</li>
+        <li><strong>Homebrew</strong> — installs brew if missing, then brew packages</li>
+        <li><strong>Runtimes</strong> — Node.js via fnm, Python via uv, .NET SDK</li>
+        <li><strong>Shell</strong> — Fish shell config with managed blocks</li>
+        <li>Skips already-installed tools. Uses sudo only for system packages.</li>
+      </ul>
+
+      <h3>Dry-run mode</h3>
+      <p>Use <code>--dry-run</code> to see what would be installed without making changes:</p>
+      <div class="doc-code-block"><pre><code><span class="prompt">$</span> dk apply --dry-run
+<span class="output">[dry-run] would install system packages: git curl build-essential ...
+[dry-run] would install brew packages: fish starship atuin fzf ...
+[dry-run] would install Node.js via fnm (LTS)</span></code></pre></div>
+    </section>
+
+    <section id="doctor">
+      <h2>dk doctor</h2>
+      <p>Run comprehensive diagnostics on your system. Checks every category that <code>dk apply</code> configures.</p>
+
+      <div class="doc-code-block"><pre><code><span class="prompt">$</span> dk doctor
+<span class="prompt">$</span> dk doctor --json     <span class="comment"># Machine-readable output</span></code></pre></div>
+
+      <h3>Check categories</h3>
+      <ul>
+        <li><strong>System</strong> — distribution, kernel, WSL version, systemd</li>
+        <li><strong>Tools</strong> — git, curl, build tools, Homebrew</li>
+        <li><strong>Runtimes</strong> — Node.js, Python, .NET SDK</li>
+        <li><strong>Editors</strong> — VS Code, Zed, Cursor detection</li>
+        <li><strong>Docker</strong> — daemon status, socket access, WSL integration</li>
+        <li><strong>Shell</strong> — Fish config, Starship prompt, Atuin, FZF</li>
+      </ul>
+    </section>
+
+    <section id="status">
+      <h2>dk status</h2>
+      <p>Quick overview of installed tools and their versions. Detects what's available on your PATH and reports version info.</p>
+
+      <div class="doc-code-block"><pre><code><span class="prompt">$</span> dk status
+<span class="output">System:    Fedora 40 (WSL2)
+Shell:     fish 3.7.1
+Node:      22.x
+Python:    3.12.x
+.NET:      8.0.x
+Git:       2.45.x
+Brew:      4.x
+Docker:    running</span></code></pre></div>
+    </section>
+
+    <section id="profile">
+      <h2>dk profile</h2>
+      <p>Manage Datakraften profiles — predefined sets of tools for different developer types.</p>
+
+      <h3>List available profiles</h3>
+      <div class="doc-code-block"><pre><code><span class="prompt">$</span> dk profile list</code></pre></div>
+
+      <h3>Available profiles</h3>
+      <ul>
+        <li><code>minimal</code> — just system tools and git</li>
+        <li><code>default</code> — balanced setup for most developers</li>
+        <li><code>ai</code> — AI development toolchain</li>
+        <li><code>dotnet</code> — .NET ecosystem</li>
+        <li><code>frontend</code> — web development</li>
+        <li><code>platform</code> — platform engineering</li>
+      </ul>
+
+      <h3>Switch profile</h3>
+      <div class="doc-code-block"><pre><code><span class="prompt">$</span> dk profile use ai
+<span class="prompt">$</span> dk apply             <span class="comment"># Re-run apply with the new profile</span></code></pre></div>
+
+      <div class="doc-tip">
+        <p><strong>Tip:</strong> Profile definitions live in <code>~/.config/datakraften/profiles/</code>. You can create custom profiles too.</p>
+      </div>
+    </section>
+
+    <section id="global-flags">
+      <h2>Global flags</h2>
+      <p>All commands support these flags:</p>
+      <ul>
+        <li><code>--dry-run</code> — preview changes without executing</li>
+        <li><code>--json</code> — structured output for scripting</li>
+      </ul>
+    </section>
+
+    <p class="doc-official"><a href="https://github.com/sagathelab/datakraften" target="_blank" rel="noopener">GitHub repository →</a></p>
+  </main>
+
+  <div id="footer-placeholder"></div>
+  <script src="/footer.js"></script>
+</body>
+</html>
