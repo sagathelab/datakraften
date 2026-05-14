@@ -45,16 +45,11 @@ if [ "$(id -u)" = "0" ]; then
 	exit 1
 fi
 
-# Must be in WSL
-if ! grep -qi microsoft /proc/version 2>/dev/null && ! grep -qi wsl /proc/version 2>/dev/null; then
-	warn "This does not appear to be a WSL environment."
-	warn "Datakraften is designed for Windows + WSL."
-	warn "Continue anyway? (y/N)"
-	read -r continue_install
-	if [ "${continue_install}" != "y" ] && [ "${continue_install}" != "Y" ]; then
-		err "Installation cancelled."
-		exit 1
-	fi
+# Platform detection (informational only)
+if grep -qi microsoft /proc/version 2>/dev/null || grep -qi wsl /proc/version 2>/dev/null; then
+	info "WSL environment detected"
+else
+	info "Native Linux environment detected"
 fi
 
 # --- Dependencies ---
@@ -67,26 +62,51 @@ if command -v go &>/dev/null; then
 	ok "Go found: $(go version)"
 fi
 
+# Detect package manager
+install_pkg() {
+	if command -v apt-get &>/dev/null; then
+		sudo apt-get update -qq
+		sudo apt-get install -y -qq "$@"
+	elif command -v dnf &>/dev/null; then
+		sudo dnf install -y "$@"
+	elif command -v yum &>/dev/null; then
+		sudo yum install -y "$@"
+	elif command -v pacman &>/dev/null; then
+		sudo pacman -S --noconfirm "$@"
+	elif command -v brew &>/dev/null; then
+		brew install "$@"
+	else
+		warn "No known package manager found. Please install manually: $*"
+		return 1
+	fi
+}
+
+# Map dk dependency names to distro-specific packages
+git_pkg()   { echo "git"; }
+curl_pkg()  { echo "curl"; }
+make_pkg()  {
+	if command -v apt-get &>/dev/null; then echo "build-essential make"
+	elif command -v dnf &>/dev/null || command -v yum &>/dev/null; then echo "make"
+	else echo "make"; fi
+}
+
 if ! command -v git &>/dev/null; then
 	info "Installing git..."
-	sudo apt-get update -qq && sudo apt-get install -y -qq git
-	ok "git installed"
+	install_pkg "$(git_pkg)" && ok "git installed"
 else
 	ok "git found"
 fi
 
 if ! command -v curl &>/dev/null; then
 	info "Installing curl..."
-	sudo apt-get update -qq && sudo apt-get install -y -qq curl
-	ok "curl installed"
+	install_pkg "$(curl_pkg)" && ok "curl installed"
 else
 	ok "curl found"
 fi
 
 if ! command -v make &>/dev/null; then
 	info "Installing build tools..."
-	sudo apt-get update -qq && sudo apt-get install -y -qq build-essential make
-	ok "build tools installed"
+	install_pkg "$(make_pkg)" && ok "build tools installed"
 else
 	ok "make found"
 fi
@@ -133,7 +153,11 @@ fi
 
 info "Building dk CLI..."
 cd "${DATARKAFTEN_DIR}"
-make build
+if command -v make &>/dev/null; then
+	make build
+else
+	go build -o bin/dk ./cmd/dk/
+fi
 ok "dk built"
 
 # --- Install ---
