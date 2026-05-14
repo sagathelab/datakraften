@@ -6,7 +6,7 @@ export default function Landing() {
   return (
     <Layout variant="landing">
       <section className="hero text-center pt-12 pb-8">
-        <pre className="font-share-tech text-magenta text-[10px] sm:text-xs leading-tight animate-logo-fade whitespace-pre">
+        <pre className="font-share-tech text-magenta text-[10px] sm:text-xs leading-tight animate-logo-glow whitespace-pre select-none">
 {`██████╗  █████╗ ████████╗ █████╗ ██╗  ██╗██████╗  █████╗ ███████╗████████╗███████╗███╗   ██╗
 ██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗██║ ██╔╝██╔══██╗██╔══██╗██╔════╝╚══██╔══╝██╔════╝████╗  ██║
 ██║  ██║███████║   ██║   ███████║█████╔╝ ██████╔╝███████║█████╗     ██║   █████╗  ██╔██╗ ██║
@@ -14,8 +14,11 @@ export default function Landing() {
 ██████╔╝██║  ██║   ██║   ██║  ██║██║  ██╗██║  ██║██║  ██║██║        ██║   ███████╗██║ ╚████║
 ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝        ╚═╝   ╚══════╝╚═╝  ╚═══╝`}
         </pre>
-        <p className="font-share-tech text-text-dim text-sm mt-4">
-          The WSL-first developer workstation platform
+        <p className="font-share-tech text-text-dim uppercase tracking-[0.1em] text-sm sm:text-base mt-4">
+          Bootstrap modern developer environments
+        </p>
+        <p className="font-share-tech text-magenta uppercase tracking-[0.15em] text-xs sm:text-sm mt-1 animate-tagline-glow">
+          for AI-powered development
         </p>
       </section>
 
@@ -30,22 +33,22 @@ export default function Landing() {
           <FeatureCard
             title="~ Runtimes"
             desc="Node.js (fnm), Python (uv), .NET SDK -- install and manage with a single command"
-            to="/docs/#runtimes"
+            to="/docs/"
           />
           <FeatureCard
-            title="~ Shell &amp; CLI"
+            title="~ Shell & CLI"
             desc="Fish shell, Starship prompt, Atuin history, fzf, broot, fd, btm -- power-user defaults"
-            to="/docs/#shell-cli"
+            to="/docs/"
           />
           <FeatureCard
-            title="~ Cloud &amp; Dev"
+            title="~ Cloud & Dev"
             desc="GitHub CLI, Azure CLI, Docker, Homebrew -- everything for cloud-native development"
-            to="/docs/#cloud-dev"
+            to="/docs/"
           />
           <FeatureCard
-            title="~ Editors &amp; Tools"
+            title="~ Editors & Tools"
             desc="VS Code, Zed, Cursor, Codex CLI, OpenCode, PowerShell -- AI-powered development"
-            to="/docs/#editors-tools"
+            to="/docs/"
           />
         </div>
       </section>
