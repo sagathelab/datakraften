@@ -27,7 +27,7 @@
   color: #ff00ff;
   letter-spacing: 1px;
   user-select: none;
-  animation: logoGlow 6s ease-out forwards;
+  animation: logoGlow 3s ease-out forwards;
   white-space: pre;
 }
 
