@@ -268,9 +268,12 @@ ai:
 
 			if profile == "custom" {
 				fmt.Println()
-				fmt.Println("  Customize your setup by editing the config file:")
-				fmt.Printf("    %s\n", configPath)
-				fmt.Println("  Run 'dk apply' to install based on your configuration.")
+				fmt.Printf("  ✓ Config created at %s\n", configPath)
+				fmt.Println()
+				fmt.Println("  Next steps:")
+				fmt.Println("    1. Edit the config file to customize your toolset")
+				fmt.Println("    2. Run 'dk apply' to install tools")
+				fmt.Println("    3. Run 'dk doctor' to verify")
 			} else {
 				fmt.Println("  ✓ Config created")
 				fmt.Println()
@@ -318,11 +321,6 @@ func handleCustomURL(configPath string) {
 	survey.AskOne(prompt, &useRemote)
 
 	if !useRemote {
-		fmt.Println()
-		fmt.Println("  Config written.")
-		fmt.Println("  Customize by editing the config file:")
-		fmt.Printf("    %s\n", configPath)
-		fmt.Println()
 		return
 	}
 
