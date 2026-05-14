@@ -1,7 +1,6 @@
 package app
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 	"github.com/sagathelab/datakraften/internal/profiles"
 	"github.com/sagathelab/datakraften/internal/system"
 	"github.com/spf13/cobra"
+	"github.com/AlecAivazis/survey/v2"
 )
 
 func newInitCmd() *cobra.Command {
@@ -25,18 +25,67 @@ func newInitCmd() *cobra.Command {
 			configDir := filepath.Join(home, ".config", "datakraften")
 			configPath := filepath.Join(configDir, "config.yaml")
 
+			alreadyInit := false
 			if _, err := os.Stat(configPath); err == nil {
+				alreadyInit = true
+
+				state := LoadState()
+				currentProfile := state.ActiveProfile
+				if currentProfile == "" {
+					currentProfile = "default"
+				}
+
 				fmt.Println("  Datakraften is already initialized.")
 				fmt.Printf("  Config: %s\n", configPath)
+				if currentProfile != "" {
+					fmt.Printf("  Current profile: %s\n", currentProfile)
+				}
 				fmt.Println()
-				fmt.Println("  Run 'dk apply' to apply the configuration.")
-				fmt.Println("  Run 'dk doctor' to check your environment.")
-				return nil
+
+				switchProfile := false
+				prompt := &survey.Confirm{
+					Message: "Switch to a different profile?",
+					Default: false,
+				}
+				survey.AskOne(prompt, &switchProfile)
+
+				if !switchProfile {
+					fmt.Println()
+					fmt.Println("  Run 'dk apply' to apply the configuration.")
+					fmt.Println("  Run 'dk doctor' to check your environment.")
+					return nil
+				}
 			}
 
 			profile := profileFlag
 			if profile == "" {
-				profile = promptProfile(profiles.Available())
+				selected, err := selectProfile()
+				if err != nil {
+					return err
+				}
+				profile = selected
+			}
+
+			if alreadyInit {
+				data, err := os.ReadFile(configPath)
+				if err == nil {
+					lines := strings.Split(string(data), "\n")
+					for i, line := range lines {
+						if strings.HasPrefix(strings.TrimSpace(line), "profile:") {
+							lines[i] = fmt.Sprintf("profile: %s", profile)
+							break
+						}
+					}
+					os.WriteFile(configPath, []byte(strings.Join(lines, "\n")), 0644)
+				}
+				state := LoadState()
+				state.ActiveProfile = profile
+				state.Save()
+
+				fmt.Printf("  ✓ Profile updated to: %s\n", profile)
+				fmt.Println()
+				fmt.Println("  Run 'dk apply' to apply this profile.")
+				return nil
 			}
 
 			if err := os.MkdirAll(configDir, 0755); err != nil {
@@ -135,28 +184,22 @@ ai:
 	return cmd
 }
 
-func promptProfile(profiles []string) string {
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Println()
-	fmt.Println("  Select a profile:")
-	for i, p := range profiles {
-		fmt.Printf("    [%d] %s\n", i+1, p)
-	}
-	fmt.Print("  Enter number [3]: ")
-
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
-
-	if input == "" {
-		return "default"
+func selectProfile() (string, error) {
+	allProfiles := profiles.All()
+	opts := make([]string, len(allProfiles))
+	for i, p := range allProfiles {
+		opts[i] = fmt.Sprintf("%s  — %s", p.Name, p.Description)
 	}
 
-	var idx int
-	if _, err := fmt.Sscanf(input, "%d", &idx); err != nil || idx < 1 || idx > len(profiles) {
-		fmt.Println("  Invalid selection, using default.")
-		return "default"
+	var selected int
+	prompt := &survey.Select{
+		Message: "Select a profile:",
+		Options: opts,
+		Default: opts[1],
+	}
+	if err := survey.AskOne(prompt, &selected); err != nil {
+		return "", err
 	}
 
-	return profiles[idx-1]
+	return allProfiles[selected].Name, nil
 }

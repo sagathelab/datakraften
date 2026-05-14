@@ -28,11 +28,11 @@ func newProfileListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List available profiles",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			available := profiles.Available()
+			all := profiles.All()
 			fmt.Println("  Available profiles:")
 			fmt.Println()
-			for _, p := range available {
-				fmt.Printf("    %s\n", p)
+			for _, p := range all {
+				fmt.Printf("    %s  — %s\n", p.Name, p.Description)
 			}
 			fmt.Println()
 			fmt.Println("  Use 'dk profile use <name>' to switch.")
@@ -53,8 +53,11 @@ func newProfileUseCmd() *cobra.Command {
 			if len(args) > 0 {
 				name = args[0]
 			} else {
-				available := profiles.Available()
-				name = promptProfile(available)
+				selected, err := selectProfile()
+				if err != nil {
+					return err
+				}
+				name = selected
 			}
 
 			home, _ := os.UserHomeDir()
@@ -89,6 +92,9 @@ func newProfileUseCmd() *cobra.Command {
 			state.Save()
 
 			fmt.Printf("  Switched to profile: %s\n", name)
+			if desc := profiles.Describe(name); desc != "" {
+				fmt.Printf("  %s\n", desc)
+			}
 			fmt.Println()
 			fmt.Println("  Run 'dk apply' to apply this profile.")
 
