@@ -202,6 +202,9 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 				fmt.Printf("    ✗ Fish config: %s\n", err)
 			} else {
 				report.Shell = true
+				s := LoadState()
+				s.ManagedShell = true
+				s.Save()
 				fmt.Println("    ✓ Fish shell configured")
 			}
 		}

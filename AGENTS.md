@@ -38,24 +38,17 @@ Achieved:
 - `--dry-run` and `--json` global flags
 
 In progress / known gaps:
-- AI tool installation not yet wired into `dk apply` (Codex, OpenCode, Claude Code, Gemini CLI)
-- `doctor.Check`/`Report` framework exists but is not yet integrated — doctor uses ad-hoc print functions
-- Profile YAML files missing for `dotnet`, `frontend`, `platform` (3 of 6 exist)
-- `dk apply` does not install .NET SDK (EnsureDotnet exists but is not called)
+- `dk doctor --fix` not yet implemented
+- `dk ai doctor` and `dk ai init-project` not yet implemented
 - No test files yet
-- `--json` flag is registered but no command outputs JSON yet
-- `--yes` flag is registered but ignored
+- `--yes` flag works for auto-confirm but is not respected everywhere
 
 ## Next Phase — Fase 2 (Profiles & AI)
-- Complete all 6 profile YAML files
-- Wire AI tool installation into `dk apply`
-- Wire .NET SDK installation into `dk apply`
-- Integrate `doctor.Check`/`Report` framework
 - Implement `dk doctor --fix`
 - Implement `dk ai doctor` and `dk ai init-project`
-- Add JSON output for `dk status` and `dk doctor`
 - Add test coverage
 - Implement `dk upgrade --tools` (planned, separate from `dk update --self`)
+- Respect `--yes` flag across all interactive prompts
 
 ## Repository Structure
 ```
