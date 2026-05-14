@@ -2,6 +2,7 @@ package runtimes
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/sagathelab/datakraften/internal/exec"
 )
@@ -23,7 +24,7 @@ func PythonVersion() string {
 		}
 	}
 	r := exec.Run(cmd, "--version")
-	return r.Stdout
+	return strings.TrimSpace(strings.TrimPrefix(r.Stdout, "Python "))
 }
 
 func EnsurePython() (bool, error) {

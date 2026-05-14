@@ -16,16 +16,38 @@ import (
 	"github.com/sagathelab/datakraften/internal/system"
 )
 
+type RuntimeStatus int
+
+const (
+	RuntimeMissing RuntimeStatus = iota
+	RuntimeAlready
+	RuntimeNew
+)
+
+func (s RuntimeStatus) String() string {
+	switch s {
+	case RuntimeNew:
+		return "installed"
+	case RuntimeAlready:
+		return "already installed"
+	default:
+		return "not installed"
+	}
+}
+
 type ApplyReport struct {
-	System   int
-	Brew     int
-	BrewPkgs int
-	Node     bool
-	Python   bool
-	Dotnet   bool
-	AITools  int
-	Shell    bool
-	Errors   []string
+	System    int
+	BrewPkgs  int
+	Node      RuntimeStatus
+	NodeVer   string
+	Python    RuntimeStatus
+	PythonVer string
+	Dotnet    RuntimeStatus
+	DotnetVer string
+	AITools   int
+	AIAlready bool
+	Shell     bool
+	Errors    []string
 }
 
 func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
@@ -68,7 +90,6 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 				fmt.Printf("    ✗ Homebrew: %s\n", err)
 			} else if installed {
 				fmt.Println("    ✓ Homebrew installed")
-				report.Brew = 1
 			} else {
 				fmt.Println("    ✓ Homebrew (already installed)")
 			}
@@ -111,11 +132,13 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 			report.Errors = append(report.Errors, fmt.Sprintf("Node: %s", err))
 			fmt.Printf("    ✗ Node.js: %s\n", err)
 		} else {
-			report.Node = installed
+			report.NodeVer = runtimes.NodeVersion()
 			if installed {
-				fmt.Printf("    ✓ Node.js %s installed\n", runtimes.NodeVersion())
-			} else {
-				fmt.Printf("    ✓ Node.js %s (already installed)\n", runtimes.NodeVersion())
+				report.Node = RuntimeNew
+				fmt.Printf("    ✓ Node.js %s installed\n", report.NodeVer)
+			} else if report.NodeVer != "" {
+				report.Node = RuntimeAlready
+				fmt.Printf("    ✓ Node.js %s (already installed)\n", report.NodeVer)
 			}
 		}
 	} else {
@@ -128,14 +151,13 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 			report.Errors = append(report.Errors, fmt.Sprintf("Python: %s", err))
 			fmt.Printf("    ✗ Python: %s\n", err)
 		} else {
-			report.Python = installed
-			pyVer := runtimes.PythonVersion()
+			report.PythonVer = runtimes.PythonVersion()
 			if installed {
-				fmt.Printf("    ✓ Python %s installed\n", pyVer)
-			} else if pyVer != "" {
-				fmt.Printf("    ✓ Python %s (already installed)\n", pyVer)
-			} else {
-				fmt.Println("    ✓ Python configured")
+				report.Python = RuntimeNew
+				fmt.Printf("    ✓ Python %s installed\n", report.PythonVer)
+			} else if report.PythonVer != "" {
+				report.Python = RuntimeAlready
+				fmt.Printf("    ✓ Python %s (already installed)\n", report.PythonVer)
 			}
 		}
 	} else {
@@ -148,14 +170,13 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 			report.Errors = append(report.Errors, fmt.Sprintf(".NET: %s", err))
 			fmt.Printf("    ✗ .NET SDK: %s\n", err)
 		} else {
-			report.Dotnet = installed
-			dnVer := runtimes.DotnetVersion()
+			report.DotnetVer = runtimes.DotnetVersion()
 			if installed {
-				fmt.Printf("    ✓ .NET SDK %s installed\n", dnVer)
-			} else if dnVer != "" {
-				fmt.Printf("    ✓ .NET SDK %s (already installed)\n", dnVer)
-			} else {
-				fmt.Println("    ✓ .NET SDK configured")
+				report.Dotnet = RuntimeNew
+				fmt.Printf("    ✓ .NET SDK %s installed\n", report.DotnetVer)
+			} else if report.DotnetVer != "" {
+				report.Dotnet = RuntimeAlready
+				fmt.Printf("    ✓ .NET SDK %s (already installed)\n", report.DotnetVer)
 			}
 		}
 	} else {
@@ -216,6 +237,7 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 		} else {
 			report.AITools = installed
 			if installed == 0 {
+				report.AIAlready = true
 				fmt.Println("    ✓ AI tools (already installed)")
 			} else {
 				fmt.Printf("    ✓ %d AI tool(s) installed\n", installed)

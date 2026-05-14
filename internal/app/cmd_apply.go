@@ -62,16 +62,18 @@ func newApplyCmd() *cobra.Command {
 			fmt.Println("  -------")
 			fmt.Printf("    System packages: %d installed\n", report.System)
 			fmt.Printf("    Brew packages: %d installed\n", report.BrewPkgs)
-			if report.Node {
-				fmt.Println("    Node.js: installed")
+			if report.NodeVer != "" {
+				fmt.Printf("    Node.js %s (%s)\n", report.NodeVer, report.Node)
 			}
-			if report.Python {
-				fmt.Println("    Python: installed")
+			if report.PythonVer != "" {
+				fmt.Printf("    Python %s (%s)\n", report.PythonVer, report.Python)
 			}
-			if report.Dotnet {
-				fmt.Println("    .NET: installed")
+			if report.DotnetVer != "" {
+				fmt.Printf("    .NET SDK %s (%s)\n", report.DotnetVer, report.Dotnet)
 			}
-			if report.AITools > 0 {
+			if report.AIAlready {
+				fmt.Println("    AI tools (already installed)")
+			} else if report.AITools > 0 {
 				fmt.Printf("    AI tools: %d installed\n", report.AITools)
 			}
 			if len(report.Errors) > 0 {
