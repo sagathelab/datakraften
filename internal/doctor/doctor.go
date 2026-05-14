@@ -1,19 +1,23 @@
 package doctor
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+)
 
 type Check struct {
-	ID       string
-	Title    string
-	Category string
-	Severity string // "critical", "warning", "info"
-	Status   string // "pass", "fail", "skip"
-	Message  string
-	Fix      string
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	Category string `json:"category"`
+	Severity string `json:"severity"`
+	Status   string `json:"status"`
+	Message  string `json:"message,omitempty"`
+	Fix      string `json:"fix,omitempty"`
 }
 
 type Report struct {
-	Checks []Check
+	Checks []Check `json:"checks"`
 }
 
 func (r *Report) Add(c Check) {
@@ -43,4 +47,10 @@ func (r *Report) Print() {
 	} else {
 		fmt.Printf("  ⚠ %d warning(s) found\n", warnings)
 	}
+}
+
+func (r *Report) PrintJSON() {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	enc.Encode(r)
 }

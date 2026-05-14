@@ -1,7 +1,9 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/sagathelab/datakraften/internal/docker"
 	"github.com/sagathelab/datakraften/internal/editors"
@@ -10,6 +12,35 @@ import (
 	"github.com/sagathelab/datakraften/internal/system"
 	"github.com/spf13/cobra"
 )
+
+type StatusReport struct {
+	WSL struct {
+		Detected bool   `json:"detected"`
+		Version  int    `json:"version,omitempty"`
+		Distro   string `json:"distro,omitempty"`
+		DistroVer string `json:"distro_version,omitempty"`
+		Systemd  bool   `json:"systemd"`
+	} `json:"wsl"`
+	Tools map[string]bool `json:"tools"`
+	Runtimes struct {
+		Node   string `json:"node,omitempty"`
+		Python string `json:"python,omitempty"`
+		Dotnet string `json:"dotnet,omitempty"`
+	} `json:"runtimes"`
+	Editors []editorStatus `json:"editors"`
+	Docker  struct {
+		CliInstalled  bool `json:"cli_installed"`
+		DaemonRunning bool `json:"daemon_running"`
+	} `json:"docker"`
+	LastApply string `json:"last_apply,omitempty"`
+	Profile   string `json:"profile,omitempty"`
+}
+
+type editorStatus struct {
+	Name      string `json:"name"`
+	Installed bool   `json:"installed"`
+	Path      string `json:"path,omitempty"`
+}
 
 func newStatusCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -20,6 +51,46 @@ func newStatusCmd() *cobra.Command {
 			state := LoadState()
 			wsl, wslVer := system.DetectWSL()
 			distro, distroVer := system.Distro()
+
+			if jsonOutput {
+				r := StatusReport{}
+				r.WSL.Detected = wsl
+				if wsl {
+					r.WSL.Version = wslVer
+				}
+				r.WSL.Distro = distro
+				r.WSL.DistroVer = distroVer
+				r.WSL.Systemd = system.HasSystemd()
+
+				r.Tools = map[string]bool{}
+				for _, name := range []string{"git", "gh", "az", "docker", "fnm", "uv"} {
+					r.Tools[name] = exec.CommandExists(name)
+				}
+
+				r.Runtimes.Node = runtimes.NodeVersion()
+				r.Runtimes.Python = runtimes.PythonVersion()
+				r.Runtimes.Dotnet = runtimes.DotnetVersion()
+
+				for _, ed := range editors.DetectAll() {
+					r.Editors = append(r.Editors, editorStatus{
+						Name:      ed.Name,
+						Installed: ed.Installed,
+						Path:      ed.Path,
+					})
+				}
+
+				dockerStatus := docker.Detect()
+				r.Docker.CliInstalled = dockerStatus.CliInstalled
+				r.Docker.DaemonRunning = dockerStatus.DaemonRunning
+
+				r.LastApply = state.LastApply
+				r.Profile = state.ActiveProfile
+
+				enc := json.NewEncoder(os.Stdout)
+				enc.SetIndent("", "  ")
+				enc.Encode(r)
+				return nil
+			}
 
 			fmt.Println("  Datakraften status")
 			fmt.Println()
@@ -58,6 +129,11 @@ func newStatusCmd() *cobra.Command {
 				fmt.Printf("    ✓ Python %s\n", v)
 			} else {
 				fmt.Println("    – Python not installed")
+			}
+			if v := runtimes.DotnetVersion(); v != "" {
+				fmt.Printf("    ✓ .NET SDK %s\n", v)
+			} else {
+				fmt.Println("    – .NET SDK not installed")
 			}
 			fmt.Println()
 

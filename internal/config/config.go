@@ -8,6 +8,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+type RuntimeConfig struct {
+	Enabled bool   `mapstructure:"enabled"`
+	Manager string `mapstructure:"manager"`
+	Version string `mapstructure:"version"`
+}
+
 type Config struct {
 	Version string `mapstructure:"version"`
 	Profile string `mapstructure:"profile"`
@@ -23,7 +29,12 @@ type Config struct {
 		History     string `mapstructure:"history"`
 		FuzzyFinder string `mapstructure:"fuzzy_finder"`
 	} `mapstructure:"shell"`
-	Tools    map[string]bool `mapstructure:"tools"`
+	Runtimes struct {
+		Node   RuntimeConfig `mapstructure:"node"`
+		Python RuntimeConfig `mapstructure:"python"`
+		Dotnet RuntimeConfig `mapstructure:"dotnet"`
+	} `mapstructure:"runtimes"`
+	Tools    map[string]bool   `mapstructure:"tools"`
 	Editors  map[string]string `mapstructure:"editors"`
 	AI       map[string]string `mapstructure:"ai"`
 }

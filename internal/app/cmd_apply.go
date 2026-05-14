@@ -38,6 +38,16 @@ func newApplyCmd() *cobra.Command {
 				fmt.Println()
 			}
 
+			if !yes && !dryRun {
+				fmt.Print("  Continue? [Y/n]: ")
+				var input string
+				fmt.Scanln(&input)
+				if input == "n" || input == "N" || input == "no" {
+					fmt.Println("  Cancelled.")
+					return nil
+				}
+			}
+
 			report := RunApply(cfg, dryRun)
 
 			if dryRun {
@@ -57,6 +67,12 @@ func newApplyCmd() *cobra.Command {
 			}
 			if report.Python {
 				fmt.Println("    Python: installed")
+			}
+			if report.Dotnet {
+				fmt.Println("    .NET: installed")
+			}
+			if report.AITools > 0 {
+				fmt.Printf("    AI tools: %d installed\n", report.AITools)
 			}
 			if len(report.Errors) > 0 {
 				fmt.Println()

@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/sagathelab/datakraften/internal/ai"
 	"github.com/sagathelab/datakraften/internal/config"
+	"github.com/sagathelab/datakraften/internal/doctor"
 	"github.com/sagathelab/datakraften/internal/docker"
 	"github.com/sagathelab/datakraften/internal/editors"
 	"github.com/sagathelab/datakraften/internal/exec"
@@ -15,13 +17,15 @@ import (
 )
 
 type ApplyReport struct {
-	System  int
-	Brew    int
+	System   int
+	Brew     int
 	BrewPkgs int
-	Node    bool
-	Python  bool
-	Shell   bool
-	Errors  []string
+	Node     bool
+	Python   bool
+	Dotnet   bool
+	AITools  int
+	Shell    bool
+	Errors   []string
 }
 
 func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
@@ -132,6 +136,26 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 		fmt.Println("    ~ Would install Python via uv")
 	}
 
+	if !dryRun {
+		installed, err := runtimes.EnsureDotnet()
+		if err != nil {
+			report.Errors = append(report.Errors, fmt.Sprintf(".NET: %s", err))
+			fmt.Printf("    ✗ .NET SDK: %s\n", err)
+		} else {
+			report.Dotnet = installed
+			dnVer := runtimes.DotnetVersion()
+			if installed {
+				fmt.Printf("    ✓ .NET SDK %s installed\n", dnVer)
+			} else if dnVer != "" {
+				fmt.Printf("    ✓ .NET SDK %s (already installed)\n", dnVer)
+			} else {
+				fmt.Println("    ✓ .NET SDK configured")
+			}
+		}
+	} else {
+		fmt.Println("    ~ Would install .NET SDK via Homebrew")
+	}
+
 	fmt.Println()
 	fmt.Println("  Shell")
 	fmt.Println("  -----")
@@ -175,6 +199,27 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	fmt.Println()
+	fmt.Println("  AI Tools")
+	fmt.Println("  --------")
+
+	if !dryRun {
+		installed, err := ai.EnsureAITools(cfg)
+		if err != nil {
+			report.Errors = append(report.Errors, fmt.Sprintf("AI tools: %s", err))
+			fmt.Printf("    ✗ AI tools: %s\n", err)
+		} else {
+			report.AITools = installed
+			if installed == 0 {
+				fmt.Println("    ✓ AI tools (already installed)")
+			} else {
+				fmt.Printf("    ✓ %d AI tool(s) installed\n", installed)
+			}
+		}
+	} else {
+		fmt.Println("    ~ Would install AI tools")
+	}
+
+	fmt.Println()
 	fmt.Println("  Docker")
 	fmt.Println("  ------")
 
@@ -189,11 +234,18 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	return report
 }
 
-func RunDoctorSystem() {
+func RunDoctorSystem(r *doctor.Report) {
 	wsl, wslVer := system.DetectWSL()
 	distro, distroVer := system.Distro()
 	systemd := system.HasSystemd()
 	shell_ := system.CurrentShell()
+
+	r.Add(doctor.Check{ID: "wsl", Title: "WSL detected", Category: "system", Severity: "info",
+		Status: boolStatus(wsl && wslVer > 0), Message: fmt.Sprintf("WSL%d: %s %s", wslVer, distro, distroVer)})
+	r.Add(doctor.Check{ID: "systemd", Title: "systemd available", Category: "system", Severity: "info",
+		Status: boolStatus(systemd)})
+	r.Add(doctor.Check{ID: "shell", Title: "Current shell", Category: "system", Severity: "info",
+		Status: "pass", Message: shell_})
 
 	fmt.Println("  System")
 	if wsl {
@@ -212,18 +264,24 @@ func RunDoctorSystem() {
 	}
 }
 
-func RunDoctorTools() {
+func RunDoctorTools(r *doctor.Report) {
 	tools := []struct{
 		name string
+		id   string
 		installed bool
 	}{
-		{"git", exec.CommandExists("git")},
-		{"gh", exec.CommandExists("gh")},
-		{"az", exec.CommandExists("az")},
-		{"fnm", exec.CommandExists("fnm")},
-		{"uv", exec.CommandExists("uv")},
-		{"brew", exec.CommandExists("brew")},
-		{"docker", exec.CommandExists("docker")},
+		{"git", "tool.git", exec.CommandExists("git")},
+		{"gh", "tool.gh", exec.CommandExists("gh")},
+		{"az", "tool.az", exec.CommandExists("az")},
+		{"fnm", "tool.fnm", exec.CommandExists("fnm")},
+		{"uv", "tool.uv", exec.CommandExists("uv")},
+		{"brew", "tool.brew", exec.CommandExists("brew")},
+		{"docker", "tool.docker", exec.CommandExists("docker")},
+	}
+
+	for _, t := range tools {
+		r.Add(doctor.Check{ID: t.id, Title: t.name + " installed", Category: "tools",
+			Severity: "warning", Status: boolStatus(t.installed)})
 	}
 
 	fmt.Println("  Tools")
@@ -236,23 +294,53 @@ func RunDoctorTools() {
 	}
 }
 
-func RunDoctorRuntimes() {
+func RunDoctorRuntimes(r *doctor.Report) {
+	nv := runtimes.NodeVersion()
+	pv := runtimes.PythonVersion()
+	dv := runtimes.DotnetVersion()
+
+	r.Add(doctor.Check{ID: "runtime.node", Title: "Node.js", Category: "runtimes",
+		Severity: "warning", Status: boolStatus(nv != ""), Message: nv})
+	r.Add(doctor.Check{ID: "runtime.python", Title: "Python", Category: "runtimes",
+		Severity: "warning", Status: boolStatus(pv != ""), Message: pv})
+	r.Add(doctor.Check{ID: "runtime.dotnet", Title: ".NET SDK", Category: "runtimes",
+		Severity: "warning", Status: boolStatus(dv != ""), Message: dv})
+
 	fmt.Println("  Runtimes")
-	if v := runtimes.NodeVersion(); v != "" {
-		fmt.Printf("    ✓ Node.js %s\n", v)
+	if nv != "" {
+		fmt.Printf("    ✓ Node.js %s\n", nv)
 	} else {
 		fmt.Println("    – Node.js not installed")
 	}
-	if v := runtimes.PythonVersion(); v != "" {
-		fmt.Printf("    ✓ Python %s\n", v)
+	if pv != "" {
+		fmt.Printf("    ✓ Python %s\n", pv)
 	} else {
 		fmt.Println("    – Python not installed")
 	}
+	if dv != "" {
+		fmt.Printf("    ✓ .NET SDK %s\n", dv)
+	} else {
+		fmt.Println("    – .NET SDK not installed")
+	}
 }
 
-func RunDoctorEditors() {
+func RunDoctorEditors(r *doctor.Report) {
 	fmt.Println("  Editors")
 	for _, ed := range editors.DetectAll() {
+		status := "pass"
+		msg := ""
+		if ed.Installed && !ed.WindowsSide {
+			status = "pass"
+		} else if ed.Installed {
+			status = "fail"
+			msg = "Windows-side path"
+		} else {
+			status = "fail"
+			msg = "not found"
+		}
+		r.Add(doctor.Check{ID: "editor." + ed.Name, Title: ed.Name + " CLI", Category: "editors",
+			Severity: "info", Status: status, Message: msg})
+
 		if ed.Installed && !ed.WindowsSide {
 			fmt.Printf("    ✓ %s\n", ed.Name)
 		} else if ed.Installed {
@@ -263,12 +351,29 @@ func RunDoctorEditors() {
 	}
 }
 
-func RunDoctorDocker() {
-	fmt.Println("  Docker")
+func RunDoctorDocker(r *doctor.Report) {
 	dockerStatus := docker.Detect()
+
+	status := "fail"
+	msg := dockerStatus.Message
+	if dockerStatus.CliInstalled && dockerStatus.DaemonRunning {
+		status = "pass"
+		msg = "running"
+	}
+	r.Add(doctor.Check{ID: "docker", Title: "Docker", Category: "docker",
+		Severity: "warning", Status: status, Message: msg})
+
+	fmt.Println("  Docker")
 	if dockerStatus.CliInstalled && dockerStatus.DaemonRunning {
 		fmt.Println("    ✓ Docker running")
 	} else {
 		fmt.Printf("    ⚠ %s\n", dockerStatus.Message)
 	}
+}
+
+func boolStatus(ok bool) string {
+	if ok {
+		return "pass"
+	}
+	return "fail"
 }

@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 
+	"github.com/sagathelab/datakraften/internal/doctor"
 	"github.com/sagathelab/datakraften/internal/system"
 	"github.com/spf13/cobra"
 )
@@ -17,6 +18,13 @@ func newDoctorCmd() *cobra.Command {
 		Long:  `Check WSL status, tools, runtimes, editors, Docker, AI tooling, and more.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			state := LoadState()
+			report := &doctor.Report{}
+
+			if jsonOutput {
+				buildDoctorReport(report, category)
+				report.PrintJSON()
+				return nil
+			}
 
 			fmt.Println("  Datakraften Doctor")
 			fmt.Println()
@@ -32,7 +40,7 @@ func newDoctorCmd() *cobra.Command {
 			distro, distroVer := system.Distro()
 
 			if category == "" || category == "system" {
-				RunDoctorSystem()
+				RunDoctorSystem(report)
 
 				if wsl {
 					fmt.Println()
@@ -44,22 +52,22 @@ func newDoctorCmd() *cobra.Command {
 			}
 
 			if category == "" || category == "tools" {
-				RunDoctorTools()
+				RunDoctorTools(report)
 				fmt.Println()
 			}
 
 			if category == "" || category == "runtimes" {
-				RunDoctorRuntimes()
+				RunDoctorRuntimes(report)
 				fmt.Println()
 			}
 
 			if category == "" || category == "editors" {
-				RunDoctorEditors()
+				RunDoctorEditors(report)
 				fmt.Println()
 			}
 
 			if category == "" || category == "docker" {
-				RunDoctorDocker()
+				RunDoctorDocker(report)
 				fmt.Println()
 			}
 
@@ -88,4 +96,26 @@ func newDoctorCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&category, "category", "c", "", "Only check a specific category (system, tools, runtimes, shell, docker, editors, ai, auth)")
 
 	return cmd
+}
+
+func buildDoctorReport(r *doctor.Report, category string) {
+	if category == "" || category == "system" {
+		RunDoctorSystem(r)
+	}
+	if category == "" || category == "tools" {
+		RunDoctorTools(r)
+	}
+	if category == "" || category == "runtimes" {
+		RunDoctorRuntimes(r)
+	}
+	if category == "" || category == "editors" {
+		RunDoctorEditors(r)
+	}
+	if category == "" || category == "docker" {
+		RunDoctorDocker(r)
+	}
+	if category == "" || category == "shell" {
+		r.Add(doctor.Check{ID: "shell", Title: "Current shell", Category: "shell",
+			Severity: "info", Status: "pass", Message: system.CurrentShell()})
+	}
 }
