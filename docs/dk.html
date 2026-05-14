@@ -114,9 +114,33 @@ Docker:    running</span></code></pre></div>
       <h3>Switch profile</h3>
       <div class="doc-code-block"><pre><code><span class="prompt">$</span> dk profile use ai
 <span class="prompt">$</span> dk apply             <span class="comment"># Re-run apply with the new profile</span></code></pre></div>
+    </section>
+
+    <section id="customize">
+      <h2>Customize profiles</h2>
+      <p>You can tailor Datakraften to your exact needs by editing the config or creating your own profile.</p>
+
+      <h3>Edit config.yaml directly</h3>
+      <p>All settings live in <code>~/.config/datakraften/config.yaml</code>. Open it in any editor to enable or disable tools:</p>
+      <div class="doc-code-block"><pre><code><span class="comment"># Example: enable .NET and AI tools</span>
+runtimes:
+  dotnet:
+    enabled: true
+
+ai:
+  codex: true
+  github_copilot: true</code></pre></div>
+
+      <h3>Create a custom profile</h3>
+      <p>Profiles are YAML files in <code>~/.config/datakraften/profiles/</code>. Create your own:</p>
+      <div class="doc-code-block"><pre><code><span class="prompt">$</span> mkdir -p ~/.config/datakraften/profiles
+<span class="prompt">$</span> cp /path/to/dk/profiles/default.yaml ~/.config/datakraften/profiles/myprofile.yaml
+<span class="prompt">$</span> nvim ~/.config/datakraften/profiles/myprofile.yaml</code></pre></div>
+      <p>Then switch to it:</p>
+      <div class="doc-code-block"><pre><code><span class="prompt">$</span> dk profile use myprofile</code></pre></div>
 
       <div class="doc-tip">
-        <p><strong>Tip:</strong> Profile definitions live in <code>~/.config/datakraften/profiles/</code>. You can create custom profiles too.</p>
+        <p><strong>Tip:</strong> The built-in profile definitions live in the <code>profiles/</code> directory of the <a href="https://github.com/sagathelab/datakraften/tree/main/profiles" target="_blank" rel="noopener">Datakraften repository</a>. Use them as a starting point.</p>
       </div>
     </section>
 
