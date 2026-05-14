@@ -44,12 +44,18 @@ func newProfileListCmd() *cobra.Command {
 
 func newProfileUseCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:       "use <profile>",
+		Use:       "use [profile]",
 		Short:     "Switch to a profile",
 		ValidArgs: profiles.Available(),
-		Args:      cobra.ExactValidArgs(1),
+		Args:      cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			name := args[0]
+			name := ""
+			if len(args) > 0 {
+				name = args[0]
+			} else {
+				available := profiles.Available()
+				name = promptProfile(available)
+			}
 
 			home, _ := os.UserHomeDir()
 			configPath := filepath.Join(home, ".config", "datakraften", "config.yaml")

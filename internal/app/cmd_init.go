@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/sagathelab/datakraften/internal/installers"
+	"github.com/sagathelab/datakraften/internal/profiles"
 	"github.com/sagathelab/datakraften/internal/system"
 	"github.com/spf13/cobra"
 )
@@ -33,11 +34,9 @@ func newInitCmd() *cobra.Command {
 				return nil
 			}
 
-			profiles := []string{"minimal", "default", "ai", "dotnet", "frontend", "platform"}
-
 			profile := profileFlag
 			if profile == "" {
-				profile = promptProfile(profiles)
+				profile = promptProfile(profiles.Available())
 			}
 
 			if err := os.MkdirAll(configDir, 0755); err != nil {
