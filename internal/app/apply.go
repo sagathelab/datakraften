@@ -242,6 +242,17 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	fmt.Println("  Editors")
 	fmt.Println("  -------")
 
+	if cfg.Editors != nil && cfg.Editors["zed"] == "true" {
+		if !dryRun {
+			if err := editors.EnsureZed(); err != nil {
+				report.Errors = append(report.Errors, fmt.Sprintf("Zed: %s", err))
+				fmt.Printf("    ✗ Zed: %s\n", err)
+			}
+		} else {
+			fmt.Println("    ~ Would install Zed")
+		}
+	}
+
 	for _, ed := range editors.DetectAll() {
 		if ed.Installed {
 			status := "ok"

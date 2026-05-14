@@ -100,7 +100,7 @@ function renderBody(body: string) {
     }
 
     return (
-      <p key={bi} className="text-xs text-text-primary leading-relaxed mb-3">
+      <p key={bi} className="text-sm text-text-primary leading-relaxed mb-3">
         {renderInlineCode(block.lines.join(' '))}
       </p>
     )
@@ -111,13 +111,13 @@ export default function ToolGuide({ title, subtitle, sections, website }: ToolGu
   return (
     <Layout variant="docs" title={title}>
       <div className="doc-content py-8">
-        <h1 className="text-xl font-bold text-magenta font-share-tech mb-2">{title}</h1>
-        <p className="text-sm text-text-dim mb-8">{subtitle}</p>
+        <h1 className="text-3xl font-bold text-magenta font-share-tech mb-2">{title}</h1>
+        <p className="text-base text-text-dim mb-8">{subtitle}</p>
 
         {sections.map((section, i) => (
           <div key={i} className="mb-6">
             {section.title && (
-              <h2 className="text-base font-bold text-text-primary mb-2">{section.title}</h2>
+              <h2 className="text-lg font-bold text-text-primary mb-2">{section.title}</h2>
             )}
             {renderBody(section.body)}
           </div>

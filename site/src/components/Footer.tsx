@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 export default function Footer() {
   return (
     <footer className="footer border-t border-fuchsia-500/20 px-6 py-8 mt-16">
-      <div className="max-w-4xl mx-auto flex flex-col items-center gap-4 text-sm text-text-dim">
+      <div className="max-w-4xl mx-auto flex flex-col items-center gap-4 text-base text-text-dim">
         <a
           href="https://github.com/sagathelab/datakraften"
           target="_blank"
@@ -23,7 +23,7 @@ export default function Footer() {
           <Link to="/privacy" className="hover:text-magenta transition-colors">Privacy</Link>
           <Link to="/terms" className="hover:text-magenta transition-colors">Terms</Link>
         </div>
-        <p className="text-xs text-text-dim">&copy; 2026 Datakraften &mdash; open source (Apache 2.0)</p>
+        <p className="text-sm text-text-dim">&copy; 2026 Datakraften &mdash; open source (Apache 2.0)</p>
       </div>
     </footer>
   )

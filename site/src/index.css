@@ -44,10 +44,10 @@
   }
   100% {
     text-shadow:
-      0 0 8px #d000ff,
-      0 0 16px rgba(208, 0, 255, 0.5),
-      0 0 30px rgba(208, 0, 255, 0.25),
-      0 0 60px rgba(208, 0, 255, 0.1);
+      0 0 4px rgba(208, 0, 255, 0.5),
+      0 0 10px rgba(208, 0, 255, 0.2),
+      0 0 20px rgba(208, 0, 255, 0.1),
+      0 0 40px rgba(208, 0, 255, 0.05);
   }
 }
 
@@ -61,7 +61,7 @@
 }
 
 @keyframes blinkCaret {
-  50% { border-color: transparent; }
+  50% { opacity: 0; }
 }
 
 .scanlines {
@@ -87,7 +87,7 @@ body {
 
 .inline-code {
   font-family: "JetBrains Mono", monospace;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   background: #1a1a2e;
   color: #ff00ff;
   padding: 0.15rem 0.4rem;
@@ -103,7 +103,7 @@ body {
   overflow-x: auto;
   margin: 0.75rem 0 1.25rem;
   font-family: "JetBrains Mono", monospace;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   color: var(--color-text-primary);
   line-height: 1.6;
 }
@@ -128,7 +128,7 @@ body {
   padding: 0.75rem 1rem;
   margin: 1rem 0;
   border-radius: 0 6px 6px 0;
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: #888;
   line-height: 1.7;
 }
