@@ -28,7 +28,9 @@ Examples of unacceptable behavior:
 ## Enforcement
 
 Project maintainers are responsible for clarifying and enforcing standards.
-Instances of abusive behavior may be reported to the project team.
+Instances of abusive behavior may be reported by opening a [GitHub issue](https://github.com/sagathelab/datakraften/issues) or contacting the project team directly.
+
+For **security vulnerabilities**, please see [SECURITY.md](SECURITY.md) — do not open a public issue.
 
 ## Attribution
 
