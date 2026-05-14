@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        go-version: [1.23.x]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Build Linux amd64
+        run: go build -ldflags="-X main.Version=${{ github.ref_name }} -X main.Commit=${{ github.sha }}" -o dk-linux-amd64 ./cmd/dk/
+
+      - name: Checksum
+        run: sha256sum dk-linux-amd64 > dk-linux-amd64.sha256
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Datakraften ${{ github.ref_name }}
+          body_path: .github/release-template.md
+          files: |
+            dk-linux-amd64
+            dk-linux-amd64.sha256
+            install.sh

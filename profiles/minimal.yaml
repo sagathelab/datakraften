@@ -1,0 +1,35 @@
+version: 1
+profile: minimal
+
+system:
+  package_manager: apt
+
+tooling:
+  package_manager: brew
+
+shell:
+  default: bash
+  prompt: ""
+  history: ""
+  fuzzy_finder: ""
+
+runtimes:
+  node:
+    enabled: false
+  python:
+    enabled: false
+  dotnet:
+    enabled: false
+
+tools:
+  git: true
+  curl: true
+  build_essential: true
+
+editors: {}
+
+ai: {}
+
+reproducibility:
+  devbox: false
+  nix: false
