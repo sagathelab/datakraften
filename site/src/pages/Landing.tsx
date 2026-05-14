@@ -1,20 +1,14 @@
 import Layout from '../components/Layout'
 import Terminal from '../components/Terminal'
 import FeatureCard from '../components/FeatureCard'
+import LogoSvg from '../components/LogoSvg'
 import { Link } from 'react-router-dom'
 
 export default function Landing() {
   return (
     <Layout variant="landing">
       <section className="hero text-center pt-12 pb-8">
-        <pre className="logo-ascii" aria-label="Datakraften logo">
-{`██████╗  █████╗ ████████╗ █████╗ ██╗  ██╗██████╗  █████╗ ███████╗████████╗███████╗███╗   ██╗
-██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗██║ ██╔╝██╔══██╗██╔══██╗██╔════╝╚══██╔══╝██╔════╝████╗  ██║
-██║  ██║███████║   ██║   ███████║█████╔╝ ██████╔╝███████║█████╗     ██║   █████╗  ██╔██╗ ██║
-██║  ██║██╔══██║   ██║   ██╔══██║██╔═██╗ ██╔══██╗██╔══██║██╔══╝     ██║   ██╔══╝  ██║╚██╗██║
-██████╔╝██║  ██║   ██║   ██║  ██║██║  ██╗██║  ██║██║  ██║██║        ██║   ███████╗██║ ╚████║
-╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝        ╚═╝   ╚══════╝╚═╝  ╚═══╝`}
-        </pre>
+        <LogoSvg />
         <p className="font-share-tech text-text-dim uppercase tracking-[0.1em] text-base sm:text-lg mt-4">
           Bootstrap modern developer environments
         </p>

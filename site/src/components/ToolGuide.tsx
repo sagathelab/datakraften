@@ -101,7 +101,7 @@ function renderBody(body: string) {
     }
 
     return (
-      <p key={bi} className="text-sm text-text-primary leading-relaxed mb-3">
+      <p key={bi} className="text-sm text-text-body leading-relaxed mb-3">
         {renderInlineCode(block.lines.join(' '))}
       </p>
     )
