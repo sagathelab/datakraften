@@ -23,7 +23,7 @@ export default function Footer() {
           <Link to="/privacy" className="hover:text-magenta transition-colors">Privacy</Link>
           <Link to="/terms" className="hover:text-magenta transition-colors">Terms</Link>
         </div>
-        <p className="text-sm text-text-dim">&copy; 2026 Datakraften &mdash; open source (Apache 2.0)</p>
+        <p className="text-sm text-text-dim text-center">&copy; 2026 Datakraften &mdash; open source (Apache 2.0)</p>
       </div>
     </footer>
   )
