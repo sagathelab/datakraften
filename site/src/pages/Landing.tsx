@@ -6,7 +6,7 @@ export default function Landing() {
   return (
     <Layout variant="landing">
       <section className="hero text-center pt-12 pb-8">
-        <pre className="font-share-tech text-magenta text-[10px] sm:text-xs leading-tight animate-logo-glow whitespace-pre select-none">
+        <pre className="logo-ascii" aria-label="Datakraften logo">
 {`██████╗  █████╗ ████████╗ █████╗ ██╗  ██╗██████╗  █████╗ ███████╗████████╗███████╗███╗   ██╗
 ██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗██║ ██╔╝██╔══██╗██╔══██╗██╔════╝╚══██╔══╝██╔════╝████╗  ██║
 ██║  ██║███████║   ██║   ███████║█████╔╝ ██████╔╝███████║█████╗     ██║   █████╗  ██╔██╗ ██║
