@@ -1,0 +1,513 @@
+export interface ToolSection {
+  title?: string
+  body: string
+}
+
+export interface ToolDef {
+  id: string
+  title: string
+  subtitle: string
+  sections: ToolSection[]
+  website: string
+  websiteLabel?: string
+}
+
+export const tools: Record<string, ToolDef> = {
+  dk: {
+    id: 'dk',
+    title: 'dk CLI',
+    subtitle: 'Bootstrap, configure, and diagnose your developer workstation',
+    sections: [
+      {
+        title: 'dk init',
+        body: 'Generate your Datakraften configuration file. Detects your operating system, package manager, and preferred shell, then writes ~/.config/datakraften/config.yaml.\n\n$ dk init\n\nWhat it does:\n- Detects platform (WSL, Linux, macOS)\n- Identifies native package manager (apt, dnf, yum, pacman, brew)\n- Generates a YAML config with default profile\n- Safe to re-run -- won\'t overwrite existing config unless forced',
+      },
+      {
+        title: 'dk apply',
+        body: 'Install everything defined in your active profile. Idempotent -- safe to run repeatedly.\n\n$ dk apply\n$ dk apply --dry-run    // Preview without installing\n\nWhat it installs:\n- System packages -- via apt, dnf, yum, pacman, or brew\n- Homebrew -- installs brew if missing, then brew packages\n- Runtimes -- Node.js via fnm, Python via uv, .NET SDK\n- Shell -- Fish shell config with managed blocks\n- Skips already-installed tools. Uses sudo only for system packages.\n\nDry-run mode:\nUse --dry-run to see what would be installed without making changes:\n\n$ dk apply --dry-run\n> [dry-run] would install system packages: git curl build-essential ...\n> [dry-run] would install brew packages: fish starship atuin fzf ...\n> [dry-run] would install Node.js via fnm (LTS)',
+      },
+      {
+        title: 'dk doctor',
+        body: 'Run comprehensive diagnostics on your system. Checks every category that dk apply configures.\n\n$ dk doctor\n$ dk doctor --json     // Machine-readable output\n\nCheck categories:\n- System -- distribution, kernel, WSL version, systemd\n- Tools -- git, curl, build tools, Homebrew\n- Runtimes -- Node.js, Python, .NET SDK\n- Editors -- VS Code, Zed, Cursor detection\n- Docker -- daemon status, socket access, WSL integration\n- Shell -- Fish config, Starship prompt, Atuin, FZF',
+      },
+      {
+        title: 'dk status',
+        body: 'Quick overview of installed tools and their versions.\n\n$ dk status\n> System:    Fedora 40 (WSL2)\n> Shell:     fish 3.7.1\n> Node:      22.x\n> Python:    3.12.x\n> .NET:      8.0.x\n> Git:       2.45.x\n> Brew:      4.x\n> Docker:    running',
+      },
+      {
+        title: 'dk profile',
+        body: 'Manage Datakraften profiles -- predefined sets of tools for different developer types.\n\n$ dk profile list\n\nAvailable profiles:\n- minimal -- just system tools and git\n- default -- balanced setup for most developers\n- custom -- custom configuration with optional remote team YAML\n\nSwitch profile:\n\n$ dk profile use ai\n$ dk apply             // Re-run apply with the new profile',
+      },
+      {
+        title: 'dk update',
+        body: 'Self-update the Datakraften CLI to the latest release. Downloads the correct binary for your platform from GitHub, verifies the SHA256 checksum, and performs an atomic replacement.\n\n$ dk update\n\n> Current version: v0.1.0\n> Latest version:  v0.2.0\n> Downloading dk-linux-amd64...\n> Checksum verified ✓\n> Updated to v0.2.0\n\nHow it works:\n- Fetches the latest release from api.github.com\n- Detects your OS and architecture to download the matching binary\n- Verifies the binary against its SHA256 checksum\n- Replaces the current binary atomically\n\nTIP: Run dk update periodically to get the latest features and fixes.',
+      },
+    ],
+    website: 'https://github.com/sagathelab/datakraften',
+    websiteLabel: 'GitHub repository',
+  },
+
+  node: {
+    id: 'node',
+    title: 'Node.js + fnm',
+    subtitle: 'Fast Node Manager -- seamlessly switch between Node.js versions',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'fnm (Fast Node Manager) installs and manages multiple Node.js versions. It is written in Rust and is significantly faster than nvm. The bootstrapper installs the latest LTS version of Node.js and sets it as the default.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Check current version:\n$ node --version\n$ npm --version\n\nInstall a specific Node version:\n$ fnm install 22\n$ fnm install 20\n\nSwitch between versions:\n$ fnm use 22\n$ fnm use 20\n\nSet a default version:\n$ fnm default 22\n\nList installed versions:\n$ fnm list\n\nInstall npm packages globally:\n$ npm install -g typescript\n$ npm install -g yarn',
+      },
+      {
+        title: 'How it works',
+        body: 'fnm adds a shim directory to your PATH and switches Node.js versions by updating symlinks. The shell integration (fnm env) ensures the right version is active in every new terminal. When you cd into a project with a .nvmrc file, fnm automatically reads the version and switches to it.',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Node.js is managed by fnm -- never install it via apt or brew directly. Only fnm should manage Node versions.\n\nTIP: Use fnm install --lts to always get the latest LTS release.',
+      },
+    ],
+    website: 'https://nodejs.org/',
+    websiteLabel: 'Node.js',
+  },
+
+  python: {
+    id: 'python',
+    title: 'Python + uv',
+    subtitle: 'Fast Python package manager in Rust -- replaces pip, venv, and more',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'uv is an extremely fast Python package and project manager written in Rust. It can manage Python versions, virtual environments, dependencies, and run scripts -- all in one tool. The bootstrapper installs uv and uses it to set up the default Python runtime.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Manage Python versions:\n$ uv python install 3.12\n$ uv python list\n\nCreate a virtual environment:\n$ uv venv\n$ source .venv/bin/activate\n\nInstall packages:\n$ uv pip install requests\n$ uv pip install -r requirements.txt\n\nRun a script with its dependencies:\n$ uv run script.py\n$ uv run --with requests python script.py\n\nRun tools without installing (uvx):\n$ uvx ruff check .\n$ uvx black file.py\n$ uvx pyright\n\nManage project dependencies:\n$ uv add requests\n$ uv add --dev pytest\n$ uv sync',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: uv replaces pip, pip-tools, pipx, and venv. Use uv pip install instead of pip install -- it\'s 10-100x faster.\n\nTIP: uvx runs Python tools in isolated environments -- no need to install them first. Great for linters, formatters, and type checkers.\n\nTIP: Use uv add to add dependencies to pyproject.toml and uv sync to install them.\n\nTIP: Run uv help to see all available commands and options.',
+      },
+    ],
+    website: 'https://docs.astral.sh/uv/',
+    websiteLabel: 'uv',
+  },
+
+  dotnet: {
+    id: 'dotnet',
+    title: '.NET SDK',
+    subtitle: 'Cross-platform SDK for building C#, F#, and VB applications',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'The .NET SDK is a cross-platform development framework for building a wide range of applications -- web, mobile, desktop, cloud, and IoT -- using C#, F#, or Visual Basic. The bootstrapper installs the latest .NET SDK via Homebrew.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Create a new project:\n$ dotnet new console -n MyApp\n$ dotnet new webapi -n MyApi\n$ dotnet new mvc -n MyWebApp\n\nList available templates:\n$ dotnet new list\n\nBuild and run:\n$ dotnet build\n$ dotnet run\n\nRun tests:\n$ dotnet test\n\nPublish for deployment:\n$ dotnet publish -c Release -o ./publish\n\nCheck installed SDKs:\n$ dotnet --list-sdks\n$ dotnet --list-runtimes',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: DOTNET_ROOT is set in your fish config. The SDK is installed to /usr/share/dotnet.\n\nTIP: Use dotnet new list to browse all available project templates.\n\nTIP: Add --help to any dotnet command for detailed usage info.',
+      },
+    ],
+    website: 'https://dotnet.microsoft.com/',
+  },
+
+  fish: {
+    id: 'fish',
+    title: 'Fish Shell',
+    subtitle: 'Friendly interactive shell -- your default shell after bootstrapping',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'Fish (Friendly Interactive SHell) is a smart, user-friendly command-line shell with features like syntax highlighting, autosuggestions, and tab completions out of the box -- no configuration required. After bootstrapping, Fish is set as your default shell (effective after re-login).',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Start Fish:\n$ fish\n\nMake Fish default:\n$ chsh -s /usr/bin/fish\n\nAutosuggestions:\nFish shows dimmed suggestions based on your history as you type. Press → or Ctrl+F to accept the suggestion.\n\nTab Completions:\nPress Tab to complete commands, options, paths, and even git branches.',
+      },
+      {
+        title: 'Configuration',
+        body: 'The bootstrapper creates ~/.config/fish/config.fish with:\n- Homebrew PATH setup\n- fnm (Node.js version manager) integration\n- uv (Python package manager) shell completions\n- Atuin shell history\n- FZF fuzzy finder key bindings\n- Starship prompt\n- Useful aliases (g, ga, gc, gp, gl, gs, gd)\n- Editor set to zed --wait\n\nEdit config manually:\n$ nvim ~/.config/fish/config.fish\n\nReload config:\n$ source ~/.config/fish/config.fish',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Fish syntax is different from Bash. Use if ... end instead of if ... fi, and set -x VAR value instead of export VAR=value.\n\nTIP: Run help to open the Fish web-based documentation.\n\nTIP: Use funced to edit a function interactively, and funcsave to persist it.',
+      },
+    ],
+    website: 'https://fishshell.com/',
+  },
+
+  starship: {
+    id: 'starship',
+    title: 'Starship',
+    subtitle: 'Minimal, blazing-fast prompt for any shell',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'Starship is a cross-shell prompt that shows you relevant context: current directory, git branch and status, Node.js/Python/.NET versions, command duration, and more -- all with zero configuration to get started. Starship works in Fish, Bash, Zsh, and PowerShell. The bootstrapper enables it automatically in your Fish config.',
+      },
+      {
+        title: 'Usage',
+        body: 'Starship works automatically -- you don\'t need to run any commands. The prompt will show:\n- Current directory\n- Git branch and status (dirty/staged/ahead/behind)\n- Runtime versions when in a project directory\n- Command execution time if > 2s\n- Exit code of the last command if non-zero',
+      },
+      {
+        title: 'Customization',
+        body: 'Create ~/.config/starship.toml to customize every part of the prompt:\n\n# Disable the package module\n[package]\ndisabled = true\n\n# Change the Node.js symbol\n[nodejs]\nsymbol = "⬢ "\nformat = "via [$symbol($version )]($style)"\n\nChanges take effect immediately -- no reload needed.',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Run starship preset nerd-font-symbols -o ~/.config/starship.toml to use Nerd Font icons.\n\nTIP: See all configuration options at starship.rs/config.',
+      },
+    ],
+    website: 'https://starship.rs/',
+  },
+
+  atuin: {
+    id: 'atuin',
+    title: 'Atuin',
+    subtitle: 'Magical shell history with search, sync, and encryption',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'Atuin replaces your shell\'s built-in history with a powerful, encrypted database. It provides blazing-fast search across all your commands, syncs history between machines, and supports regex filtering. The bootstrapper enables Atuin for Fish shell.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Interactive search:\n// Press Ctrl+R and start typing\n\nSearch from the command line:\n$ atuin search docker\n$ atuin search --regex \'git.*push\'\n$ atuin search --cwd /projects/myapp\n\nSync history across machines:\n$ atuin login\n$ atuin sync\n\nBrowse all history:\n$ atuin history list\n$ atuin history list --session-only',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Atuin works automatically once installed -- it hooks into your shell and replaces the default history.\n\nTIP: atuin search supports regex patterns, filtering by host, directory, and session.\n\nTIP: Run atuin login and atuin sync to enable encrypted cloud sync.',
+      },
+    ],
+    website: 'https://atuin.sh/',
+  },
+
+  fzf: {
+    id: 'fzf',
+    title: 'fzf',
+    subtitle: 'General-purpose command-line fuzzy finder',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'fzf is a general-purpose command-line fuzzy finder. It interactively filters lines from stdin or files. Integrated into Fish shell via key bindings (Ctrl+T for files, Ctrl+R for history, Alt+C for cd).',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Search files (Ctrl+T):\n// Press Ctrl+T, type to filter, select with Tab/Enter\n\nReverse history search (Ctrl+R):\n// Press Ctrl+R, type any part of a past command to find it\n\ncd into subdirectory (Alt+C):\n// Press Alt+C, select a directory to cd into it\n\nPipe to fzf:\n$ find . -type f | fzf\n\nWith preview:\n$ fzf --preview \'cat {}\'',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Use fzf --preview \'cat {}\' to preview file contents as you filter.\n\nTIP: Set FZF_DEFAULT_COMMAND to use fd for faster search.\n\nTIP: fzf is integrated into Fish shell by default via the bootstrapper.',
+      },
+    ],
+    website: 'https://github.com/junegunn/fzf',
+  },
+
+  fd: {
+    id: 'fd',
+    title: 'fd',
+    subtitle: 'Fast and user-friendly alternative to find',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'fd is a fast and user-friendly alternative to find. It uses simple, intuitive syntax, respects .gitignore by default, produces colorized output, and is significantly faster than find.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Search by pattern:\n$ fd pattern\n\nSearch by extension:\n$ fd -e md\n\nSearch in a specific path:\n$ fd pattern /path/to/search\n\nFilter by file type:\n$ fd --type f\n$ fd --type d\n\nInclude hidden files:\n$ fd --hidden\n\nExecute a command on results:\n$ fd --exec vim',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: If installed, fzf automatically uses fd as its default file search backend.\n\nTIP: Run fd \'\' to list all files recursively in the current directory.\n\nTIP: Use --type d to search for directories only.',
+      },
+    ],
+    website: 'https://github.com/sharkdp/fd',
+  },
+
+  broot: {
+    id: 'broot',
+    title: 'broot',
+    subtitle: 'A new way to see and navigate directory trees',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'broot provides a new way to see and navigate directory trees. It features an interactive tree view with fuzzy filtering, file preview, and file management actions -- all from the terminal.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Open interactive tree:\n$ broot\n\nFilter files:\n// Start typing any pattern to fuzzy-filter the tree\n\nSelect and quit:\n// Press Alt+Enter on a directory to output its path and quit\n\nFile operations:\n:cp    // copy\n:mv    // move/rename\n:rm    // delete\n\nShow help:\n$ broot -h',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Navigate with arrow keys or vim keys (j/k) for fast movement.\n\nTIP: Press ? to see all available verbs and keyboard shortcuts.\n\nTIP: Use :open to open a file, or press Alt+Enter on a directory to cd into it.',
+      },
+    ],
+    website: 'https://dystroy.org/broot/',
+  },
+
+  btm: {
+    id: 'btm',
+    title: 'btm',
+    subtitle: 'Cross-platform graphical system monitor',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'bottom (btm) is a cross-platform graphical system monitor for the terminal. It displays CPU, memory, disk, network, processes, and temperatures in a rich TUI interface.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Start bottom:\n$ btm\n\nNavigate:\nArrow keys  -- move between widgets and processes\n?           -- show help\n1-9         -- toggle individual widgets on/off\nCtrl+C      -- quit\n\nBasic mode:\n$ btm -c',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Use btm --mem_as_value to display memory as numeric values instead of a percentage.\n\nTIP: Configuration lives in ~/.config/bottom/bottom.toml.\n\nTIP: Run btm -t for the default widget arrangement.',
+      },
+    ],
+    website: 'https://github.com/ClementTsang/bottom',
+  },
+
+  brew: {
+    id: 'brew',
+    title: 'Homebrew',
+    subtitle: 'The missing package manager for Linux -- most tools are installed via brew',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'Homebrew is a package manager that started on macOS and now fully supports Linux (Linuxbrew). It installs packages to /home/linuxbrew/.linuxbrew and keeps them isolated from system packages. The bootstrapper uses Homebrew as the primary package manager for all developer tools.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Install a package:\n$ brew install gh\n\nSearch for packages:\n$ brew search gh\n\nUpdate all packages:\n$ brew update && brew upgrade\n\nList installed packages:\n$ brew list\n\nCheck for outdated packages:\n$ brew outdated\n\nGet info about a package:\n$ brew info gh',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: brew formulas are updated frequently. Run brew update once a week to stay current.\n\nTIP: Use brew doctor if something isn\'t working.\n\nTIP: The bootstrapper adds brew to ~/.profile and ~/.bashrc.',
+      },
+    ],
+    website: 'https://brew.sh/',
+  },
+
+  gh: {
+    id: 'gh',
+    title: 'GitHub CLI',
+    subtitle: 'GitHub from the command line -- PRs, issues, repos, and more',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'The GitHub CLI (gh) brings GitHub to your terminal. It lets you manage repositories, pull requests, issues, actions, and more without leaving the command line. Installed via Homebrew.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Authenticate with GitHub:\n$ gh auth login\n\nCreate a repository:\n$ gh repo create my-project --public --clone\n\nWork with pull requests:\n$ gh pr create --title "My PR" --body "Description"\n$ gh pr view\n$ gh pr checkout 123\n\nList and manage issues:\n$ gh issue list\n$ gh issue create --title "Bug" --body "Details"\n$ gh issue view 42\n\nView GitHub Actions runs:\n$ gh run list\n$ gh run view\n$ gh run watch\n\nOpen in browser:\n$ gh browse',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Always run gh auth login first.\n\nTIP: gh status shows your latest notifications.\n\nTIP: If you have the GitHub Copilot CLI extension installed, try gh copilot.',
+      },
+    ],
+    website: 'https://cli.github.com/',
+  },
+
+  'gh-copilot': {
+    id: 'gh-copilot',
+    title: 'gh copilot',
+    subtitle: 'GitHub Copilot in your terminal',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'GitHub Copilot CLI brings Copilot to your terminal -- get command suggestions, explanations, and translations from natural language without leaving the command line.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Suggest a command:\n$ gh copilot suggest "list all modified files"\n\nExplain a command:\n$ gh copilot explain "git rebase -i HEAD~3"\n\nWhat the shell?:\n$ gh copilot what-the-shell\n\nInteractive mode:\n$ gh copilot',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Run gh copilot without arguments to enter interactive mode.\n\nTIP: Uses GPT models under the hood -- great for learning git and shell commands.\n\nTIP: You must be logged in with gh auth login and have a Copilot subscription.',
+      },
+    ],
+    website: 'https://github.com/github/gh-copilot',
+  },
+
+  az: {
+    id: 'az',
+    title: 'Azure CLI',
+    subtitle: 'Command-line tools for managing Azure resources',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'The Azure CLI (az) is a set of commands used to create, manage, and delete Azure resources. It is installed via Homebrew and provides full access to the Azure platform from the terminal.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Authenticate with Azure:\n$ az login\n\nView account info:\n$ az account show\n$ az account list\n\nCreate a resource group:\n$ az group create --name MyGroup --location northeurope\n\nList virtual machines:\n$ az vm list\n$ az vm list --resource-group MyGroup\n\nCreate a web app:\n$ az webapp create --name MyApp --resource-group MyGroup --plan MyPlan',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Run az configure to set default values like location and resource group.\n\nTIP: Use az --help to see all top-level command groups.\n\nTIP: Use az account set --subscription "My Sub" to switch between subscriptions.',
+      },
+    ],
+    website: 'https://learn.microsoft.com/en-us/cli/azure/',
+  },
+
+  docker: {
+    id: 'docker',
+    title: 'Docker + Docker Compose',
+    subtitle: 'Container platform -- Docker CLI and Compose installed via Homebrew',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'Docker is a platform for developing, shipping, and running applications in containers. Docker Compose lets you define and run multi-container applications with a single docker compose command. The Docker CLI is installed via Homebrew and connects to Docker Desktop through WSL2 integration.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'List running containers:\n$ docker ps\n$ docker ps -a\n\nManage images:\n$ docker images\n$ docker pull ubuntu:latest\n$ docker rmi ubuntu:latest\n\nStart and stop Compose services:\n$ docker compose up -d\n$ docker compose down\n$ docker compose logs -f\n\nExecute commands in a running container:\n$ docker exec -it my-container bash\n$ docker exec my-container ls -la\n\nView container logs:\n$ docker logs my-container\n$ docker logs -f my-container',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Enable Docker Desktop WSL2 integration in Docker Desktop Settings -> Resources -> WSL Integration.\n\nTIP: The bootstrapper script adds your user to the docker group.\n\nTIP: The Docker socket at /var/run/docker.sock must exist for the CLI to connect.',
+      },
+    ],
+    website: 'https://www.docker.com/',
+  },
+
+  codex: {
+    id: 'codex',
+    title: 'Codex CLI',
+    subtitle: 'OpenAI\'s command-line tool for code generation',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'OpenAI Codex CLI is a command-line tool for code generation. It uses AI models to generate, explain, and modify code directly in your terminal.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Generate code from a prompt:\n$ codex "write a python function that sorts a list"\n\nInstall git hooks:\n$ codex --install-hooks\n\nHelp:\n$ codex --help',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Run codex --install-hooks to set up git hooks for AI-assisted commit messages.\n\nTIP: Requires an OpenAI API key set via the OPENAI_API_KEY environment variable.',
+      },
+    ],
+    website: 'https://github.com/openai/codex',
+  },
+
+  opencode: {
+    id: 'opencode',
+    title: 'OpenCode',
+    subtitle: 'AI-powered coding tool that works in your terminal',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'OpenCode is an AI-powered coding tool that runs directly in your terminal. It helps with code generation, explanation, review, and refactoring -- understanding full project context to provide relevant assistance.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Start interactive session:\n$ opencode\n\nAsk about code:\n$ opencode "describe this code"\n$ opencode "explain this function"\n\nHelp:\n$ opencode --help',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Works best when run from the project root -- it can understand the full project context.\n\nTIP: Try opencode "explain this function" on selected code for quick understanding of unfamiliar codebases.',
+      },
+    ],
+    website: 'https://opencode.ai/',
+  },
+
+  vscode: {
+    id: 'vscode',
+    title: 'VS Code WSL',
+    subtitle: 'Visual Studio Code integration with WSL',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'The bootstrapper does NOT install VS Code in Linux. Instead, install VS Code on Windows with the "Remote -- WSL" extension to get the code command available in your WSL terminal. VS Code then connects to WSL seamlessly for editing Linux files.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Open current folder:\n$ code .\n\nOpen a file:\n$ code file.rs\n\nManage extensions:\n$ code --list-extensions\n$ code --install-extension rust-lang.rust-analyzer',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Install extensions from the WSL terminal with code --install-extension.\n\nTIP: Keyboard shortcuts and settings sync automatically between Windows and WSL when you sign in with your GitHub account.',
+      },
+    ],
+    website: 'https://code.visualstudio.com/',
+  },
+
+  zed: {
+    id: 'zed',
+    title: 'Zed',
+    subtitle: 'High-performance code editor written in Rust',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'Zed is a high-performance code editor written in Rust by the Atom team. It is multi-threaded, GPU-accelerated, and comes with built-in AI features, LSP support, and collaborative editing capabilities.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Open current directory:\n$ zed .\n\nOpen a file:\n$ zed file.rs\n\nBlock until editor closes:\n$ zed --wait',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Set as git editor: git config --global core.editor "zed --wait". Already configured as EDITOR in the fish config.\n\nTIP: Zed relies on WSLg for GUI support -- ensure WSLg is running for the editor window to display.',
+      },
+    ],
+    website: 'https://zed.dev/',
+  },
+
+  pwsh: {
+    id: 'pwsh',
+    title: 'PowerShell',
+    subtitle: 'Cross-platform PowerShell for automation and scripting',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'PowerShell Core is the cross-platform version of PowerShell -- an automation and scripting framework that runs alongside bash and fish on Linux. It brings powerful .NET-based scripting to any platform.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Start PowerShell:\n$ pwsh\n\nRun a command:\n$ pwsh -c "Get-Process | Where-Object CPU -gt 10"\n\nList processes:\nPS> Get-Process\n\nList files:\nPS> Get-ChildItem\n\nOutput text:\nPS> Write-Host "Hello from PowerShell"',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: PowerShell cmdlets follow a Verb-Noun naming convention.\n\nTIP: Run Get-Command to list all available cmdlets.\n\nTIP: PowerShell uses .NET under the hood -- you can call any .NET class directly.',
+      },
+    ],
+    website: 'https://learn.microsoft.com/en-us/powershell/',
+  },
+}
+
+export const toolsList = Object.values(tools)
+
+export const categories = [
+  {
+    title: 'dk CLI',
+    desc: 'Core Datakraften platform',
+    ids: ['dk'],
+  },
+  {
+    title: 'Runtimes',
+    desc: 'Programming language runtimes and version managers',
+    ids: ['node', 'python', 'dotnet'],
+  },
+  {
+    title: 'Shell & CLI',
+    desc: 'Shells, prompts, and terminal productivity tools',
+    ids: ['fish', 'starship', 'atuin', 'fzf', 'fd', 'broot', 'btm'],
+  },
+  {
+    title: 'Cloud & Dev',
+    desc: 'Cloud platforms, containers, and package managers',
+    ids: ['brew', 'gh', 'az', 'docker'],
+  },
+  {
+    title: 'Editors & Tools',
+    desc: 'Code editors and AI-powered development tools',
+    ids: ['vscode', 'zed', 'codex', 'opencode', 'gh-copilot', 'pwsh'],
+  },
+]
