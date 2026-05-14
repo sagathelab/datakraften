@@ -1,10 +1,22 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import ToolGuide from '../components/ToolGuide'
 import { tools } from '../data/tools'
 
 export default function ToolPage() {
   const { id } = useParams<{ id: string }>()
+  const location = useLocation()
   const tool = id ? tools[id] : undefined
+
+  useEffect(() => {
+    if (location.hash) {
+      const el = document.getElementById(location.hash.slice(1))
+      if (el) {
+        const top = el.getBoundingClientRect().top + window.scrollY - 64
+        window.scrollTo({ top, behavior: 'smooth' })
+      }
+    }
+  }, [location])
 
   if (!tool) {
     return (

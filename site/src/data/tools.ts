@@ -1,6 +1,7 @@
 export interface ToolSection {
   title?: string
   body: string
+  id?: string
 }
 
 export interface ToolDef {
@@ -20,14 +21,17 @@ export const tools: Record<string, ToolDef> = {
     sections: [
       {
         title: 'dk init',
+        id: 'init',
         body: 'Generate your Datakraften configuration file. Detects your operating system, package manager, and preferred shell, then writes ~/.config/datakraften/config.yaml.\n\n$ dk init\n\nWhat it does:\n- Detects platform (WSL, Linux, macOS)\n- Identifies native package manager (apt, dnf, yum, pacman, brew)\n- Generates a YAML config with default profile\n- Safe to re-run -- won\'t overwrite existing config unless forced',
       },
       {
         title: 'dk apply',
+        id: 'apply',
         body: 'Install everything defined in your active profile. Idempotent -- safe to run repeatedly.\n\n$ dk apply\n$ dk apply --dry-run    // Preview without installing\n\nWhat it installs:\n- System packages -- via apt, dnf, yum, pacman, or brew\n- Homebrew -- installs brew if missing, then brew packages\n- Runtimes -- Node.js via fnm, Python via uv, .NET SDK\n- Shell -- Fish shell config with managed blocks\n- Skips already-installed tools. Uses sudo only for system packages.\n\nDry-run mode:\nUse --dry-run to see what would be installed without making changes:\n\n$ dk apply --dry-run\n> [dry-run] would install system packages: git curl build-essential ...\n> [dry-run] would install brew packages: fish starship atuin fzf ...\n> [dry-run] would install Node.js via fnm (LTS)',
       },
       {
         title: 'dk doctor',
+        id: 'doctor',
         body: 'Run comprehensive diagnostics on your system. Checks every category that dk apply configures.\n\n$ dk doctor\n$ dk doctor --json     // Machine-readable output\n\nCheck categories:\n- System -- distribution, kernel, WSL version, systemd\n- Tools -- git, curl, build tools, Homebrew\n- Runtimes -- Node.js, Python, .NET SDK\n- Editors -- VS Code, Zed, Cursor detection\n- Docker -- daemon status, socket access, WSL integration\n- Shell -- Fish config, Starship prompt, Atuin, FZF',
       },
       {
@@ -40,6 +44,7 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'dk update',
+        id: 'update',
         body: 'Self-update the Datakraften CLI to the latest release. Downloads the correct binary for your platform from GitHub, verifies the SHA256 checksum, and performs an atomic replacement.\n\n$ dk update\n\n> Current version: v0.1.0\n> Latest version:  v0.2.0\n> Downloading dk-linux-amd64...\n> Checksum verified ✓\n> Updated to v0.2.0\n\nHow it works:\n- Fetches the latest release from api.github.com\n- Detects your OS and architecture to download the matching binary\n- Verifies the binary against its SHA256 checksum\n- Replaces the current binary atomically\n\nTIP: Run dk update periodically to get the latest features and fixes.',
       },
     ],
@@ -315,8 +320,8 @@ export const tools: Record<string, ToolDef> = {
 
   'gh-copilot': {
     id: 'gh-copilot',
-    title: 'gh copilot',
-    subtitle: 'GitHub Copilot in your terminal',
+    title: 'Copilot',
+    subtitle: 'GitHub Copilot CLI — AI assistance right in your terminal',
     sections: [
       {
         title: 'What is it?',

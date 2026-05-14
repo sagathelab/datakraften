@@ -1,8 +1,21 @@
+import { useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import Layout from '../components/Layout'
 import DocCard from '../components/DocCard'
 import { categories, tools } from '../data/tools'
 
 export default function DocsHub() {
+  const location = useLocation()
+
+  useEffect(() => {
+    if (location.hash) {
+      const el = document.getElementById(location.hash.slice(1))
+      if (el) {
+        const top = el.getBoundingClientRect().top + window.scrollY - 64
+        window.scrollTo({ top, behavior: 'smooth' })
+      }
+    }
+  }, [location])
   return (
     <Layout variant="docs" title="Documentation">
       <div className="doc-content py-8">
@@ -12,7 +25,7 @@ export default function DocsHub() {
         </p>
 
         {categories.map((cat) => (
-          <section key={cat.title} id={cat.title.toLowerCase().replace(/[\s&]+/g, '-')} className="mb-8">
+          <section key={cat.title} id={cat.title.toLowerCase().replace(/[\s&]+/g, '-')} className="mb-8 scroll-mt-16">
             <div className="flex items-baseline gap-3 mb-4">
               <h2 className="text-lg font-bold text-text-primary">{cat.title}</h2>
               <span className="text-xs text-text-dim">{cat.desc}</span>

@@ -4,6 +4,7 @@ import Layout from './Layout'
 interface ToolSection {
   title?: string
   body: string
+  id?: string
 }
 
 interface ToolGuideProps {
@@ -117,7 +118,7 @@ export default function ToolGuide({ title, subtitle, sections, website }: ToolGu
         {sections.map((section, i) => (
           <div key={i} className="mb-6">
             {section.title && (
-              <h2 className="text-lg font-bold text-text-primary mb-2">{section.title}</h2>
+              <h2 id={section.id || section.title.toLowerCase().replace(/\s+/g, '-')} className="text-lg font-bold text-text-primary mb-2 scroll-mt-16">{section.title}</h2>
             )}
             {renderBody(section.body)}
           </div>
