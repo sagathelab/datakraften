@@ -79,6 +79,8 @@ func BrewEnsureInstalled() (bool, error) {
 		fmt.Fprintf(f, "\n# >>> datakraften >>>\n%s\n# <<< datakraften <<<\n", initLine)
 	}
 
+	os.Setenv("PATH", brewBin+":"+os.Getenv("PATH"))
+
 	return true, nil
 }
 

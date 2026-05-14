@@ -26,45 +26,50 @@ type ApplyReport struct {
 
 func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	report := &ApplyReport{}
+	pm := installers.DetectPackageManager()
 
 	fmt.Println()
 	fmt.Println("  System")
 	fmt.Println("  ------")
 
 	if !dryRun {
-		n, err := installers.APTEnsurePackages(installers.APTBasePackages)
+		n, err := installers.NativeEnsurePackages(installers.NativeBasePackages())
 		if err != nil {
-			report.Errors = append(report.Errors, fmt.Sprintf("APT: %s", err))
-			fmt.Printf("    ✗ APT dependencies: %s\n", err)
+			report.Errors = append(report.Errors, fmt.Sprintf("%s: %s", pm, err))
+			fmt.Printf("    ✗ System dependencies: %s\n", err)
 		} else {
 			report.System = n
 			if n == 0 {
-				fmt.Println("    ✓ APT dependencies (already satisfied)")
+				fmt.Printf("    ✓ System dependencies via %s (already satisfied)\n", pm)
 			} else {
-				fmt.Printf("    ✓ %d APT packages installed\n", n)
+				fmt.Printf("    ✓ %d system packages installed via %s\n", n, pm)
 			}
 		}
 	} else {
-		fmt.Println("    ~ Would install APT base dependencies")
+		fmt.Printf("    ~ Would install system dependencies via %s\n", pm)
 	}
 
 	fmt.Println()
 	fmt.Println("  Tooling")
 	fmt.Println("  -------")
 
-	if !dryRun {
-		installed, err := installers.BrewEnsureInstalled()
-		if err != nil {
-			report.Errors = append(report.Errors, fmt.Sprintf("Brew: %s", err))
-			fmt.Printf("    ✗ Homebrew: %s\n", err)
-		} else if installed {
-			fmt.Println("    ✓ Homebrew installed")
-			report.Brew = 1
+	if pm != installers.BREW {
+		if !dryRun {
+			installed, err := installers.BrewEnsureInstalled()
+			if err != nil {
+				report.Errors = append(report.Errors, fmt.Sprintf("Brew: %s", err))
+				fmt.Printf("    ✗ Homebrew: %s\n", err)
+			} else if installed {
+				fmt.Println("    ✓ Homebrew installed")
+				report.Brew = 1
+			} else {
+				fmt.Println("    ✓ Homebrew (already installed)")
+			}
 		} else {
-			fmt.Println("    ✓ Homebrew (already installed)")
+			fmt.Println("    ~ Would ensure Homebrew is installed")
 		}
 	} else {
-		fmt.Println("    ~ Would ensure Homebrew is installed")
+		fmt.Println("    ✓ Homebrew (native package manager)")
 	}
 
 	brewPrefix := installers.BrewPrefix()
@@ -132,20 +137,25 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	fmt.Println("  -----")
 
 	if !dryRun {
+		if !shell.FishInstalled() {
+			fmt.Println("    Installing fish via native package manager...")
+			if err := installers.NativeInstall(installers.FishPackageName()); err != nil {
+				report.Errors = append(report.Errors, fmt.Sprintf("Fish: %s", err))
+				fmt.Printf("    ✗ Fish install: %s\n", err)
+			}
+		}
 		if shell.FishInstalled() {
 			_, err := shell.FishEnsureSetup(brewPrefix)
 			if err != nil {
-				report.Errors = append(report.Errors, fmt.Sprintf("Shell: %s", err))
+				report.Errors = append(report.Errors, fmt.Sprintf("Shell config: %s", err))
 				fmt.Printf("    ✗ Fish config: %s\n", err)
 			} else {
 				report.Shell = true
-				fmt.Println("    ✓ Fish config written")
+				fmt.Println("    ✓ Fish shell configured")
 			}
-		} else {
-			fmt.Println("    – Fish not installed (install via Brew above)")
 		}
 	} else {
-		fmt.Println("    ~ Would configure Fish shell with managed blocks")
+		fmt.Println("    ~ Would install and configure Fish shell")
 	}
 
 	fmt.Println()
