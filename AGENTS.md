@@ -20,7 +20,7 @@ Datakraften (`dk`) is a CLI for bootstrapping developer workstations. It orchest
 - System detection (WSL, distro, systemd, shell)
 - YAML config loading with Viper
 - Profile definitions (minimal, default, ai, dotnet, frontend, platform)
-- install.sh bootstrap script
+- install bootstrap script
 - Makefile build system
 
 ## Next Phase — Fase 1 (Core MVP)
@@ -48,7 +48,7 @@ internal/
   editors/                   # Editor detection (to be implemented)
   docker/                    # Docker checks (to be implemented)
 profiles/                    # YAML profile definitions
-install.sh                   # Bootstrap installer
+install                      # Bootstrap installer
 ```
 
 ## Build & Test

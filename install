@@ -5,8 +5,8 @@ set -euo pipefail
 # Installs the 'dk' CLI.
 #
 # Usage:
-#   curl -fsSL https://datakraften.no/install.sh | bash
-#   curl -fsSL https://datakraften.no/install.sh | bash -s -- --version
+#   curl -fsSL https://datakraften.no/install | bash
+#   curl -fsSL https://datakraften.no/install | bash -s -- --version
 
 DATARKAFTEN_REPO="https://github.com/sagathelab/datakraften.git"
 DATARKAFTEN_DIR="${HOME}/.local/share/datakraften/source"

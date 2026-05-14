@@ -1466,7 +1466,7 @@ Suggested monorepo:
 datakraften/
 ├── README.md
 ├── LICENSE
-├── install.sh
+├── install
 ├── cmd/
 │   └── dk/
 │       └── main.go
@@ -1573,7 +1573,7 @@ Move the current bash script into a cleaner install flow.
 
 Tasks:
 
-- Create `install.sh`
+- Create `install`
 - Install or download `dk`
 - Keep existing script as fallback
 - Add version banner
@@ -2367,7 +2367,7 @@ Small install script, open source, checksums, signed releases, clear docs.
 
 ## 20.2 Engineering
 
-- Create `install.sh`
+- Create `install`
 - Create `dk` CLI skeleton
 - Implement:
   - `dk --version`

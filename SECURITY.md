@@ -23,7 +23,7 @@ We will acknowledge receipt within 48 hours and work on a fix. We'll keep you in
 
 The following are in scope:
 - The `dk` CLI binary and source code
-- The `install.sh` bootstrap script
+- The `install` bootstrap script
 - The website (datakraften.no)
 
 The following are out of scope:

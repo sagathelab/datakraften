@@ -39,4 +39,4 @@ jobs:
           files: |
             dk-linux-amd64
             dk-linux-amd64.sha256
-            install.sh
+            install
