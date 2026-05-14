@@ -58,9 +58,9 @@ func (pm PackageManager) UpdateCommand() (string, []string) {
 	case APT:
 		return "sudo", []string{"apt-get", "update", "-qq"}
 	case DNF:
-		return "sudo", []string{"dnf", "check-update"}
+		return "sudo", []string{"dnf", "makecache"}
 	case YUM:
-		return "sudo", []string{"yum", "check-update"}
+		return "sudo", []string{"yum", "makecache"}
 	case PACMAN:
 		return "sudo", []string{"pacman", "-Sy"}
 	case BREW:
