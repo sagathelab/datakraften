@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sagathelab/datakraften/internal/installers"
 	"github.com/sagathelab/datakraften/internal/system"
 	"github.com/spf13/cobra"
 )
@@ -58,11 +59,13 @@ func newInitCmd() *cobra.Command {
 			fmt.Printf("  Writing config to: %s\n", configPath)
 			fmt.Println()
 
+			nativePM := string(installers.DetectPackageManager())
+
 			cfg := fmt.Sprintf(`version: 1
 profile: %s
 
 system:
-  package_manager: apt
+  package_manager: %s
 
 tooling:
   package_manager: brew
@@ -99,7 +102,7 @@ ai:
   codex: false
   opencode: false
   github_copilot: false
-`, profile)
+`, profile, nativePM)
 
 			if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
 				return fmt.Errorf("failed to write config: %w", err)
