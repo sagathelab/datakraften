@@ -58,6 +58,9 @@ func newUpdateCmd() *cobra.Command {
 					message = resp.Status
 				}
 				if resp.StatusCode == http.StatusNotFound {
+					if hasReleases, _ := repoHasReleases(client, token); !hasReleases {
+						return fmt.Errorf("no releases found in repository — publish a release on GitHub first")
+					}
 					return fmt.Errorf("cannot fetch latest release (%s): %s. If this is a private repository, set GH_TOKEN or GITHUB_TOKEN", resp.Status, message)
 				}
 				return fmt.Errorf("cannot fetch latest release (%s): %s", resp.Status, message)
@@ -175,6 +178,26 @@ func newUpdateCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func repoHasReleases(client *http.Client, token string) (bool, error) {
+	req, err := newGitHubRequest(http.MethodGet, "https://api.github.com/repos/sagathelab/datakraften/releases?per_page=1", token)
+	if err != nil {
+		return false, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return false, nil
+	}
+	var releases []json.RawMessage
+	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
+		return false, err
+	}
+	return len(releases) > 0, nil
 }
 
 func githubToken() string {
