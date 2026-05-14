@@ -5,8 +5,8 @@ set -euo pipefail
 # Installs the 'dk' CLI.
 #
 # Usage:
-#   curl -fsSL https://datakraften.no/install | bash
-#   curl -fsSL https://datakraften.no/install | bash -s -- --version
+#   curl -fsSL https://datakraften.no/install.sh | bash
+#   curl -fsSL https://datakraften.no/install.sh | bash -s -- --version
 
 DATARKAFTEN_REPO="https://github.com/sagathelab/datakraften.git"
 DATARKAFTEN_DIR="${HOME}/.local/share/datakraften/source"
@@ -169,12 +169,12 @@ ok "dk installed to ${BINARY}"
 
 # --- Add to PATH ---
 
-if ! echo "${PATH}" | tr ':' '\n' | grep -q "${BIN_DIR}"; then
-	SHELL_CONFIG="${HOME}/.profile"
-	if [ -f "${HOME}/.bashrc" ]; then
-		SHELL_CONFIG="${HOME}/.bashrc"
-	fi
+SHELL_CONFIG="${HOME}/.profile"
+if [ -f "${HOME}/.bashrc" ]; then
+	SHELL_CONFIG="${HOME}/.bashrc"
+fi
 
+if ! echo "${PATH}" | tr ':' '\n' | grep -q "${BIN_DIR}"; then
 	if ! grep -q "datakraften" "${SHELL_CONFIG}" 2>/dev/null; then
 		cat >> "${SHELL_CONFIG}" <<- 'EOF'
 

@@ -10,7 +10,7 @@
 Bootstrap, configure, validate, and reproduce development environments across machines — WSL-first, multi-platform ambition.
 
 ```bash
-curl -fsSL https://datakraften.no/install | bash
+curl -fsSL https://datakraften.no/install.sh | bash
 dk init
 dk apply
 dk doctor
@@ -37,7 +37,7 @@ It is **not** a package manager. It is an orchestration layer with opinionated p
 
 ```bash
 # Install dk
-curl -fsSL https://datakraften.no/install | bash
+curl -fsSL https://datakraften.no/install.sh | bash
 
 # Initialize with a profile
 dk init --profile default
