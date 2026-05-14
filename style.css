@@ -109,7 +109,7 @@ a:hover {
     0 0 80px var(--magenta-glow-strong);
   letter-spacing: 1px;
   user-select: none;
-  animation: logoFade 6s ease-out forwards, logoPulse 4s ease-in-out 6s infinite;
+  animation: logoFade 6s ease-out forwards;
 }
 
 @keyframes logoFade {
@@ -130,19 +130,6 @@ a:hover {
       0 0 40px var(--magenta-glow),
       0 0 80px var(--magenta-glow-strong);
   }
-}
-
-@keyframes logoPulse {
-  0%, 100% { opacity: 1; text-shadow:
-    0 0 10px var(--magenta-glow),
-    0 0 20px var(--magenta-glow),
-    0 0 40px var(--magenta-glow),
-    0 0 80px var(--magenta-glow-strong); }
-  50% { opacity: 0.85; text-shadow:
-    0 0 5px var(--magenta-glow),
-    0 0 10px var(--magenta-glow),
-    0 0 20px var(--magenta-glow),
-    0 0 40px var(--magenta-glow-strong); }
 }
 
 .tagline {
