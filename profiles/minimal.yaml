@@ -5,7 +5,7 @@ system:
   package_manager: apt
 
 tooling:
-  package_manager: brew
+  package_manager: ""
 
 shell:
   default: bash
@@ -21,15 +21,8 @@ runtimes:
   dotnet:
     enabled: false
 
-tools:
-  git: true
-  curl: true
-  build_essential: true
+tools: {}
 
 editors: {}
 
 ai: {}
-
-reproducibility:
-  devbox: false
-  nix: false

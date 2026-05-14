@@ -6,12 +6,9 @@ type Profile struct {
 }
 
 var allProfiles = []Profile{
-	{Name: "minimal", Description: "Core system tools only"},
-	{Name: "default", Description: "General developer setup"},
-	{Name: "ai", Description: "AI-native development environment"},
-	{Name: "dotnet", Description: ".NET developer setup"},
-	{Name: "frontend", Description: "Frontend developer setup"},
-	{Name: "platform", Description: "Platform engineer setup"},
+	{Name: "minimal", Description: "Core system packages only"},
+	{Name: "default", Description: "Full developer workstation"},
+	{Name: "custom", Description: "Custom configuration with optional remote team YAML"},
 }
 
 func Available() []string {

@@ -53,6 +53,7 @@ type ApplyReport struct {
 func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	report := &ApplyReport{}
 	pm := installers.DetectPackageManager()
+	isMinimal := cfg.Profile == "minimal"
 
 	verbosePrintf("packageManager=%s profile=%s\n", pm, cfg.Profile)
 	verbosePrintf("dryRun=%v\n", dryRun)
@@ -76,6 +77,13 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 		}
 	} else {
 		fmt.Printf("    ~ Would install system dependencies via %s\n", pm)
+	}
+
+	if isMinimal {
+		fmt.Println()
+		fmt.Println("  Minimal profile — skipping tooling, runtimes, shell, and AI tools.")
+		fmt.Println()
+		return report
 	}
 
 	fmt.Println()
@@ -126,7 +134,7 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	fmt.Println("  Runtimes")
 	fmt.Println("  --------")
 
-	if !dryRun {
+	if shouldInstallRuntime(cfg, "node") && !dryRun {
 		installed, err := runtimes.EnsureNode()
 		if err != nil {
 			report.Errors = append(report.Errors, fmt.Sprintf("Node: %s", err))
@@ -141,11 +149,17 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 				fmt.Printf("    ✓ Node.js %s (already installed)\n", report.NodeVer)
 			}
 		}
+	} else if !dryRun && !shouldInstallRuntime(cfg, "node") {
+		fmt.Println("    – Node.js (disabled in config)")
 	} else {
-		fmt.Println("    ~ Would install Node.js LTS via fnm")
+		if shouldInstallRuntime(cfg, "node") {
+			fmt.Println("    ~ Would install Node.js LTS via fnm")
+		} else {
+			fmt.Println("    ~ Node.js (disabled in config)")
+		}
 	}
 
-	if !dryRun {
+	if shouldInstallRuntime(cfg, "python") && !dryRun {
 		installed, err := runtimes.EnsurePython()
 		if err != nil {
 			report.Errors = append(report.Errors, fmt.Sprintf("Python: %s", err))
@@ -160,11 +174,17 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 				fmt.Printf("    ✓ Python %s (already installed)\n", report.PythonVer)
 			}
 		}
+	} else if !dryRun && !shouldInstallRuntime(cfg, "python") {
+		fmt.Println("    – Python (disabled in config)")
 	} else {
-		fmt.Println("    ~ Would install Python via uv")
+		if shouldInstallRuntime(cfg, "python") {
+			fmt.Println("    ~ Would install Python via uv")
+		} else {
+			fmt.Println("    ~ Python (disabled in config)")
+		}
 	}
 
-	if !dryRun {
+	if shouldInstallRuntime(cfg, "dotnet") && !dryRun {
 		installed, err := runtimes.EnsureDotnet()
 		if err != nil {
 			report.Errors = append(report.Errors, fmt.Sprintf(".NET: %s", err))
@@ -179,8 +199,14 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 				fmt.Printf("    ✓ .NET SDK %s (already installed)\n", report.DotnetVer)
 			}
 		}
+	} else if !dryRun && !shouldInstallRuntime(cfg, "dotnet") {
+		fmt.Println("    – .NET SDK (disabled in config)")
 	} else {
-		fmt.Println("    ~ Would install .NET SDK via Homebrew")
+		if shouldInstallRuntime(cfg, "dotnet") {
+			fmt.Println("    ~ Would install .NET SDK via Homebrew")
+		} else {
+			fmt.Println("    ~ .NET SDK (disabled in config)")
+		}
 	}
 
 	fmt.Println()
@@ -263,6 +289,23 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 
 	fmt.Println()
 	return report
+}
+
+func shouldInstallRuntime(cfg *config.Config, name string) bool {
+	switch cfg.Profile {
+	case "custom":
+		switch name {
+		case "node":
+			return cfg.Runtimes.Node.Enabled
+		case "python":
+			return cfg.Runtimes.Python.Enabled
+		case "dotnet":
+			return cfg.Runtimes.Dotnet.Enabled
+		}
+	default:
+		return true
+	}
+	return true
 }
 
 func RunDoctorSystem(r *doctor.Report) {

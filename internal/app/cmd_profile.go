@@ -2,12 +2,16 @@ package app
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/sagathelab/datakraften/internal/config"
 	"github.com/sagathelab/datakraften/internal/profiles"
 	"github.com/spf13/cobra"
+	"github.com/AlecAivazis/survey/v2"
 )
 
 func newProfileCmd() *cobra.Command {
@@ -85,6 +89,40 @@ func newProfileUseCmd() *cobra.Command {
 
 			if err := os.WriteFile(configPath, []byte(strings.Join(lines, "\n")), 0644); err != nil {
 				return fmt.Errorf("failed to write config: %w", err)
+			}
+
+			if name == "custom" {
+				cfg, err := config.Load()
+				if err == nil && cfg.Custom.URL == "" {
+					useRemote := false
+					prompt := &survey.Confirm{
+						Message: "Add a remote team config (YAML URL)?",
+						Default: false,
+					}
+					survey.AskOne(prompt, &useRemote)
+
+					if useRemote {
+						var url string
+						urlPrompt := &survey.Input{
+							Message: "Remote config URL:",
+						}
+						survey.AskOne(urlPrompt, &url)
+
+						if url != "" {
+							fmt.Printf("    Fetching remote config from %s...\n", url)
+							resp, fetchErr := http.Get(url)
+							if fetchErr == nil && resp.StatusCode == http.StatusOK {
+								body, readErr := io.ReadAll(resp.Body)
+								resp.Body.Close()
+								if readErr == nil {
+									remoteCfg := fmt.Sprintf("profile: custom\ncustom:\n  url: %s\n%s", url, string(body))
+									os.WriteFile(configPath, []byte(remoteCfg), 0644)
+									fmt.Println("    ✓ Remote config applied")
+								}
+							}
+						}
+					}
+				}
 			}
 
 			state := LoadState()

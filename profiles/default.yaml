@@ -27,7 +27,6 @@ runtimes:
     version: latest
 
 tools:
-  git: true
   github_cli: true
   azure_cli: true
   docker: true
@@ -44,7 +43,3 @@ ai:
   github_copilot: true
   claude_code: optional
   gemini_cli: optional
-
-reproducibility:
-  devbox: optional
-  nix: optional

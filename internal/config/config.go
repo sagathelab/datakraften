@@ -14,6 +14,10 @@ type RuntimeConfig struct {
 	Version string `mapstructure:"version"`
 }
 
+type CustomConfig struct {
+	URL string `mapstructure:"url"`
+}
+
 type Config struct {
 	Version string `mapstructure:"version"`
 	Profile string `mapstructure:"profile"`
@@ -37,6 +41,7 @@ type Config struct {
 	Tools    map[string]bool   `mapstructure:"tools"`
 	Editors  map[string]string `mapstructure:"editors"`
 	AI       map[string]string `mapstructure:"ai"`
+	Custom   CustomConfig      `mapstructure:"custom"`
 }
 
 func DefaultConfigPath() string {

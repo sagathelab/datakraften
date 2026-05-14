@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -78,6 +80,11 @@ func newInitCmd() *cobra.Command {
 					}
 					os.WriteFile(configPath, []byte(strings.Join(lines, "\n")), 0644)
 				}
+
+				if profile == "custom" {
+					handleCustomURL(configPath)
+				}
+
 				state := LoadState()
 				state.ActiveProfile = profile
 				state.Save()
@@ -117,8 +124,45 @@ func newInitCmd() *cobra.Command {
 
 			nativePM := string(installers.DetectPackageManager())
 
-			cfg := fmt.Sprintf(`version: 1
-profile: %s
+			var cfg string
+			switch profile {
+			case "minimal":
+				cfg = fmt.Sprintf(`version: 1
+profile: minimal
+
+system:
+  package_manager: %s
+
+tooling:
+  package_manager: ""
+
+shell:
+  default: bash
+  prompt: ""
+  history: ""
+  fuzzy_finder: ""
+
+runtimes:
+  node:
+    enabled: false
+    manager: fnm
+    version: lts
+  python:
+    enabled: false
+    manager: uv
+    version: latest
+  dotnet:
+    enabled: false
+
+tools: {}
+
+editors: {}
+
+ai: {}
+`, nativePM)
+			case "custom":
+				cfg = fmt.Sprintf(`version: 1
+profile: custom
 
 system:
   package_manager: %s
@@ -158,28 +202,89 @@ ai:
   codex: false
   opencode: false
   github_copilot: false
-`, profile, nativePM)
+`, nativePM)
 
-			if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
-				return fmt.Errorf("failed to write config: %w", err)
+				if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
+					return fmt.Errorf("failed to write config: %w", err)
+				}
+
+				handleCustomURL(configPath)
+			default:
+				cfg = fmt.Sprintf(`version: 1
+profile: %s
+
+system:
+  package_manager: %s
+
+tooling:
+  package_manager: brew
+
+shell:
+  default: fish
+  prompt: starship
+  history: atuin
+  fuzzy_finder: fzf
+
+tools:
+  github_cli: true
+  azure_cli: true
+  docker: true
+
+runtimes:
+  node:
+    enabled: true
+    manager: fnm
+    version: lts
+  python:
+    enabled: true
+    manager: uv
+    version: latest
+  dotnet:
+    enabled: true
+
+editors:
+  vscode: true
+  zed: true
+  cursor: optional
+
+ai:
+  codex: true
+  opencode: true
+  github_copilot: true
+  claude_code: optional
+  gemini_cli: optional
+`, profile, nativePM)
+			}
+
+			if profile != "custom" {
+				if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
+					return fmt.Errorf("failed to write config: %w", err)
+				}
 			}
 
 			state := LoadState()
 			state.ActiveProfile = profile
 			state.Save()
 
-			fmt.Println("  ✓ Config created")
-			fmt.Println()
-			fmt.Println("  Next steps:")
-			fmt.Println("    1. Run 'dk apply' to install tools")
-			fmt.Println("    2. Run 'dk doctor' to verify")
+			if profile == "custom" {
+				fmt.Println()
+				fmt.Println("  Customize your setup by editing the config file:")
+				fmt.Printf("    %s\n", configPath)
+				fmt.Println("  Run 'dk apply' to install based on your configuration.")
+			} else {
+				fmt.Println("  ✓ Config created")
+				fmt.Println()
+				fmt.Println("  Next steps:")
+				fmt.Println("    1. Run 'dk apply' to install tools")
+				fmt.Println("    2. Run 'dk doctor' to verify")
+			}
 			fmt.Println()
 
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to initialize (minimal, default, ai, dotnet, frontend, platform)")
+	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to initialize (minimal, default, custom)")
 
 	return cmd
 }
@@ -202,4 +307,66 @@ func selectProfile() (string, error) {
 	}
 
 	return allProfiles[selected].Name, nil
+}
+
+func handleCustomURL(configPath string) {
+	useRemote := false
+	prompt := &survey.Confirm{
+		Message: "Use remote team config (YAML URL)?",
+		Default: false,
+	}
+	survey.AskOne(prompt, &useRemote)
+
+	if !useRemote {
+		fmt.Println()
+		fmt.Println("  Config written.")
+		fmt.Println("  Customize by editing the config file:")
+		fmt.Printf("    %s\n", configPath)
+		fmt.Println()
+		return
+	}
+
+	var url string
+	urlPrompt := &survey.Input{
+		Message: "Remote config URL:",
+	}
+	survey.AskOne(urlPrompt, &url)
+
+	if url == "" {
+		fmt.Println("  No URL provided. Using local config as-is.")
+		fmt.Println()
+		return
+	}
+
+	fmt.Printf("    Fetching remote config from %s...\n", url)
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Printf("    ✗ Failed to fetch remote config: %s\n", err)
+		fmt.Println("  Using local config as-is.")
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("    ✗ Remote config returned status %d\n", resp.StatusCode)
+		fmt.Println("  Using local config as-is.")
+		return
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("    ✗ Failed to read remote config: %s\n", err)
+		fmt.Println("  Using local config as-is.")
+		return
+	}
+
+	remoteCfg := fmt.Sprintf("profile: custom\ncustom:\n  url: %s\n%s", url, string(body))
+	if err := os.WriteFile(configPath, []byte(remoteCfg), 0644); err != nil {
+		fmt.Printf("    ✗ Failed to write config: %s\n", err)
+		return
+	}
+
+	fmt.Println("    ✓ Remote config applied")
+	fmt.Println("  Config updated with team settings.")
+	fmt.Println()
 }
