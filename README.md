@@ -3,7 +3,7 @@
 **The AI-native developer workstation platform.**
 
 [![CI](https://github.com/sagathelab/datakraften/actions/workflows/ci.yml/badge.svg)](https://github.com/sagathelab/datakraften/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/sagathelab/datakraften)](https://go.dev/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -70,4 +70,4 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 
 ## License
 
-[MIT](LICENSE) © 2026 Datakraften
+[Apache 2.0](LICENSE) © 2026 Datakraften
