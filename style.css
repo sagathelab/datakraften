@@ -467,10 +467,6 @@ a:hover {
   margin-top: 2rem;
 }
 
-.footer-content {
-  margin-bottom: 0.5rem;
-}
-
 .footer-links {
   display: flex;
   align-items: center;
@@ -489,6 +485,12 @@ a:hover {
 
 .footer-link:hover {
   color: var(--magenta);
+}
+
+.footer-sep {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  user-select: none;
 }
 
 .github-link {
