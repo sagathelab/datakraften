@@ -126,9 +126,18 @@ a:hover {
   text-transform: uppercase;
 }
 
-.tagline .accent {
+.tagline {
+  margin-bottom: 0.25rem;
+}
+
+.tagline-sub {
+  font-family: var(--font-logo);
+  font-size: clamp(0.85rem, 2vw, 1.15rem);
   color: var(--magenta);
   text-shadow: 0 0 10px var(--magenta-glow);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-top: 0;
 }
 
 /* ── Utility ────────────────────────────────────────────────── */
