@@ -32,6 +32,9 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	report := &ApplyReport{}
 	pm := installers.DetectPackageManager()
 
+	verbosePrintf("packageManager=%s profile=%s\n", pm, cfg.Profile)
+	verbosePrintf("dryRun=%v\n", dryRun)
+
 	fmt.Println()
 	fmt.Println("  System")
 	fmt.Println("  ------")
@@ -77,6 +80,9 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	brewPrefix := installers.BrewPrefix()
+
+	verbosePrintf("brewPrefix=%s\n", brewPrefix)
+	verbosePrintf("brewPkgs=%v\n", installers.DefaultBrewPackages)
 
 	if !dryRun {
 		n, err := installers.BrewEnsurePackages(installers.DefaultBrewPackages)

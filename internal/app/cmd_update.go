@@ -36,12 +36,22 @@ func newUpdateCmd() *cobra.Command {
 				return fmt.Errorf("cannot determine executable path: %w", err)
 			}
 
-			fmt.Println("  Checking for updates...")
+			if !jsonOutput {
+				fmt.Println("  Checking for updates...")
+			}
 
 			client := &http.Client{Timeout: 30 * time.Second}
 			token := githubToken()
 
-			req, err := newGitHubRequest(http.MethodGet, "https://api.github.com/repos/sagathelab/datakraften/releases/latest", token)
+			apiURL := "https://api.github.com/repos/sagathelab/datakraften/releases/latest"
+			if verbose {
+				fmt.Fprintf(os.Stderr, "  [verbose] GET %s\n", apiURL)
+				if token != "" {
+					fmt.Fprintf(os.Stderr, "  [verbose] using GitHub token authentication\n")
+				}
+			}
+
+			req, err := newGitHubRequest(http.MethodGet, apiURL, token)
 			if err != nil {
 				return fmt.Errorf("cannot create release request: %w", err)
 			}
@@ -51,6 +61,10 @@ func newUpdateCmd() *cobra.Command {
 				return fmt.Errorf("cannot fetch latest release: %w", err)
 			}
 			defer resp.Body.Close()
+
+			if verbose {
+				fmt.Fprintf(os.Stderr, "  [verbose] response: %s\n", resp.Status)
+			}
 
 			if resp.StatusCode != http.StatusOK {
 				message := parseGitHubAPIMessage(resp.Body)
@@ -74,12 +88,18 @@ func newUpdateCmd() *cobra.Command {
 				return fmt.Errorf("latest release response did not include a tag name")
 			}
 
-			fmt.Printf("  Latest version: %s\n", release.TagName)
-			fmt.Printf("  Current version: %s\n", version)
-			fmt.Println()
+			if !jsonOutput {
+				fmt.Printf("  Latest version: %s\n", release.TagName)
+				fmt.Printf("  Current version: %s\n", version)
+				fmt.Println()
+			}
 
 			if version == release.TagName || version == "dev" {
-				fmt.Println("  ✓ Already up to date.")
+				if jsonOutput {
+					printUpdateJSON(version, release.TagName, false, "", 0, nil)
+				} else {
+					fmt.Println("  ✓ Already up to date.")
+				}
 				return nil
 			}
 
@@ -100,7 +120,16 @@ func newUpdateCmd() *cobra.Command {
 				return fmt.Errorf("no binary found for %s/%s", runtime.GOOS, runtime.GOARCH)
 			}
 
-			fmt.Printf("  Downloading %s...\n", binaryName)
+			if verbose {
+				fmt.Fprintf(os.Stderr, "  [verbose] binary: %s\n", binaryURL)
+				if checksumURL != "" {
+					fmt.Fprintf(os.Stderr, "  [verbose] checksum: %s\n", checksumURL)
+				}
+			}
+
+			if !jsonOutput {
+				fmt.Printf("  Downloading %s...\n", binaryName)
+			}
 
 			binReq, err := newGitHubRequest(http.MethodGet, binaryURL, token)
 			if err != nil {
@@ -125,6 +154,7 @@ func newUpdateCmd() *cobra.Command {
 				return fmt.Errorf("cannot create temp file: %w", err)
 			}
 
+			var checksumErr error
 			hash := sha256.New()
 			written, err := io.Copy(f, io.TeeReader(binResp.Body, hash))
 			if err != nil {
@@ -135,6 +165,9 @@ func newUpdateCmd() *cobra.Command {
 			f.Close()
 
 			if checksumURL != "" {
+				if verbose {
+					fmt.Fprintf(os.Stderr, "  [verbose] verifying checksum...\n")
+				}
 				chkReq, err := newGitHubRequest(http.MethodGet, checksumURL, token)
 				if err == nil {
 					chkResp, err := client.Do(chkReq)
@@ -148,12 +181,18 @@ func newUpdateCmd() *cobra.Command {
 								got := fmt.Sprintf("%x", hash.Sum(nil))
 								if got != expected {
 									os.Remove(tmpPath)
-									return fmt.Errorf("checksum mismatch: expected %s, got %s", expected, got)
+									checksumErr = fmt.Errorf("checksum mismatch: expected %s, got %s", expected, got)
+								} else if verbose {
+									fmt.Fprintf(os.Stderr, "  [verbose] checksum verified ✓\n")
 								}
 							}
 						}
 					}
 				}
+			}
+
+			if checksumErr != nil {
+				return checksumErr
 			}
 
 			if err := os.Rename(tmpPath, execPath); err != nil {
@@ -171,9 +210,13 @@ func newUpdateCmd() *cobra.Command {
 				return fmt.Errorf("cannot set permissions: %w", err)
 			}
 
-			fmt.Printf("  ✓ Updated to %s (%d bytes)\n", release.TagName, written)
-			fmt.Println()
-			fmt.Println("  Run 'dk doctor' to verify your setup.")
+			if jsonOutput {
+				printUpdateJSON(version, release.TagName, true, binaryName, written, nil)
+			} else {
+				fmt.Printf("  ✓ Updated to %s (%d bytes)\n", release.TagName, written)
+				fmt.Println()
+				fmt.Println("  Run 'dk doctor' to verify your setup.")
+			}
 
 			return nil
 		},
@@ -220,6 +263,31 @@ func newGitHubRequest(method, url, token string) (*http.Request, error) {
 	}
 
 	return req, nil
+}
+
+type updateResult struct {
+	CurrentVersion string `json:"current_version"`
+	LatestVersion  string `json:"latest_version"`
+	Updated        bool   `json:"updated"`
+	Binary         string `json:"binary,omitempty"`
+	BytesWritten   int64  `json:"bytes_written,omitempty"`
+}
+
+func printUpdateJSON(currentVer, latestVer string, updated bool, binary string, bytesWritten int64, err error) {
+	result := updateResult{
+		CurrentVersion: currentVer,
+		LatestVersion:  latestVer,
+		Updated:        updated,
+		Binary:         binary,
+		BytesWritten:   bytesWritten,
+	}
+	if err != nil {
+		result.Binary = ""
+		result.BytesWritten = 0
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	enc.Encode(result)
 }
 
 func parseGitHubAPIMessage(r io.Reader) string {

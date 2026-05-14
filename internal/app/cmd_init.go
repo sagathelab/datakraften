@@ -46,6 +46,10 @@ func newInitCmd() *cobra.Command {
 			wsl, wslVer := system.DetectWSL()
 			distro, distroVer := system.Distro()
 
+			verbosePrintf("home=%s configDir=%s\n", home, configDir)
+			verbosePrintf("wsl=%v wslVer=%d distro=%s distroVer=%s\n", wsl, wslVer, distro, distroVer)
+			verbosePrintf("profile=%s nativePM=%s\n", profile, installers.DetectPackageManager())
+
 			fmt.Println("  Datakraften init")
 			fmt.Println()
 			fmt.Println("  Detected:")

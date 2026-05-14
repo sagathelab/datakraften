@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -12,6 +13,12 @@ var (
 	verbose   bool
 	jsonOutput bool
 )
+
+func verbosePrintf(format string, args ...interface{}) {
+	if verbose {
+		fmt.Fprintf(os.Stderr, "  [verbose] "+format, args...)
+	}
+}
 
 type App struct {
 	RootCmd *cobra.Command
