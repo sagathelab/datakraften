@@ -9,6 +9,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type updateStep struct {
+	name string
+	run  func(bool) error
+}
+
+var updateSteps = []updateStep{
+	{name: "brew", run: updateBrew},
+	{name: "fnm", run: updateFnm},
+	{name: "uv", run: updateUv},
+	{name: "npm", run: updateNpm},
+}
+
 func newUpdateCmd() *cobra.Command {
 	var list bool
 	var dryRun bool
@@ -74,20 +86,21 @@ func updateAll(dryRun bool) error {
 	fmt.Println("  Updating all managed tools")
 	fmt.Println("  -------------------------")
 
-	if err := updateBrew(dryRun); err != nil {
-		fmt.Printf("    ⚠ brew: %s\n", err)
-	}
-	if err := updateFnm(dryRun); err != nil {
-		fmt.Printf("    ⚠ fnm: %s\n", err)
-	}
-	if err := updateUv(dryRun); err != nil {
-		fmt.Printf("    ⚠ uv: %s\n", err)
-	}
-	if err := updateNpm(dryRun); err != nil {
-		fmt.Printf("    ⚠ npm: %s\n", err)
+	var failures []string
+
+	for _, step := range updateSteps {
+		if err := step.run(dryRun); err != nil {
+			fmt.Printf("    ✗ %s: %s\n", step.name, err)
+			failures = append(failures, fmt.Sprintf("%s: %s", step.name, err))
+		}
 	}
 
 	fmt.Println()
+	if len(failures) > 0 {
+		fmt.Println("  ✗ Update finished with errors")
+		return fmt.Errorf("update failed: %s", strings.Join(failures, "; "))
+	}
+
 	fmt.Println("  ✓ Update complete")
 	return nil
 }
