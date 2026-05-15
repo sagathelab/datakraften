@@ -6,8 +6,8 @@ import (
 
 	"github.com/sagathelab/datakraften/internal/ai"
 	"github.com/sagathelab/datakraften/internal/config"
-	"github.com/sagathelab/datakraften/internal/doctor"
 	"github.com/sagathelab/datakraften/internal/docker"
+	"github.com/sagathelab/datakraften/internal/doctor"
 	"github.com/sagathelab/datakraften/internal/editors"
 	"github.com/sagathelab/datakraften/internal/exec"
 	"github.com/sagathelab/datakraften/internal/installers"
@@ -36,20 +36,52 @@ func (s RuntimeStatus) String() string {
 }
 
 type ApplyReport struct {
-	System   []string
-	BrewPkgs []string
-	Node     RuntimeStatus
-	NodeVer  string
-	Python   RuntimeStatus
+	System    []string
+	BrewPkgs  []string
+	Node      RuntimeStatus
+	NodeVer   string
+	Python    RuntimeStatus
 	PythonVer string
-	Go       RuntimeStatus
-	GoVer    string
-	Dotnet   RuntimeStatus
+	Go        RuntimeStatus
+	GoVer     string
+	Dotnet    RuntimeStatus
 	DotnetVer string
-	AITools  []string
-	AIApps   []string
-	Shell    bool
-	Errors   []string
+	AITools   ai.InstallReport
+	AIApps    ai.InstallReport
+	Shell     bool
+	Errors    []string
+}
+
+func installReportSummary(report ai.InstallReport) string {
+	if report.Enabled == 0 {
+		return "(disabled)"
+	}
+
+	parts := make([]string, 0, 4)
+	if len(report.Installed) > 0 {
+		parts = append(parts, fmt.Sprintf("installed: %s", strings.Join(report.Installed, ", ")))
+	}
+	if len(report.AlreadyInstalled) > 0 {
+		parts = append(parts, fmt.Sprintf("already installed: %s", strings.Join(report.AlreadyInstalled, ", ")))
+	}
+	if len(report.Skipped) > 0 {
+		parts = append(parts, fmt.Sprintf("skipped: %s", strings.Join(report.Skipped, ", ")))
+	}
+	if len(report.Errors) > 0 {
+		parts = append(parts, fmt.Sprintf("failed: %s", strings.Join(report.Errors, "; ")))
+	}
+	if len(parts) == 0 {
+		return "(already installed)"
+	}
+	return strings.Join(parts, "; ")
+}
+
+func prefixedInstallErrors(section string, errors []string) []string {
+	prefixed := make([]string, 0, len(errors))
+	for _, err := range errors {
+		prefixed = append(prefixed, fmt.Sprintf("%s: %s", section, err))
+	}
+	return prefixed
 }
 
 func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
@@ -313,17 +345,14 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	fmt.Println("  --------")
 
 	if !dryRun {
-		installed, err := ai.EnsureAITools(cfg)
-		if err != nil {
-			report.Errors = append(report.Errors, fmt.Sprintf("AI tools: %s", err))
-			fmt.Printf("    ✗ AI tools: %s\n", err)
+		report.AITools = ai.EnsureAITools(cfg)
+		if report.AITools.HasFailures() {
+			report.Errors = append(report.Errors, prefixedInstallErrors("AI tools", report.AITools.Errors)...)
+			fmt.Printf("    ✗ AI tools: %s\n", installReportSummary(report.AITools))
+		} else if report.AITools.Enabled == 0 {
+			fmt.Println("    – AI tools: (disabled)")
 		} else {
-			report.AITools = installed
-			if len(installed) == 0 {
-				fmt.Println("    ✓ AI tools (already installed)")
-			} else {
-				fmt.Printf("    ✓ %d AI tool(s) installed: %s\n", len(installed), strings.Join(installed, ", "))
-			}
+			fmt.Printf("    ✓ AI tools: %s\n", installReportSummary(report.AITools))
 		}
 	} else {
 		fmt.Println("    ~ Would install AI tools")
@@ -334,17 +363,14 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	fmt.Println("  --------")
 
 	if !dryRun {
-		installed, err := ai.EnsureAIApps(cfg)
-		if err != nil {
-			report.Errors = append(report.Errors, fmt.Sprintf("AI apps: %s", err))
-			fmt.Printf("    ✗ AI apps: %s\n", err)
+		report.AIApps = ai.EnsureAIApps(cfg)
+		if report.AIApps.HasFailures() {
+			report.Errors = append(report.Errors, prefixedInstallErrors("AI apps", report.AIApps.Errors)...)
+			fmt.Printf("    ✗ AI apps: %s\n", installReportSummary(report.AIApps))
+		} else if report.AIApps.Enabled == 0 {
+			fmt.Println("    – AI apps: (disabled)")
 		} else {
-			report.AIApps = installed
-			if len(installed) == 0 {
-				fmt.Println("    ✓ AI apps (already installed)")
-			} else {
-				fmt.Printf("    ✓ %d AI app(s) installed: %s\n", len(installed), strings.Join(installed, ", "))
-			}
+			fmt.Printf("    ✓ AI apps: %s\n", installReportSummary(report.AIApps))
 		}
 	} else {
 		fmt.Println("    ~ Would install AI apps")
@@ -399,7 +425,7 @@ func RunDoctorSystem(r *doctor.Report) {
 		Fix: "If WSL is not detected, ensure you are running inside WSL: 'wsl --install' from PowerShell"})
 	r.Add(doctor.Check{ID: "systemd", Title: "systemd available", Category: "system", Severity: "info",
 		Status: boolStatus(systemd),
-		Fix: "Enable systemd in /etc/wsl.conf: add [boot]\nsystemd=true, then 'wsl --terminate' from PowerShell"})
+		Fix:    "Enable systemd in /etc/wsl.conf: add [boot]\nsystemd=true, then 'wsl --terminate' from PowerShell"})
 	r.Add(doctor.Check{ID: "shell", Title: "Current shell", Category: "system", Severity: "info",
 		Status: "pass", Message: shell_})
 
@@ -421,9 +447,9 @@ func RunDoctorSystem(r *doctor.Report) {
 }
 
 func RunDoctorTools(r *doctor.Report) {
-	tools := []struct{
-		name string
-		id   string
+	tools := []struct {
+		name      string
+		id        string
 		installed bool
 	}{
 		{"git", "tool.git", exec.CommandExists("git")},

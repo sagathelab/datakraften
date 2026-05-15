@@ -24,11 +24,6 @@ var DefaultBrewPackages = []string{
 	"powershell",
 }
 
-var AIToolPackages = map[string]string{
-	"opencode":      "opencode",
-	"github-copilot-cli": "github/copilot-cli/copilot",
-}
-
 func BrewInstalled() bool {
 	return exec.CommandExists("brew")
 }

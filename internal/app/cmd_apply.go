@@ -77,11 +77,8 @@ func newApplyCmd() *cobra.Command {
 			if report.DotnetVer != "" {
 				fmt.Printf("    .NET SDK %s (%s)\n", report.DotnetVer, report.Dotnet)
 			}
-			if len(report.AITools) > 0 {
-				fmt.Printf("    AI tools: %s\n", strings.Join(report.AITools, ", "))
-			} else {
-				fmt.Println("    AI tools: (already installed)")
-			}
+			fmt.Printf("    AI tools: %s\n", installReportSummary(report.AITools))
+			fmt.Printf("    AI apps: %s\n", installReportSummary(report.AIApps))
 			if len(report.Errors) > 0 {
 				fmt.Println()
 				fmt.Println("  Errors:")

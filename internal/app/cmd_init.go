@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/sagathelab/datakraften/internal/config"
 	"github.com/sagathelab/datakraften/internal/installers"
 	"github.com/sagathelab/datakraften/internal/system"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/AlecAivazis/survey/v2"
 )
 
 var defaultConfigYAML = `version: 1
@@ -68,7 +68,7 @@ ai_tools:
     version: latest
   copilot:
     enabled: true
-    manager: brew
+    manager: gh
     version: latest
   claude:
     enabled: false
