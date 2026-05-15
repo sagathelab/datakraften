@@ -10,7 +10,10 @@ export default function Landing() {
     <Layout variant="landing">
       <section className="hero text-center pt-9 pb-10">
         <LogoSvg />
-        <p className="font-share-tech text-text-dim uppercase tracking-[0.1em] text-base sm:text-lg mt-4">
+        <h1 className="font-share-tech text-xl sm:text-2xl text-text-dim/45 mt-6">
+          Developer workstation bootstrap for WSL, Linux, and macOS
+        </h1>
+        <p className="font-share-tech font-bold text-text-primary/80 uppercase tracking-[0.1em] text-base sm:text-lg mt-4">
           MAKE YOUR MACHINE SHIP-READY FOR CODING AND COLLABORATION
         </p>
         <p className="font-share-tech text-magenta uppercase tracking-[0.15em] text-sm sm:text-base mt-1 animate-tagline-glow">

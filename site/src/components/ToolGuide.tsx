@@ -1,6 +1,7 @@
 import { Fragment, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import Layout from './Layout'
+import type { ToolFaq, ToolSection, ToolTask } from '../data/tools'
 
 const dkLinks: Record<string, string> = {
   init: '/docs/dk#init',
@@ -12,17 +13,16 @@ const dkLinks: Record<string, string> = {
   sources: '/docs/dk#sources',
 }
 
-interface ToolSection {
-  title?: string
-  body: string
-  id?: string
-}
-
 interface ToolGuideProps {
   title: string
   subtitle: string
   sections: ToolSection[]
   website?: string
+  summary?: string
+  supportedPlatforms?: string[]
+  commonTasks?: ToolTask[]
+  troubleshooting?: ToolFaq[]
+  faqs?: ToolFaq[]
 }
 
 function renderInlineCode(text: string) {
@@ -357,8 +357,61 @@ function renderBody(body: string) {
   })
 }
 
-export default function ToolGuide({ title, subtitle, sections, website }: ToolGuideProps) {
+function firstParagraph(text: string) {
+  return text
+    .split('\n\n')
+    .map((part) => part.trim())
+    .find(Boolean)
+}
+
+function extractSummary(summary: string | undefined, sections: ToolSection[], subtitle: string) {
+  return summary ?? firstParagraph(sections[0]?.body ?? '') ?? subtitle
+}
+
+function extractCommonTasks(commonTasks: ToolTask[] | undefined, sections: ToolSection[]) {
+  if (commonTasks?.length) {
+    return commonTasks
+  }
+
+  const seen = new Set<string>()
+  const tasks: ToolTask[] = []
+
+  for (const section of sections) {
+    const commands = section.body
+      .split('\n')
+      .filter((line) => line.startsWith('$ '))
+      .map((line) => line.slice(2).trim())
+
+    for (const command of commands) {
+      if (!command || seen.has(command)) {
+        continue
+      }
+
+      seen.add(command)
+      tasks.push({
+        title: section.title ?? 'Command',
+        command,
+      })
+    }
+  }
+
+  return tasks.slice(0, 4)
+}
+
+export default function ToolGuide({
+  title,
+  subtitle,
+  sections,
+  website,
+  summary,
+  supportedPlatforms,
+  commonTasks,
+  troubleshooting,
+  faqs,
+}: ToolGuideProps) {
   const toc = sections.filter((s) => s.title)
+  const pageSummary = extractSummary(summary, sections, subtitle)
+  const taskList = extractCommonTasks(commonTasks, sections)
 
   return (
     <Layout variant="docs" title={title}>
@@ -366,6 +419,51 @@ export default function ToolGuide({ title, subtitle, sections, website }: ToolGu
         <div className="doc-content flex-1 min-w-0">
           <h1 className="text-3xl font-bold text-magenta font-share-tech mb-2">{title}</h1>
           <p className="text-base text-text-dim mb-8">{subtitle}</p>
+
+          <section className="mb-8 rounded-2xl border border-fuchsia-500/20 bg-bg-card p-5">
+            <h2 className="text-xl font-bold text-text-primary mb-2">Quick summary</h2>
+            <p className="text-base text-text-body leading-relaxed">{pageSummary}</p>
+          </section>
+
+          {supportedPlatforms && supportedPlatforms.length > 0 && (
+            <section className="mb-8">
+              <h2 className="text-xl font-bold text-text-primary mb-3">Supported platforms</h2>
+              <div className="flex flex-wrap gap-2">
+                {supportedPlatforms.map((platform) => (
+                  <span
+                    key={platform}
+                    className="rounded-full border border-fuchsia-500/25 bg-fuchsia-500/8 px-3 py-1 text-sm text-text-primary"
+                  >
+                    {platform}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {taskList.length > 0 && (
+            <section className="mb-10">
+              <h2 className="text-xl font-bold text-text-primary mb-3">Common tasks</h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {taskList.map((task) => (
+                  <div
+                    key={`${task.title}-${task.command ?? task.details ?? 'task'}`}
+                    className="rounded-xl border border-fuchsia-500/18 bg-bg-card p-4"
+                  >
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-magenta mb-2">
+                      {task.title}
+                    </h3>
+                    {task.command && (
+                      <code className="inline-code mb-2 inline-block">{task.command}</code>
+                    )}
+                    {task.details && (
+                      <p className="mt-2 text-sm text-text-body leading-relaxed">{task.details}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {sections.map((section, i) => (
             <div key={i} className={i === 0 ? 'mb-6' : 'mt-10 mb-6'}>
@@ -380,6 +478,44 @@ export default function ToolGuide({ title, subtitle, sections, website }: ToolGu
               {renderBody(section.body)}
             </div>
           ))}
+
+          {troubleshooting && troubleshooting.length > 0 && (
+            <section className="mt-10 mb-6">
+              <h2 className="text-xl font-bold text-text-primary mb-3">Troubleshooting</h2>
+              <div className="space-y-4">
+                {troubleshooting.map((item) => (
+                  <div
+                    key={item.question}
+                    className="rounded-xl border border-fuchsia-500/18 bg-bg-card p-4"
+                  >
+                    <h3 className="text-base font-semibold text-text-primary mb-2">
+                      {item.question}
+                    </h3>
+                    <p className="text-base text-text-body leading-relaxed">{item.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {faqs && faqs.length > 0 && (
+            <section className="mt-10 mb-6">
+              <h2 className="text-xl font-bold text-text-primary mb-3">FAQ</h2>
+              <div className="space-y-4">
+                {faqs.map((faq) => (
+                  <div
+                    key={faq.question}
+                    className="rounded-xl border border-fuchsia-500/18 bg-bg-card p-4"
+                  >
+                    <h3 className="text-base font-semibold text-text-primary mb-2">
+                      {faq.question}
+                    </h3>
+                    <p className="text-base text-text-body leading-relaxed">{faq.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {website && (
             <div className="mt-8 pt-4 border-t border-fuchsia-500/20">

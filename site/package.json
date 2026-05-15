@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && cp dist/index.html dist/404.html && node scripts/static-routes.mjs",
+    "build": "tsc -b && vite build && bun scripts/prerender.tsx",
     "lint": "eslint . && stylelint \"src/**/*.css\"",
     "lint:eslint": "eslint .",
     "lint:css": "stylelint \"src/**/*.css\"",

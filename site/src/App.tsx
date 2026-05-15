@@ -5,6 +5,7 @@ import DocsHub from './pages/DocsHub'
 import ToolPage from './pages/ToolPage'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
+import { applyPageMeta, getPageMeta } from './seo'
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation()
@@ -18,10 +19,21 @@ function ScrollToTop() {
   return null
 }
 
+function RouteHead() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    applyPageMeta(getPageMeta(pathname))
+  }, [pathname])
+
+  return null
+}
+
 export default function App() {
   return (
     <>
       <ScrollToTop />
+      <RouteHead />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/docs" element={<DocsHub />} />

@@ -4,6 +4,17 @@ export interface ToolSection {
   id?: string
 }
 
+export interface ToolTask {
+  title: string
+  command?: string
+  details?: string
+}
+
+export interface ToolFaq {
+  question: string
+  answer: string
+}
+
 export interface ToolDef {
   id: string
   title: string
@@ -11,6 +22,12 @@ export interface ToolDef {
   sections: ToolSection[]
   website: string
   websiteLabel?: string
+  summary?: string
+  supportedPlatforms?: string[]
+  commonTasks?: ToolTask[]
+  troubleshooting?: ToolFaq[]
+  faqs?: ToolFaq[]
+  keywords?: string[]
 }
 
 export const tools: Record<string, ToolDef> = {
@@ -56,6 +73,69 @@ export const tools: Record<string, ToolDef> = {
     ],
     website: 'https://github.com/sagathelab/datakraften',
     websiteLabel: 'GitHub repository',
+    summary:
+      'Datakraften is a YAML-driven CLI that bootstraps and maintains developer workstations across WSL, Linux, and macOS.',
+    supportedPlatforms: ['WSL', 'Linux', 'macOS (partial support)'],
+    commonTasks: [
+      {
+        title: 'Initialize a default config',
+        command: 'dk init',
+        details:
+          'Generate a full default config and detect package manager/platform automatically.',
+      },
+      {
+        title: 'Apply the workstation setup',
+        command: 'dk apply',
+        details:
+          'Install runtimes, shell tooling, editors, cloud tools, and AI tools from your config.',
+      },
+      {
+        title: 'Diagnose your machine',
+        command: 'dk doctor',
+        details: 'Check system, tools, runtimes, editors, Docker, and shell state.',
+      },
+      {
+        title: 'Refresh managed tools',
+        command: 'dk update',
+        details: 'Update Homebrew, fnm, uv, and global npm packages through one command.',
+      },
+    ],
+    troubleshooting: [
+      {
+        question: 'Why does `dk apply` stop on a team config?',
+        answer:
+          'If the remote YAML is invalid or unreachable, team configs abort by design. Validate the remote file and confirm the URL is accessible before rerunning `dk apply`.',
+      },
+      {
+        question: 'Why does `dk update` fail on npm permissions?',
+        answer:
+          'Global npm packages installed into system-owned paths can fail with EACCES. Reinstall them under your user-owned Node/fnm setup or fix ownership before running `dk update` again.',
+      },
+    ],
+    faqs: [
+      {
+        question: 'Does Datakraften replace apt, brew, fnm, or uv?',
+        answer:
+          'No. Datakraften orchestrates existing package managers and runtime tools instead of replacing them.',
+      },
+      {
+        question: 'Is `dk apply` safe to run repeatedly?',
+        answer:
+          'Yes. The apply flow is designed to be idempotent and should only install or configure what is missing.',
+      },
+      {
+        question: 'Can I share one config across a team?',
+        answer:
+          'Yes. Use a team source that points to a remote YAML URL so every developer gets the same workstation definition.',
+      },
+    ],
+    keywords: [
+      'dk cli',
+      'developer workstation bootstrap',
+      'WSL setup',
+      'Linux setup',
+      'team onboarding',
+    ],
   },
 
   node: {

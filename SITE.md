@@ -40,7 +40,7 @@ site/
 │       ├── Privacy.tsx     # /privacy page
 │       └── Terms.tsx       # /terms page
 ├── scripts/
-│   └── static-routes.mjs  # Generates static HTML for all doc routes + sitemap.xml
+│   └── prerender.tsx      # Prerenders route HTML + metadata + sitemap.xml
 ├── eslint.config.js        # ESLint configuration
 ├── stylelint.config.js     # Stylelint configuration
 ├── tsconfig*.json          # TypeScript configuration
@@ -74,7 +74,7 @@ interface ToolDef {
 Adding a new doc page:
 1. Add a new `ToolDef` entry to the `tools` record in `tools.ts`
 2. Each section body uses a custom markdown-like syntax (see below)
-3. Static routes are auto-generated from `tools.ts` keys in `static-routes.mjs`
+3. Static routes are auto-generated from `tools.ts` keys in `scripts/prerender.tsx`
 
 ## Documentation Syntax
 
@@ -123,7 +123,7 @@ All commands run from the `site/` directory:
 
 ```bash
 bun run dev          # Start Vite dev server with HMR
-bun run build        # TypeScript check + Vite build + 404.html + static routes + sitemap
+bun run build        # TypeScript check + Vite build + prerendered routes + metadata + sitemap
 bun run lint         # ESLint + stylelint
 bun run format       # Prettier --write (all ts/tsx/css)
 bun run format:check # Prettier --check (CI)
@@ -133,7 +133,7 @@ bun run format:check # Prettier --check (CI)
 - `dist/index.html` — main HTML
 - `dist/404.html` — copy of index.html for SPA fallback
 - `dist/assets/` — compiled JS + CSS bundles
-- Static HTML files for all doc routes
+- Prerendered HTML files for all public routes
 - `dist/sitemap.xml`
 
 ## Deployment

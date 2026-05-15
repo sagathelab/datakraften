@@ -36,6 +36,11 @@ export default function ToolPage() {
       subtitle={tool.subtitle}
       sections={tool.sections}
       website={tool.website}
+      summary={tool.summary}
+      supportedPlatforms={tool.supportedPlatforms}
+      commonTasks={tool.commonTasks}
+      troubleshooting={tool.troubleshooting}
+      faqs={tool.faqs}
     />
   )
 }
