@@ -58,7 +58,7 @@ export default function LogoSvg() {
       <div
         className="logo-stage"
         style={{
-          transform: `scale(${scale})`,
+          transform: `translateX(-50%) scale(${scale})`,
         }}
       >
         <pre ref={preRef} className="logo-pre">

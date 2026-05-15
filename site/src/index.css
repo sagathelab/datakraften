@@ -31,10 +31,12 @@
 }
 
 .logo-stage {
+  position: absolute;
+  top: 0;
+  left: 50%;
   width: max-content;
   transform-origin: top center;
   will-change: transform;
-  margin: 0 auto;
 }
 
 .logo-pre {

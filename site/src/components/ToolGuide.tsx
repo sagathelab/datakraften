@@ -368,7 +368,7 @@ export default function ToolGuide({ title, subtitle, sections, website }: ToolGu
           <p className="text-base text-text-dim mb-8">{subtitle}</p>
 
           {sections.map((section, i) => (
-            <div key={i} className="mb-6">
+            <div key={i} className={i === 0 ? 'mb-6' : 'mt-10 mb-6'}>
               {section.title && (
                 <h2
                   id={section.id || section.title.toLowerCase().replace(/\s+/g, '-')}

@@ -7,7 +7,7 @@ export default function Privacy() {
         <h1 className="text-3xl font-bold text-magenta font-share-tech mb-4">Privacy Policy</h1>
         <p>Last updated: 2026</p>
 
-        <h2 className="text-xl font-bold text-text-primary mt-6 mb-2">Information We Collect</h2>
+        <h2 className="text-xl font-bold text-text-primary mt-8 mb-2">Information We Collect</h2>
         <p>
           Datakraften CLI does not collect or transmit any personal data. It operates entirely on
           your local machine, installing and configuring tools you choose.
@@ -17,7 +17,7 @@ export default function Privacy() {
           cookies, trackers, or analytics of any kind.
         </p>
 
-        <h2 className="text-xl font-bold text-text-primary mt-6 mb-2">Third-Party Services</h2>
+        <h2 className="text-xl font-bold text-text-primary mt-8 mb-2">Third-Party Services</h2>
         <p>
           When you use Datakraften to install tools, those tools may collect data according to their
           own privacy policies. This includes but is not limited to:
@@ -31,14 +31,14 @@ export default function Privacy() {
           </li>
         </ul>
 
-        <h2 className="text-xl font-bold text-text-primary mt-6 mb-2">Data Storage</h2>
+        <h2 className="text-xl font-bold text-text-primary mt-8 mb-2">Data Storage</h2>
         <p>
           Datakraften stores only local configuration files in ~/.config/datakraften/ and state in
           ~/.local/state/datakraften/. No data is sent to external servers by the Datakraften CLI
           itself.
         </p>
 
-        <h2 className="text-xl font-bold text-text-primary mt-6 mb-2">Contact</h2>
+        <h2 className="text-xl font-bold text-text-primary mt-8 mb-2">Contact</h2>
         <p>
           For privacy-related questions, open an issue on the{' '}
           <a
