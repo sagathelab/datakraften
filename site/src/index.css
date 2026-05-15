@@ -22,7 +22,9 @@
 }
 
 .logo-shell {
-  display: block;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   width: 100%;
   max-width: 920px;
   margin: 0 auto;
@@ -31,9 +33,6 @@
 }
 
 .logo-stage {
-  position: absolute;
-  top: 0;
-  left: 50%;
   width: max-content;
   transform-origin: top center;
   will-change: transform;
