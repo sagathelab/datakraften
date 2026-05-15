@@ -1,5 +1,15 @@
 import { Fragment, useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import Layout from './Layout'
+
+const dkLinks: Record<string, string> = {
+  init: '/docs/dk#init',
+  apply: '/docs/dk#apply',
+  doctor: '/docs/dk#doctor',
+  status: '/docs/dk#status',
+  update: '/docs/dk#update',
+  profile: '/docs/dk#profile',
+}
 
 interface ToolSection {
   title?: string
@@ -18,7 +28,16 @@ function renderInlineCode(text: string) {
   const parts = text.split(/(`[^`]+`)/g)
   return parts.map((part, i) => {
     if (part.startsWith('`') && part.endsWith('`')) {
-      return <code key={i} className="inline-code">{part.slice(1, -1)}</code>
+      const code = part.slice(1, -1)
+      const dkMatch = code.match(/^dk (\w+)/)
+      if (dkMatch && dkLinks[dkMatch[1]]) {
+        return (
+          <Link key={i} to={dkLinks[dkMatch[1]]} className="inline-code inline-code--link">
+            {code}
+          </Link>
+        )
+      }
+      return <code key={i} className="inline-code">{code}</code>
     }
     return <span key={i}>{part}</span>
   })

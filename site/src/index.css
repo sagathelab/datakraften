@@ -113,6 +113,22 @@ body {
   border: 1px solid #ff00ff;
 }
 
+.inline-code--link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #ff00ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(255, 0, 255, 0.3);
+  cursor: pointer;
+  transition: text-decoration-color 0.15s;
+}
+
+.inline-code--link:hover {
+  text-decoration-color: #ff00ff;
+}
+
 .code-block {
   background: #1a1a2e;
   border: 1px solid rgba(255, 0, 255, 0.3);
