@@ -13,7 +13,7 @@ export default function Landing() {
           From zero to AI-ready dev environment in one command
         </p>
         <p className="font-share-tech text-magenta uppercase tracking-[0.15em] text-sm sm:text-base mt-1 animate-tagline-glow">
-          WSL-first · AI-native · Opinionated · Team-ready
+          From zero to ship · AI-native · Opinionated · Team-ready
         </p>
       </section>
 
