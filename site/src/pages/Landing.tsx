@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom'
 export default function Landing() {
   return (
     <Layout variant="landing">
-      <section className="hero text-center pt-12 pb-10">
+      <section className="hero text-center pt-9 pb-10">
         <LogoSvg />
         <p className="font-share-tech text-text-dim uppercase tracking-[0.1em] text-base sm:text-lg mt-4">
           MAKE YOUR MACHINE SHIP-READY FOR CODING AND COLLABORATION
