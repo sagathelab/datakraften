@@ -77,7 +77,7 @@ Datakraften aims to become the preferred orchestration platform for developer en
 
 ---
 
-## Phase 3 — Profiles & AI (medium term)
+## Phase 3 — Profiles & Config (medium term)
 
 ### 3.1 Profile library
 
@@ -86,18 +86,7 @@ Datakraften aims to become the preferred orchestration platform for developer en
 - [ ] `dk init --profile` gets updated listing
 - [ ] `profiles/minimal.yaml` updated to correct config structure
 
-### 3.2 `dk ai` submodule
-
-- [ ] `dk ai doctor` — authentication state checks for each AI tool
-  - `codex whoami`, `opencode` version check, `gh-copilot` version check
-  - Detect missing tokens/config files
-  - Print login guidance per tool
-- [ ] `dk ai init-project` — generate AGENTS.md, `.ai/tasks/`, `.ai/context/`
-  - Scan project structure for hints (package.json, pyproject.toml, etc.)
-  - Generate `.ai/agents/` with workflow definitions
-- [ ] `dk ai status` — show which AI tools are installed and their auth state
-
-### 3.3 Config consolidation
+### 3.2 Config consolidation
 
 - [ ] Wire `Config.Tools` map to actual installation logic (currently ignored)
 - [ ] Wire `Config.Editors` map to actual installation logic
@@ -188,7 +177,7 @@ Datakraften aims to become the preferred orchestration platform for developer en
 | Milestone | Deliverables | Horizon |
 |-----------|--------------|---------|
 | **M1** Doctor Fix + Upgrade/Update | `--fix` implemented, `dk upgrade` + `dk update`, YAML consistency | Near |
-| **M2** Shell + AI Profiles | Bash/Zsh managed blocks, new profile YAMLs, `dk ai doctor` | Near–Medium |
+| **M2** Shell + Profiles | Bash/Zsh managed blocks, new profile YAMLs | Near–Medium |
 | **M3** Testing | Unit/integration tests, CLI polish, `--yes` everywhere | Medium |
 | **M4** macOS Support | Platform abstraction, darwin builds, brew-native on macOS | Medium–Long |
 | **M5** Full Linux Support | Distro-specific installers, CI test matrix | Medium–Long |
