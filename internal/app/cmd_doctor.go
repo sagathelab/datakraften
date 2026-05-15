@@ -33,7 +33,7 @@ func newDoctorCmd() *cobra.Command {
 
 			if state.LastApply != "" {
 				fmt.Printf("  Last apply: %s\n", state.LastApply)
-				fmt.Printf("  Profile: %s", state.ActiveProfile)
+				fmt.Printf("  Source: %s", state.ActiveSource)
 				fmt.Println()
 				fmt.Println()
 			}

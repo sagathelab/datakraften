@@ -11,12 +11,11 @@ import (
 func newApplyCmd() *cobra.Command {
 	var dryRun bool
 	var yes bool
-	var profileFlag string
 
 	cmd := &cobra.Command{
 		Use:   "apply",
 		Short: "Apply Datakraften configuration",
-		Long:  `Install missing tools, configure shell, runtimes, editors, and AI tooling based on the current profile.`,
+		Long:  `Install missing tools, configure shell, runtimes, editors, and AI tooling based on your configuration.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			state := LoadState()
 
@@ -27,15 +26,10 @@ func newApplyCmd() *cobra.Command {
 				return nil
 			}
 
-			activeProfile := cfg.Profile
-			if profileFlag != "" {
-				activeProfile = profileFlag
-			}
-
 			if dryRun {
-				fmt.Printf("  Datakraften apply (dry-run) — profile: %s\n", activeProfile)
+				fmt.Printf("  Datakraften apply (dry-run) — source: %s\n", cfg.Source)
 			} else {
-				fmt.Printf("  Datakraften apply — profile: %s\n", activeProfile)
+				fmt.Printf("  Datakraften apply — source: %s\n", cfg.Source)
 				fmt.Println()
 			}
 
@@ -56,8 +50,8 @@ func newApplyCmd() *cobra.Command {
 				return nil
 			}
 
-			state.RecordApply(activeProfile)
-			WriteLog("apply", fmt.Sprintf("Applied profile: %s\n", activeProfile))
+			state.RecordApply(cfg.Source)
+			WriteLog("apply", fmt.Sprintf("Applied source: %s\n", cfg.Source))
 
 			fmt.Println("  Summary")
 			fmt.Println("  -------")
@@ -76,6 +70,9 @@ func newApplyCmd() *cobra.Command {
 			}
 			if report.PythonVer != "" {
 				fmt.Printf("    Python %s (%s)\n", report.PythonVer, report.Python)
+			}
+			if report.GoVer != "" {
+				fmt.Printf("    Go %s (%s)\n", report.GoVer, report.Go)
 			}
 			if report.DotnetVer != "" {
 				fmt.Printf("    .NET SDK %s (%s)\n", report.DotnetVer, report.Dotnet)
@@ -105,7 +102,6 @@ func newApplyCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Show what would be done without making changes")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip confirmation prompts")
-	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to apply")
 
 	return cmd
 }

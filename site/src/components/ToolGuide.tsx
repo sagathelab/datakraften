@@ -9,7 +9,7 @@ const dkLinks: Record<string, string> = {
   status: '/docs/dk#status',
   update: '/docs/dk#update',
   upgrade: '/docs/dk#upgrade',
-  profile: '/docs/dk#profile',
+  sources: '/docs/dk#sources',
 }
 
 interface ToolSection {
@@ -83,8 +83,8 @@ function CodeBlock({ lines }: { lines: string[] }) {
       >
         {copied ? (
           <svg
-            width="16"
-            height="16"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -96,8 +96,8 @@ function CodeBlock({ lines }: { lines: string[] }) {
           </svg>
         ) : (
           <svg
-            width="16"
-            height="16"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -162,8 +162,8 @@ function YamlBlock({ lines }: { lines: string[] }) {
       >
         {copied ? (
           <svg
-            width="16"
-            height="16"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -175,8 +175,8 @@ function YamlBlock({ lines }: { lines: string[] }) {
           </svg>
         ) : (
           <svg
-            width="16"
-            height="16"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"

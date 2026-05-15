@@ -11,7 +11,7 @@ import (
 type State struct {
 	Version      string   `json:"version"`
 	LastApply    string   `json:"last_apply,omitempty"`
-	ActiveProfile string  `json:"active_profile"`
+	ActiveSource string  `json:"active_source"`
 	InstalledTools []string `json:"installed_tools,omitempty"`
 	ManagedShell  bool     `json:"managed_shell"`
 }
@@ -55,9 +55,9 @@ func (s *State) Save() error {
 	return nil
 }
 
-func (s *State) RecordApply(profile string) {
+func (s *State) RecordApply(source string) {
 	s.LastApply = time.Now().Format(time.RFC3339)
-	s.ActiveProfile = profile
+	s.ActiveSource = source
 	s.Save()
 }
 

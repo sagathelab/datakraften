@@ -42,6 +42,8 @@ type ApplyReport struct {
 	NodeVer  string
 	Python   RuntimeStatus
 	PythonVer string
+	Go       RuntimeStatus
+	GoVer    string
 	Dotnet   RuntimeStatus
 	DotnetVer string
 	AITools  []string
@@ -53,22 +55,19 @@ type ApplyReport struct {
 func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	report := &ApplyReport{}
 	pm := installers.DetectPackageManager()
-	isMinimal := cfg.Profile == "minimal"
+	verbosePrintf("packageManager=%s source=%s\n", pm, cfg.Source)
 
-	verbosePrintf("packageManager=%s profile=%s\n", pm, cfg.Profile)
-	verbosePrintf("dryRun=%v\n", dryRun)
-
-	if cfg.Profile == "team" {
-		if cfg.Team.URL == "" {
-			report.Errors = append(report.Errors, "team profile requires a URL — set team.url in config")
-			fmt.Println("  ✗ Team profile is active but no team.url is set.")
-			fmt.Println("  Run 'dk init' or 'dk profile use team' to configure the URL.")
+	if cfg.Source == "team" {
+		if cfg.URL == "" {
+			report.Errors = append(report.Errors, "team source requires a URL — set url in config")
+			fmt.Println("  ✗ Team source is active but no url is set.")
+			fmt.Println("  Run 'dk init --team <url>' to configure.")
 			return report
 		}
 
-		fmt.Printf("  Fetching remote config from %s...\n", cfg.Team.URL)
+		fmt.Printf("  Fetching remote config from %s...\n", cfg.URL)
 
-		remoteCfg, err := config.FetchRemote(cfg.Team.URL)
+		remoteCfg, err := config.FetchRemote(cfg.URL)
 		if err != nil {
 			report.Errors = append(report.Errors, fmt.Sprintf("remote config: %s", err))
 			fmt.Printf("    ✗ %s\n", err)
@@ -77,11 +76,11 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 
 		fmt.Println("    ✓ Remote config loaded")
 
-		profile := cfg.Profile
-		team := cfg.Team
+		source := cfg.Source
+		url := cfg.URL
 		*cfg = *remoteCfg
-		cfg.Profile = profile
-		cfg.Team = team
+		cfg.Source = source
+		cfg.URL = url
 	}
 
 	fmt.Println()
@@ -103,13 +102,6 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 		}
 	} else {
 		fmt.Printf("    ~ Would install system dependencies via %s\n", pm)
-	}
-
-	if isMinimal {
-		fmt.Println()
-		fmt.Println("  Minimal profile — skipping tooling, runtimes, shell, and AI tools.")
-		fmt.Println()
-		return report
 	}
 
 	fmt.Println()
@@ -207,6 +199,31 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 			fmt.Println("    ~ Would install Python via uv")
 		} else {
 			fmt.Println("    ~ Python (disabled in config)")
+		}
+	}
+
+	if shouldInstallRuntime(cfg, "go") && !dryRun {
+		installed, err := runtimes.EnsureGo()
+		if err != nil {
+			report.Errors = append(report.Errors, fmt.Sprintf("Go: %s", err))
+			fmt.Printf("    ✗ Go: %s\n", err)
+		} else {
+			report.GoVer = runtimes.GoVersion()
+			if installed {
+				report.Go = RuntimeNew
+				fmt.Printf("    ✓ Go %s installed\n", report.GoVer)
+			} else if report.GoVer != "" {
+				report.Go = RuntimeAlready
+				fmt.Printf("    ✓ Go %s (already installed)\n", report.GoVer)
+			}
+		}
+	} else if !dryRun && !shouldInstallRuntime(cfg, "go") {
+		fmt.Println("    – Go (disabled in config)")
+	} else {
+		if shouldInstallRuntime(cfg, "go") {
+			fmt.Println("    ~ Would install Go via Homebrew")
+		} else {
+			fmt.Println("    ~ Go (disabled in config)")
 		}
 	}
 
@@ -349,18 +366,15 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 }
 
 func shouldInstallRuntime(cfg *config.Config, name string) bool {
-	switch cfg.Profile {
-	case "custom":
-		switch name {
-		case "node":
-			return cfg.Runtimes.Node.Enabled
-		case "python":
-			return cfg.Runtimes.Python.Enabled
-		case "dotnet":
-			return cfg.Runtimes.Dotnet.Enabled
-		}
-	default:
-		return true
+	switch name {
+	case "node":
+		return cfg.Runtimes.Node.Enabled
+	case "python":
+		return cfg.Runtimes.Python.Enabled
+	case "go":
+		return cfg.Runtimes.Go.Enabled
+	case "dotnet":
+		return cfg.Runtimes.Dotnet.Enabled
 	}
 	return true
 }
@@ -443,6 +457,7 @@ func RunDoctorTools(r *doctor.Report) {
 func RunDoctorRuntimes(r *doctor.Report) {
 	nv := runtimes.NodeVersion()
 	pv := runtimes.PythonVersion()
+	gv := runtimes.GoVersion()
 	dv := runtimes.DotnetVersion()
 
 	fixRuntime := func(missing string) string {
@@ -455,6 +470,8 @@ func RunDoctorRuntimes(r *doctor.Report) {
 		Severity: "warning", Status: boolStatus(nv != ""), Message: nv, Fix: fixRuntime(nv)})
 	r.Add(doctor.Check{ID: "runtime.python", Title: "Python", Category: "runtimes",
 		Severity: "warning", Status: boolStatus(pv != ""), Message: pv, Fix: fixRuntime(pv)})
+	r.Add(doctor.Check{ID: "runtime.go", Title: "Go", Category: "runtimes",
+		Severity: "warning", Status: boolStatus(gv != ""), Message: gv, Fix: fixRuntime(gv)})
 	r.Add(doctor.Check{ID: "runtime.dotnet", Title: ".NET SDK", Category: "runtimes",
 		Severity: "warning", Status: boolStatus(dv != ""), Message: dv, Fix: fixRuntime(dv)})
 
@@ -468,6 +485,11 @@ func RunDoctorRuntimes(r *doctor.Report) {
 		fmt.Printf("    ✓ Python %s\n", pv)
 	} else {
 		fmt.Println("    – Python not installed")
+	}
+	if gv != "" {
+		fmt.Printf("    ✓ Go %s\n", gv)
+	} else {
+		fmt.Println("    – Go not installed")
 	}
 	if dv != "" {
 		fmt.Printf("    ✓ .NET SDK %s\n", dv)

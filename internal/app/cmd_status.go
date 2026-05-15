@@ -25,6 +25,7 @@ type StatusReport struct {
 	Runtimes struct {
 		Node   string `json:"node,omitempty"`
 		Python string `json:"python,omitempty"`
+		Go     string `json:"go,omitempty"`
 		Dotnet string `json:"dotnet,omitempty"`
 	} `json:"runtimes"`
 	Editors []editorStatus `json:"editors"`
@@ -33,7 +34,7 @@ type StatusReport struct {
 		DaemonRunning bool `json:"daemon_running"`
 	} `json:"docker"`
 	LastApply string `json:"last_apply,omitempty"`
-	Profile   string `json:"profile,omitempty"`
+	Source    string `json:"source,omitempty"`
 }
 
 type editorStatus struct {
@@ -69,6 +70,7 @@ func newStatusCmd() *cobra.Command {
 
 				r.Runtimes.Node = runtimes.NodeVersion()
 				r.Runtimes.Python = runtimes.PythonVersion()
+				r.Runtimes.Go = runtimes.GoVersion()
 				r.Runtimes.Dotnet = runtimes.DotnetVersion()
 
 				for _, ed := range editors.DetectAll() {
@@ -84,7 +86,7 @@ func newStatusCmd() *cobra.Command {
 				r.Docker.DaemonRunning = dockerStatus.DaemonRunning
 
 				r.LastApply = state.LastApply
-				r.Profile = state.ActiveProfile
+				r.Source = state.ActiveSource
 
 				enc := json.NewEncoder(os.Stdout)
 				enc.SetIndent("", "  ")
@@ -130,6 +132,11 @@ func newStatusCmd() *cobra.Command {
 			} else {
 				fmt.Println("    – Python not installed")
 			}
+			if v := runtimes.GoVersion(); v != "" {
+				fmt.Printf("    ✓ Go %s\n", v)
+			} else {
+				fmt.Println("    – Go not installed")
+			}
 			if v := runtimes.DotnetVersion(); v != "" {
 				fmt.Printf("    ✓ .NET SDK %s\n", v)
 			} else {
@@ -160,7 +167,7 @@ func newStatusCmd() *cobra.Command {
 
 			if state.LastApply != "" {
 				fmt.Printf("  Last apply: %s\n", state.LastApply)
-				fmt.Printf("  Profile: %s\n", state.ActiveProfile)
+				fmt.Printf("  Source: %s\n", state.ActiveSource)
 			}
 
 			return nil

@@ -47,7 +47,7 @@ func EnsureAITools(cfg *config.Config) ([]string, error) {
 	var installed []string
 
 	for _, tool := range cliTools {
-		if !cfg.AITools[tool.key] {
+		if !cfg.AITools[tool.key].Enabled {
 			continue
 		}
 		if exec.CommandExists(tool.cmd) {
@@ -83,7 +83,7 @@ func EnsureAIApps(cfg *config.Config) ([]string, error) {
 	var installed []string
 
 	for _, app := range desktopApps {
-		if !cfg.AIApps[app.key] {
+		if !cfg.AIApps[app.key].Enabled {
 			continue
 		}
 		if appInstalled(app) {

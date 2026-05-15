@@ -77,7 +77,7 @@ export default function Landing() {
           </p>
           <p>
             <span className="text-magenta font-bold">~</span> Consistency across your team. Share a
-            YAML profile and every developer gets the same toolchain, runtimes, and shell config.
+            YAML config and every developer gets the same toolchain, runtimes, and shell config.
             Onboarding goes from days to minutes.
           </p>
           <p>

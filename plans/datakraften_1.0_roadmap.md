@@ -8,7 +8,7 @@ Datakraften aims to become the preferred orchestration platform for developer en
 
 ## Phase 1 — Core MVP (current state ✅)
 
-- [x] 6 CLI commands: `init`, `apply`, `doctor`, `status`, `profile`, `update`
+- [x] 6 CLI commands: `init`, `apply`, `doctor`, `status`, `upgrade`, `update`
 - [x] System detection (WSL, distro, systemd, shell)
 - [x] Multi-PM (APT, DNF, YUM, PACMAN, BREW)
 - [x] Runtimes: Node (fnm), Python (uv), .NET (brew)
@@ -17,9 +17,11 @@ Datakraften aims to become the preferred orchestration platform for developer en
 - [x] Docker WSL integration check
 - [x] AI tool installation (5 CLI + 3 desktop)
 - [x] State management (`~/.local/state/datakraften/state.json`)
-- [x] Self-update with SHA256 verification
+- [x] Self-upgrade with SHA256 verification
+- [x] Tool updates (`dk update` with --list, --dry-run)
 - [x] Bootstrap install script
-- [x] Team profile (remote YAML fetch-on-apply)
+- [x] Config sources: default, custom, team (remote YAML fetch-on-apply)
+- [x] Source-based config: `source: default | custom | team` replaces old `profile:`
 - [x] Linting: golangci-lint, Prettier, stylelint, TypeScript strict
 
 ---
@@ -77,16 +79,9 @@ Datakraften aims to become the preferred orchestration platform for developer en
 
 ---
 
-## Phase 3 — Profiles & Config (medium term)
+## Phase 3 — Config consolidation (medium term)
 
-### 3.1 Profile library
-
-- [ ] Create YAML files: `ai.yaml`, `dotnet.yaml`, `frontend.yaml`, `platform.yaml`, `python.yaml`
-- [ ] Register all profiles in `internal/profiles/profiles.go`
-- [ ] `dk init --profile` gets updated listing
-- [ ] `profiles/minimal.yaml` updated to correct config structure
-
-### 3.2 Config consolidation
+### 3.1 Config consolidation
 
 - [ ] Wire `Config.Tools` map to actual installation logic (currently ignored)
 - [ ] Wire `Config.Editors` map to actual installation logic
@@ -177,7 +172,7 @@ Datakraften aims to become the preferred orchestration platform for developer en
 | Milestone | Deliverables | Horizon |
 |-----------|--------------|---------|
 | **M1** Doctor Fix + Upgrade/Update | `--fix` implemented, `dk upgrade` + `dk update`, YAML consistency | Near |
-| **M2** Shell + Profiles | Bash/Zsh managed blocks, new profile YAMLs | Near–Medium |
+| **M2** Config sources | `source: default | custom | team`, remove profile command | Near |
 | **M3** Testing | Unit/integration tests, CLI polish, `--yes` everywhere | Medium |
 | **M4** macOS Support | Platform abstraction, darwin builds, brew-native on macOS | Medium–Long |
 | **M5** Full Linux Support | Distro-specific installers, CI test matrix | Medium–Long |
@@ -193,7 +188,7 @@ Datakraften 1.0 is shipping when:
 1. A developer can run `curl -fsSL https://datakraften.no/install | bash` on a fresh machine (WSL, Linux, or macOS) and have a productive, AI-ready environment within minutes.
 2. `dk doctor --fix` repairs common issues without manual intervention.
 3. `dk upgrade` keeps Datakraften itself up to date; `dk update` keeps tools up to date.
-4. Profiles (`minimal`, `default`, `ai`, `dotnet`, `frontend`, `platform`, `custom`, `team`) are fully functional and YAML-driven.
+4. Config sources (`default`, `custom`, `team`) are fully functional and YAML-driven with backward compat from old `profile:` field.
 5. The codebase has meaningful test coverage and passes all lint/format/type checks in CI.
 6. Team onboarding is a documented, reliable flow — not an afterthought.
 7. The platform abstraction is proven: adding a new OS target requires implementing an interface, not rewriting modules.
