@@ -36,18 +36,17 @@ func (s RuntimeStatus) String() string {
 }
 
 type ApplyReport struct {
-	System    int
-	BrewPkgs  int
-	Node      RuntimeStatus
-	NodeVer   string
-	Python    RuntimeStatus
+	System   []string
+	BrewPkgs []string
+	Node     RuntimeStatus
+	NodeVer  string
+	Python   RuntimeStatus
 	PythonVer string
-	Dotnet    RuntimeStatus
+	Dotnet   RuntimeStatus
 	DotnetVer string
-	AITools   int
-	AIAlready bool
-	Shell     bool
-	Errors    []string
+	AITools  []string
+	Shell    bool
+	Errors   []string
 }
 
 func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
@@ -69,10 +68,10 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 			fmt.Printf("    ✗ System dependencies: %s\n", err)
 		} else {
 			report.System = n
-			if n == 0 {
+			if len(n) == 0 {
 				fmt.Printf("    ✓ System dependencies via %s (already satisfied)\n", pm)
 			} else {
-				fmt.Printf("    ✓ %d system packages installed via %s\n", n, pm)
+				fmt.Printf("    ✓ %d system packages installed via %s: %s\n", len(n), pm, strings.Join(n, ", "))
 			}
 		}
 	} else {
@@ -120,10 +119,10 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 			fmt.Printf("    ✗ Brew packages: %s\n", err)
 		} else {
 			report.BrewPkgs = n
-			if n == 0 {
+			if len(n) == 0 {
 				fmt.Println("    ✓ Brew packages (already installed)")
 			} else {
-				fmt.Printf("    ✓ %d Brew packages installed\n", n)
+				fmt.Printf("    ✓ %d Brew packages installed: %s\n", len(n), strings.Join(n, ", "))
 			}
 		}
 	} else {
@@ -276,11 +275,10 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 			fmt.Printf("    ✗ AI tools: %s\n", err)
 		} else {
 			report.AITools = installed
-			if installed == 0 {
-				report.AIAlready = true
+			if len(installed) == 0 {
 				fmt.Println("    ✓ AI tools (already installed)")
 			} else {
-				fmt.Printf("    ✓ %d AI tool(s) installed\n", installed)
+				fmt.Printf("    ✓ %d AI tool(s) installed: %s\n", len(installed), strings.Join(installed, ", "))
 			}
 		}
 	} else {

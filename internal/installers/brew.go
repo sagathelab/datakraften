@@ -108,7 +108,7 @@ func BrewInstall(pkg string) error {
 	return nil
 }
 
-func BrewEnsurePackages(pkgs []string) (int, error) {
+func BrewEnsurePackages(pkgs []string) ([]string, error) {
 	var toInstall []string
 	for _, pkg := range pkgs {
 		if !BrewPackageInstalled(pkg) {
@@ -116,13 +116,13 @@ func BrewEnsurePackages(pkgs []string) (int, error) {
 		}
 	}
 	if len(toInstall) == 0 {
-		return 0, nil
+		return nil, nil
 	}
 
 	for _, pkg := range toInstall {
 		if err := BrewInstall(pkg); err != nil {
-			return 0, err
+			return nil, err
 		}
 	}
-	return len(toInstall), nil
+	return toInstall, nil
 }

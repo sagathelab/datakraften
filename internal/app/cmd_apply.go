@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/sagathelab/datakraften/internal/config"
 	"github.com/spf13/cobra"
@@ -60,8 +61,16 @@ func newApplyCmd() *cobra.Command {
 
 			fmt.Println("  Summary")
 			fmt.Println("  -------")
-			fmt.Printf("    System packages: %d installed\n", report.System)
-			fmt.Printf("    Brew packages: %d installed\n", report.BrewPkgs)
+			if len(report.System) > 0 {
+				fmt.Printf("    System packages: %s\n", strings.Join(report.System, ", "))
+			} else {
+				fmt.Println("    System packages: (already satisfied)")
+			}
+			if len(report.BrewPkgs) > 0 {
+				fmt.Printf("    Brew packages: %s\n", strings.Join(report.BrewPkgs, ", "))
+			} else {
+				fmt.Println("    Brew packages: (already installed)")
+			}
 			if report.NodeVer != "" {
 				fmt.Printf("    Node.js %s (%s)\n", report.NodeVer, report.Node)
 			}
@@ -71,10 +80,10 @@ func newApplyCmd() *cobra.Command {
 			if report.DotnetVer != "" {
 				fmt.Printf("    .NET SDK %s (%s)\n", report.DotnetVer, report.Dotnet)
 			}
-			if report.AIAlready {
-				fmt.Println("    AI tools (already installed)")
-			} else if report.AITools > 0 {
-				fmt.Printf("    AI tools: %d installed\n", report.AITools)
+			if len(report.AITools) > 0 {
+				fmt.Printf("    AI tools: %s\n", strings.Join(report.AITools, ", "))
+			} else {
+				fmt.Println("    AI tools: (already installed)")
 			}
 			if len(report.Errors) > 0 {
 				fmt.Println()

@@ -151,7 +151,7 @@ func NativeInstall(pkg string) error {
 	return nil
 }
 
-func NativeEnsurePackages(pkgs []string) (int, error) {
+func NativeEnsurePackages(pkgs []string) ([]string, error) {
 	pm := DetectPackageManager()
 	var missing []string
 	for _, pkg := range pkgs {
@@ -160,18 +160,18 @@ func NativeEnsurePackages(pkgs []string) (int, error) {
 		}
 	}
 	if len(missing) == 0 {
-		return 0, nil
+		return nil, nil
 	}
 
 	if err := NativeUpdate(); err != nil {
-		return 0, err
+		return nil, err
 	}
 	for _, pkg := range missing {
 		if err := NativeInstall(pkg); err != nil {
-			return 0, err
+			return nil, err
 		}
 	}
-	return len(missing), nil
+	return missing, nil
 }
 
 func FishPackageName() string {

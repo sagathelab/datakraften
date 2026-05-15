@@ -42,12 +42,12 @@ func npmInstalled() bool {
 	return exec.CommandExists("npm")
 }
 
-func EnsureAITools(cfg *config.Config) (int, error) {
+func EnsureAITools(cfg *config.Config) ([]string, error) {
 	if cfg.AI == nil {
-		return 0, nil
+		return nil, nil
 	}
 
-	installed := 0
+	var installed []string
 
 	for _, tool := range tools {
 		if !isEnabled(cfg.AI, tool.name) {
@@ -59,7 +59,7 @@ func EnsureAITools(cfg *config.Config) (int, error) {
 		if err := installTool(tool); err != nil {
 			return installed, fmt.Errorf("%s: %w", tool.name, err)
 		}
-		installed++
+		installed = append(installed, tool.name)
 	}
 
 	return installed, nil
