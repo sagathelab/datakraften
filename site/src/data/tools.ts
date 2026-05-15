@@ -27,16 +27,16 @@ export const tools: Record<string, ToolDef> = {
       {
         title: 'dk apply',
         id: 'apply',
-        body: 'Install everything defined in your configuration. Idempotent -- safe to run repeatedly.\n\n$ dk apply\n$ dk apply --dry-run\n\nNOTE: Preview without installing\n\nWhat it installs:\n- System packages -- via apt, dnf, yum, pacman, or brew\n- Homebrew -- installs brew if missing, then brew packages\n- Runtimes -- Node.js via fnm, Python via uv, .NET SDK\n- Shell -- Fish shell config with managed blocks\n- AI tools -- CLI tools + desktop apps\n- Skips already-installed tools. Uses sudo only for system packages.\n\nTeam source:\nIf your config has source: team, `dk apply` fetches the remote YAML fresh before installing. The remote file is the single source of truth — your local config only stores ~source: team~ and ~url~. If the remote YAML is invalid or unreachable, `dk apply` aborts.\n\nDry-run mode:\nUse --dry-run to see what would be installed without making changes:\n\n$ dk apply --dry-run\n> [dry-run] would install system packages: git curl build-essential ...\n> [dry-run] would install brew packages: fish starship atuin fzf ...\n> [dry-run] would install Node.js via fnm (LTS)',
+        body: 'Install everything defined in your configuration. Idempotent -- safe to run repeatedly.\n\n$ dk apply\n$ dk apply --dry-run\n\nNOTE: Preview without installing\n\nWhat it installs:\n- System packages -- via apt, dnf, yum, pacman, or brew\n- Homebrew -- installs brew if missing, then brew packages\n- Runtimes -- Node.js via fnm, Python via uv, Go, .NET SDK\n- Shell -- Fish shell config with managed blocks\n- AI tools -- CLI tools + desktop apps\n- Skips already-installed tools. Uses sudo only for system packages.\n\nTeam source:\nIf your config has source: team, `dk apply` fetches the remote YAML fresh before installing. The remote file is the single source of truth — your local config only stores ~source: team~ and ~url~. If the remote YAML is invalid or unreachable, `dk apply` aborts.\n\nDry-run mode:\nUse --dry-run to see what would be installed without making changes:\n\n$ dk apply --dry-run\n> [dry-run] would install system packages: git curl build-essential ...\n> [dry-run] would install brew packages: fish starship atuin fzf ...\n> [dry-run] would install Node.js via fnm (LTS)',
       },
       {
         title: 'dk doctor',
         id: 'doctor',
-        body: 'Run comprehensive diagnostics on your system. Checks every category that dk apply configures.\n\n$ dk doctor\n$ dk doctor --json\n\nNOTE: Machine-readable output\n\nCheck categories:\n- System -- distribution, kernel, WSL version, systemd\n- Tools -- git, curl, build tools, Homebrew\n- Runtimes -- Node.js, Python, .NET SDK\n- Editors -- VS Code, Zed, Cursor detection\n- Docker -- daemon status, socket access, WSL integration\n- Shell -- Fish config, Starship prompt, Atuin, FZF',
+        body: 'Run comprehensive diagnostics on your system. Checks every category that dk apply configures.\n\n$ dk doctor\n$ dk doctor --json\n\nNOTE: Machine-readable output\n\nCheck categories:\n- System -- distribution, kernel, WSL version, systemd\n- Tools -- git, curl, build tools, Homebrew\n- Runtimes -- Node.js, Python, Go, .NET SDK\n- Editors -- VS Code, Zed, Cursor detection\n- Docker -- daemon status, socket access, WSL integration\n- Shell -- Fish config, Starship prompt, Atuin, FZF',
       },
       {
         title: 'dk status',
-        body: 'Quick overview of installed tools and their versions.\n\n$ dk status\n> System:    Fedora 40 (WSL2)\n> Shell:     fish 3.7.1\n> Node:      22.x\n> Python:    3.12.x\n> .NET:      8.0.x\n> Git:       2.45.x\n> Brew:      4.x\n> Docker:    running',
+        body: 'Quick overview of installed tools and their versions.\n\n$ dk status\n> System:    Fedora 40 (WSL2)\n> Shell:     fish 3.7.1\n> Node:      22.x\n> Python:    3.12.x\n> Go:        1.24.x\n> .NET:      8.0.x\n> Git:       2.45.x\n> Brew:      4.x\n> Docker:    running',
       },
       {
         title: 'Config sources',
@@ -104,6 +104,28 @@ export const tools: Record<string, ToolDef> = {
     ],
     website: 'https://docs.astral.sh/uv/',
     websiteLabel: 'uv',
+  },
+
+  go: {
+    id: 'go',
+    title: 'Go',
+    subtitle: 'Compiled, batteries-included language for fast CLIs, services, and tooling',
+    sections: [
+      {
+        title: 'What is it?',
+        body: 'Go is a statically typed, compiled language designed for simplicity, fast builds, and great tooling. Datakraften installs Go as a first-class runtime so you can build CLIs, backend services, and developer tools out of the box.',
+      },
+      {
+        title: 'Basic Usage',
+        body: 'Check the installed version:\n$ go version\n\nCreate a new module:\n$ mkdir myapp && cd myapp\n$ go mod init example.com/myapp\n\nRun a program:\n$ go run .\n\nBuild a binary:\n$ go build\n\nRun tests:\n$ go test ./...\n\nAdd a dependency:\n$ go get github.com/spf13/cobra\n\nFormat code:\n$ go fmt ./...',
+      },
+      {
+        title: 'Tips',
+        body: 'TIP: Go modules are the default dependency system. Run go mod init once per project.\n\nTIP: Use go test ./... to run all tests in the current module.\n\nTIP: Use gofmt or go fmt consistently -- formatting is part of the standard Go workflow.',
+      },
+    ],
+    website: 'https://go.dev/',
+    websiteLabel: 'Go',
   },
 
   dotnet: {
@@ -584,7 +606,7 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'Example: Full-stack team config',
-        body: 'A comprehensive remote YAML for a full-stack team working with Node.js, Python, and .NET:\n\n| system_packages:\n|   - build-essential\n|   - curl\n|   - git\n|   - unzip\n|   - postgresql-client\n|   - redis-tools\n|   - jq\n|\n| brew_packages:\n|   - fish\n|   - starship\n|   - atuin\n|   - fzf\n|   - fd\n|   - broot\n|   - bottom\n|   - gh\n|   - docker\n|   - powershell\n|\n| runtimes:\n|   node:\n|     enabled: true\n|     version: lts\n|   python:\n|     enabled: true\n|   dotnet:\n|     enabled: true\n|\n| shell:\n|   fish:\n|     enabled: true\n|\n| editors:\n|   vscode:\n|     enabled: true\n|   zed:\n|     enabled: true\n|\n| ai_tools:\n|   codex:\n|     enabled: true\n|   opencode:\n|     enabled: true\n|   copilot:\n|     enabled: true\n|   claude:\n|     enabled: false\n|   gemini:\n|     enabled: false\n| ai_apps:\n|   codex:\n|     enabled: true\n|   claude:\n|     enabled: false\n|   copilot:\n|     enabled: true\n\nNOTE: Extends the minimal setup with additional system tools (postgresql-client, redis-tools, jq) and PowerShell — all from a single shared URL.',
+        body: 'A comprehensive remote YAML for a full-stack team working with Node.js, Python, Go, and .NET:\n\n| system_packages:\n|   - build-essential\n|   - curl\n|   - git\n|   - unzip\n|   - postgresql-client\n|   - redis-tools\n|   - jq\n|\n| brew_packages:\n|   - fish\n|   - starship\n|   - atuin\n|   - fzf\n|   - fd\n|   - broot\n|   - bottom\n|   - gh\n|   - docker\n|   - powershell\n|\n| runtimes:\n|   node:\n|     enabled: true\n|     version: lts\n|   python:\n|     enabled: true\n|   go:\n|     enabled: true\n|   dotnet:\n|     enabled: true\n|\n| shell:\n|   fish:\n|     enabled: true\n|\n| editors:\n|   vscode:\n|     enabled: true\n|   zed:\n|     enabled: true\n|\n| ai_tools:\n|   codex:\n|     enabled: true\n|   opencode:\n|     enabled: true\n|   copilot:\n|     enabled: true\n|   claude:\n|     enabled: false\n|   gemini:\n|     enabled: false\n| ai_apps:\n|   codex:\n|     enabled: true\n|   claude:\n|     enabled: false\n|   copilot:\n|     enabled: true\n\nNOTE: Extends the minimal setup with additional system tools (postgresql-client, redis-tools, jq) and PowerShell — all from a single shared URL.',
       },
     ],
     website: '',
@@ -607,7 +629,7 @@ export const categories = [
   {
     title: 'Runtimes',
     desc: 'Programming language runtimes and version managers',
-    ids: ['node', 'python', 'dotnet'],
+    ids: ['node', 'python', 'go', 'dotnet'],
   },
   {
     title: 'Shell & CLI',

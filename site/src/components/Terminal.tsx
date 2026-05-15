@@ -1,22 +1,12 @@
 import { useState } from 'react'
 
-const tabs = [
-  { id: 'dk', label: 'dk CLI', command: 'curl -fsSL https://datakraften.no/install | bash' },
-  {
-    id: 'bash',
-    label: 'Bash (legacy)',
-    command: 'bash <(curl -fsSL https://datakraften.no/wsl/debian.sh)',
-  },
-]
+const installCommand = 'curl -fsSL https://datakraften.no/install | bash'
 
 export default function Terminal() {
-  const [activeTab, setActiveTab] = useState('dk')
   const [showToast, setShowToast] = useState(false)
 
-  const activeCommand = tabs.find((t) => t.id === activeTab)?.command ?? ''
-
   const copyCommand = () => {
-    navigator.clipboard.writeText(activeCommand).then(() => {
+    navigator.clipboard.writeText(installCommand).then(() => {
       setShowToast(true)
       setTimeout(() => setShowToast(false), 2000)
     })
@@ -28,29 +18,12 @@ export default function Terminal() {
         <span className="w-3 h-3 rounded-full bg-red-500/80" />
         <span className="w-3 h-3 rounded-full bg-yellow-500/80" />
         <span className="w-3 h-3 rounded-full bg-green-500/80" />
-        <span className="ml-4 text-sm text-text-dim font-jetbrains">
-          {activeTab === 'dk' ? 'dk-cli' : 'bash-legacy'}
-        </span>
-      </div>
-      <div className="flex border-b border-fuchsia-500/20">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 text-sm font-jetbrains transition-colors ${
-              activeTab === tab.id
-                ? 'bg-fuchsia-500/10 text-magenta border-b-2 border-magenta'
-                : 'text-text-dim hover:text-text-primary'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+        <span className="ml-4 text-sm text-text-dim font-jetbrains">dk-cli</span>
       </div>
       <div className="p-4 font-jetbrains text-base leading-relaxed flex justify-between items-start">
         <div>
-          <span className="text-prompt">$</span>
-          <span className="ml-2 text-text-primary">{activeCommand}</span>
+          <span className="text-magenta">$</span>
+          <span className="ml-2 text-text-primary">{installCommand}</span>
           <span className="inline-block w-[0.15em] h-[1em] bg-magenta ml-3 animate-cursor-blink align-text-top relative top-[2px]" />
         </div>
         <button
@@ -73,11 +46,7 @@ export default function Terminal() {
           </svg>
         </button>
       </div>
-      <div className="px-4 pb-2 text-sm text-text-dim">
-        {activeTab === 'dk'
-          ? 'Install the Datakraften CLI'
-          : 'Legacy bash installer for WSL Debian/Ubuntu'}
-      </div>
+      <div className="px-4 pb-2 text-sm text-text-dim">Install the Datakraften CLI</div>
 
       {showToast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a2e] border border-fuchsia-500/30 px-4 py-2 rounded text-base text-text-primary font-jetbrains z-50 animate-blink">

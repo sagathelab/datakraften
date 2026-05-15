@@ -63,7 +63,7 @@ export default function DocsHub() {
             className="mb-8 scroll-mt-16"
           >
             <div className="flex items-baseline gap-3 mb-4">
-              <h2 className="text-lg font-bold text-text-primary">{cat.title}</h2>
+              <h2 className="text-xl font-bold text-text-primary">{cat.title}</h2>
               <span className="text-xs text-text-dim">{cat.desc}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

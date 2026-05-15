@@ -205,9 +205,12 @@ function YamlBlock({ lines }: { lines: string[] }) {
 
 function renderBody(body: string) {
   const lines = body.split('\n')
-  const blocks: { type: 'code' | 'text' | 'tip' | 'note' | 'list' | 'yaml'; lines: string[] }[] = []
+  const blocks: {
+    type: 'code' | 'text' | 'tip' | 'note' | 'list' | 'ordered-list' | 'yaml'
+    lines: string[]
+  }[] = []
   let current: {
-    type: 'code' | 'text' | 'tip' | 'note' | 'list' | 'yaml'
+    type: 'code' | 'text' | 'tip' | 'note' | 'list' | 'ordered-list' | 'yaml'
     lines: string[]
   } | null = null
 
@@ -217,6 +220,7 @@ function renderBody(body: string) {
   const isNote = (l: string) => l.startsWith('NOTE:')
   const isEmpty = (l: string) => l.trim() === ''
   const isListItem = (l: string) => l.startsWith('- ')
+  const isOrderedListItem = (l: string) => /^\d+\. /.test(l)
   const isYaml = (l: string) => l.startsWith('| ') || l === '|'
 
   for (const line of lines) {
@@ -255,6 +259,13 @@ function renderBody(body: string) {
       }
       if (!current) current = { type: 'list', lines: [] }
       current.lines.push(line.slice(2))
+    } else if (isOrderedListItem(line)) {
+      if (current && current.type !== 'ordered-list') {
+        blocks.push(current)
+        current = null
+      }
+      if (!current) current = { type: 'ordered-list', lines: [] }
+      current.lines.push(line.replace(/^\d+\. /, ''))
     } else if (isEmpty(line)) {
       if (current && (current.type === 'code' || current.type === 'yaml')) {
         current.lines.push(line)
@@ -316,7 +327,7 @@ function renderBody(body: string) {
       return (
         <ul
           key={bi}
-          className="list-disc list-inside text-sm text-text-body leading-relaxed mb-3 space-y-1"
+          className="list-disc list-inside text-base text-text-body leading-relaxed mb-3 space-y-1"
         >
           {block.lines.map((l, li) => (
             <li key={li}>{renderInlineCode(l)}</li>
@@ -325,8 +336,21 @@ function renderBody(body: string) {
       )
     }
 
+    if (block.type === 'ordered-list') {
+      return (
+        <ol
+          key={bi}
+          className="list-decimal list-inside marker:text-magenta text-base text-text-body leading-relaxed mb-3 space-y-1"
+        >
+          {block.lines.map((l, li) => (
+            <li key={li}>{renderInlineCode(l)}</li>
+          ))}
+        </ol>
+      )
+    }
+
     return (
-      <p key={bi} className="text-sm text-text-body leading-relaxed mb-3">
+      <p key={bi} className="text-base text-text-body leading-relaxed mb-3">
         {renderInlineCode(block.lines.join(' '))}
       </p>
     )
@@ -348,7 +372,7 @@ export default function ToolGuide({ title, subtitle, sections, website }: ToolGu
               {section.title && (
                 <h2
                   id={section.id || section.title.toLowerCase().replace(/\s+/g, '-')}
-                  className="text-lg font-bold text-text-primary mb-2 scroll-mt-16"
+                  className="text-xl font-bold text-text-primary mb-2 scroll-mt-16"
                 >
                   {section.title}
                 </h2>
