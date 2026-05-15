@@ -66,6 +66,48 @@ export default function Landing() {
           <Step num="05" text="dk update" desc="Stay up to date" to="/docs/dk#update" />
         </div>
       </section>
+
+      <section className="what-you-get pb-16">
+        <h2 className="font-share-tech text-magenta text-center mb-8 text-xl">What you get</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
+          <WhatYouGetItem
+            icon="~"
+            title="AI tools, pre-configured"
+            desc="GitHub Copilot CLI, Codex CLI, OpenCode, aider — ready to use out of the box"
+            to="/docs#editors-tools"
+          />
+          <WhatYouGetItem
+            icon="~"
+            title="Shell, supercharged"
+            desc="Fish shell with Starship prompt, Atuin history, fzf, broot, fd, and btm — power-user defaults"
+            to="/docs#shell-cli"
+          />
+          <WhatYouGetItem
+            icon="~"
+            title="Runtimes, managed"
+            desc="Node.js via fnm, Python via uv, .NET SDK — versioned and isolated per project"
+            to="/docs#runtimes"
+          />
+          <WhatYouGetItem
+            icon="~"
+            title="Editor detection"
+            desc="Auto-detects VS Code, Zed, and Cursor — even from inside WSL"
+            to="/docs#editors-tools"
+          />
+          <WhatYouGetItem
+            icon="~"
+            title="Idempotent by design"
+            desc="Run dk apply as many times as you want — only installs what's missing"
+            to="/docs/dk#apply"
+          />
+          <WhatYouGetItem
+            icon="~"
+            title="Team-ready profiles"
+            desc="Share a remote YAML profile for consistent environments across your whole team"
+            to="/docs/dk#profile"
+          />
+        </div>
+      </section>
     </Layout>
   )
 }
@@ -85,5 +127,17 @@ function Arrow() {
     <svg className="w-6 h-6 text-text-dim hidden sm:block flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M5 12h14M13 5l7 7-7 7" />
     </svg>
+  )
+}
+
+function WhatYouGetItem({ icon, title, desc, to }: { icon: string; title: string; desc: string; to: string }) {
+  return (
+    <Link to={to} className="flex items-start gap-3 p-4 border border-fuchsia-500/20 rounded-lg bg-bg-card hover:border-magenta hover:bg-fuchsia-500/5 transition-all group">
+      <span className="text-magenta text-lg font-bold leading-none mt-0.5">{icon}</span>
+      <div>
+        <span className="text-text-primary font-semibold group-hover:text-magenta transition-colors">{title}</span>
+        <p className="text-text-dim text-sm mt-1 leading-relaxed">{desc}</p>
+      </div>
+    </Link>
   )
 }
