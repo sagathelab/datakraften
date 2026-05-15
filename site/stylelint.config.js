@@ -1,0 +1,20 @@
+export default {
+  extends: ['stylelint-config-standard'],
+  rules: {
+    'at-rule-no-unknown': [true, { ignoreAtRules: ['theme', 'tailwind', 'apply', 'layer'] }],
+    'import-notation': null,
+    'color-hex-length': null,
+    'custom-property-empty-line-before': null,
+    'value-keyword-case': null,
+    'keyframes-name-pattern': null,
+    'color-function-alias-notation': null,
+    'alpha-value-notation': null,
+    'rule-empty-line-before': null,
+    'declaration-block-single-line-max-declarations': null,
+    'selector-class-pattern': null,
+    'color-function-notation': null,
+    'no-descending-specificity': null,
+    'declaration-empty-line-before': null,
+    'comment-empty-line-before': null,
+  },
+}

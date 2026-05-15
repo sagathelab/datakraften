@@ -22,7 +22,7 @@ export const tools: Record<string, ToolDef> = {
       {
         title: 'dk init',
         id: 'init',
-        body: 'Generate your Datakraften configuration file. Detects your operating system, package manager, and preferred shell, then writes ~/.config/datakraften/config.yaml.\n\n$ dk init\n\nWhat it does:\n- Detects platform (WSL, Linux, macOS)\n- Identifies native package manager (apt, dnf, yum, pacman, brew)\n- Generates a YAML config with default profile\n- Safe to re-run -- won\'t overwrite existing config unless forced',
+        body: "Generate your Datakraften configuration file. Detects your operating system, package manager, and preferred shell, then writes ~/.config/datakraften/config.yaml.\n\n$ dk init\n\nWhat it does:\n- Detects platform (WSL, Linux, macOS)\n- Identifies native package manager (apt, dnf, yum, pacman, brew)\n- Generates a YAML config with default profile\n- Safe to re-run -- won't overwrite existing config unless forced",
       },
       {
         title: 'dk apply',
@@ -93,7 +93,7 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'Tips',
-        body: 'TIP: uv replaces pip, pip-tools, pipx, and venv. Use uv pip install instead of pip install -- it\'s 10-100x faster.\n\nTIP: uvx runs Python tools in isolated environments -- no need to install them first. Great for linters, formatters, and type checkers.\n\nTIP: Use uv add to add dependencies to pyproject.toml and uv sync to install them.\n\nTIP: Run uv help to see all available commands and options.',
+        body: "TIP: uv replaces pip, pip-tools, pipx, and venv. Use uv pip install instead of pip install -- it's 10-100x faster.\n\nTIP: uvx runs Python tools in isolated environments -- no need to install them first. Great for linters, formatters, and type checkers.\n\nTIP: Use uv add to add dependencies to pyproject.toml and uv sync to install them.\n\nTIP: Run uv help to see all available commands and options.",
       },
     ],
     website: 'https://docs.astral.sh/uv/',
@@ -157,7 +157,7 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'Usage',
-        body: 'Starship works automatically -- you don\'t need to run any commands. The prompt will show:\n- Current directory\n- Git branch and status (dirty/staged/ahead/behind)\n- Runtime versions when in a project directory\n- Command execution time if > 2s\n- Exit code of the last command if non-zero',
+        body: "Starship works automatically -- you don't need to run any commands. The prompt will show:\n- Current directory\n- Git branch and status (dirty/staged/ahead/behind)\n- Runtime versions when in a project directory\n- Command execution time if > 2s\n- Exit code of the last command if non-zero",
       },
       {
         title: 'Customization',
@@ -178,11 +178,11 @@ export const tools: Record<string, ToolDef> = {
     sections: [
       {
         title: 'What is it?',
-        body: 'Atuin replaces your shell\'s built-in history with a powerful, encrypted database. It provides blazing-fast search across all your commands, syncs history between machines, and supports regex filtering. The bootstrapper enables Atuin for Fish shell.',
+        body: "Atuin replaces your shell's built-in history with a powerful, encrypted database. It provides blazing-fast search across all your commands, syncs history between machines, and supports regex filtering. The bootstrapper enables Atuin for Fish shell.",
       },
       {
         title: 'Basic Usage',
-        body: 'Interactive search:\nNOTE: Press Ctrl+R and start typing\n\nSearch from the command line:\n$ atuin search docker\n$ atuin search --regex \'git.*push\'\n$ atuin search --cwd /projects/myapp\n\nSync history across machines:\n$ atuin login\n$ atuin sync\n\nBrowse all history:\n$ atuin history list\n$ atuin history list --session-only',
+        body: "Interactive search:\nNOTE: Press Ctrl+R and start typing\n\nSearch from the command line:\n$ atuin search docker\n$ atuin search --regex 'git.*push'\n$ atuin search --cwd /projects/myapp\n\nSync history across machines:\n$ atuin login\n$ atuin sync\n\nBrowse all history:\n$ atuin history list\n$ atuin history list --session-only",
       },
       {
         title: 'Tips',
@@ -203,11 +203,11 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'Basic Usage',
-        body: 'Search files (Ctrl+T):\nNOTE: Press Ctrl+T, type to filter, select with Tab/Enter\n\nReverse history search (Ctrl+R):\nNOTE: Press Ctrl+R, type any part of a past command to find it\n\ncd into subdirectory (Alt+C):\nNOTE: Press Alt+C, select a directory to cd into it\n\nPipe to fzf:\n$ find . -type f | fzf\n\nWith preview:\n$ fzf --preview \'cat {}\'',
+        body: "Search files (Ctrl+T):\nNOTE: Press Ctrl+T, type to filter, select with Tab/Enter\n\nReverse history search (Ctrl+R):\nNOTE: Press Ctrl+R, type any part of a past command to find it\n\ncd into subdirectory (Alt+C):\nNOTE: Press Alt+C, select a directory to cd into it\n\nPipe to fzf:\n$ find . -type f | fzf\n\nWith preview:\n$ fzf --preview 'cat {}'",
       },
       {
         title: 'Tips',
-        body: 'TIP: Use fzf --preview \'cat {}\' to preview file contents as you filter.\n\nTIP: Set FZF_DEFAULT_COMMAND to use fd for faster search.\n\nTIP: fzf is integrated into Fish shell by default via the bootstrapper.',
+        body: "TIP: Use fzf --preview 'cat {}' to preview file contents as you filter.\n\nTIP: Set FZF_DEFAULT_COMMAND to use fd for faster search.\n\nTIP: fzf is integrated into Fish shell by default via the bootstrapper.",
       },
     ],
     website: 'https://github.com/junegunn/fzf',
@@ -228,7 +228,7 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'Tips',
-        body: 'TIP: If installed, fzf automatically uses fd as its default file search backend.\n\nTIP: Run fd \'\' to list all files recursively in the current directory.\n\nTIP: Use --type d to search for directories only.',
+        body: "TIP: If installed, fzf automatically uses fd as its default file search backend.\n\nTIP: Run fd '' to list all files recursively in the current directory.\n\nTIP: Use --type d to search for directories only.",
       },
     ],
     website: 'https://github.com/sharkdp/fd',
@@ -291,7 +291,7 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'Tips',
-        body: 'TIP: brew formulas are updated frequently. Run brew update once a week to stay current.\n\nTIP: Use brew doctor if something isn\'t working.\n\nTIP: The bootstrapper adds brew to ~/.profile and ~/.bashrc.',
+        body: "TIP: brew formulas are updated frequently. Run brew update once a week to stay current.\n\nTIP: Use brew doctor if something isn't working.\n\nTIP: The bootstrapper adds brew to ~/.profile and ~/.bashrc.",
       },
     ],
     website: 'https://brew.sh/',
@@ -384,7 +384,7 @@ export const tools: Record<string, ToolDef> = {
   codex: {
     id: 'codex',
     title: 'Codex CLI',
-    subtitle: 'OpenAI\'s command-line tool for code generation',
+    subtitle: "OpenAI's command-line tool for code generation",
     sections: [
       {
         title: 'What is it?',
@@ -500,15 +500,15 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'system_packages',
-        body: 'Packages installed via your native package manager (apt, dnf, yum, pacman, or brew). The bootstrapper auto-detects which manager to use.\n\n| system_packages:\n|   - build-essential\n|   - curl\n|   - git\n|   - unzip\n\nThese are installed with sudo (where applicable) before any other step. `dk apply` skips already-installed packages automatically.\n\nTIP: Use your package manager\'s native name for each package — dk passes the name directly to apt install or dnf install.',
+        body: "Packages installed via your native package manager (apt, dnf, yum, pacman, or brew). The bootstrapper auto-detects which manager to use.\n\n| system_packages:\n|   - build-essential\n|   - curl\n|   - git\n|   - unzip\n\nThese are installed with sudo (where applicable) before any other step. `dk apply` skips already-installed packages automatically.\n\nTIP: Use your package manager's native name for each package — dk passes the name directly to apt install or dnf install.",
       },
       {
         title: 'brew_packages',
-        body: 'Packages installed via Homebrew. Datakraften installs Homebrew if it\'s not already present, then uses it for the tools listed here. Most developer tooling comes through brew.\n\n| brew_packages:\n|   - fish\n|   - starship\n|   - atuin\n|   - fzf\n|   - fd\n|   - broot\n|   - bottom\n|   - gh\n|   - docker\n|   - docker-compose\n|   - powershell\n\nTIP: Homebrew keeps packages in /home/linuxbrew/.linuxbrew — isolated from system packages, which means cleaner upgrades and fewer conflicts.',
+        body: "Packages installed via Homebrew. Datakraften installs Homebrew if it's not already present, then uses it for the tools listed here. Most developer tooling comes through brew.\n\n| brew_packages:\n|   - fish\n|   - starship\n|   - atuin\n|   - fzf\n|   - fd\n|   - broot\n|   - bottom\n|   - gh\n|   - docker\n|   - docker-compose\n|   - powershell\n\nTIP: Homebrew keeps packages in /home/linuxbrew/.linuxbrew — isolated from system packages, which means cleaner upgrades and fewer conflicts.",
       },
       {
         title: 'runtimes',
-        body: 'Programming language runtimes and their version managers. Each runtime has its own enabled flag and optional version.\n\n| runtimes:\n|   node:\n|     enabled: true\n|     version: lts\n|   python:\n|     enabled: true\n|   dotnet:\n|     enabled: false\n\n- Node.js is managed by fnm (Fast Node Manager). Set version to lts for the latest LTS, or pin a specific version like 20 or 22.\n- Python is managed by uv. It installs the latest stable Python version and sets up uv as the default package manager.\n- .NET SDK is installed via Homebrew. Disabled by default in the minimal profile.\n\nTIP: Set enabled: false for runtimes you don\'t need — `dk apply` will skip them entirely.',
+        body: "Programming language runtimes and their version managers. Each runtime has its own enabled flag and optional version.\n\n| runtimes:\n|   node:\n|     enabled: true\n|     version: lts\n|   python:\n|     enabled: true\n|   dotnet:\n|     enabled: false\n\n- Node.js is managed by fnm (Fast Node Manager). Set version to lts for the latest LTS, or pin a specific version like 20 or 22.\n- Python is managed by uv. It installs the latest stable Python version and sets up uv as the default package manager.\n- .NET SDK is installed via Homebrew. Disabled by default in the minimal profile.\n\nTIP: Set enabled: false for runtimes you don't need — `dk apply` will skip them entirely.",
       },
       {
         title: 'shell',
@@ -520,7 +520,7 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'ai_tools & ai_apps',
-        body: 'AI-powered developer tools — the differentiating feature of Datakraften. Two sections control what gets installed:\n\n**~ai_tools~** — CLI tools installed via npm or Homebrew:\n\n| ai_tools:\n|   codex: true     # npm install -g @openai/codex\n|   opencode: true   # brew install opencode\n|   copilot: true    # brew install github/copilot-cli/copilot\n|   claude: false    # npm install -g @anthropic-ai/claude-code\n|   gemini: false    # npm install -g @google-gemini/gemini-cli\n\n**~ai_apps~** — desktop apps installed via Homebrew Cask or VS Code extension:\n\n| ai_apps:\n|   codex: true      # brew install --cask codex-app\n|   claude: false    # brew install --cask claude\n|   copilot: true    # code --install-extension GitHub.copilot\n\n`dk apply` handles both sections. CLI tools are installed first, then desktop apps. Apps that require a specific platform (e.g., macOS-only brew casks) are skipped gracefully.\n\nTIP: Some AI tools require API keys or subscriptions (GitHub Copilot subscription, OpenAI API key). Check each tool\'s documentation for authentication requirements.',
+        body: "AI-powered developer tools — the differentiating feature of Datakraften. Two sections control what gets installed:\n\n**~ai_tools~** — CLI tools installed via npm or Homebrew:\n\n| ai_tools:\n|   codex: true     # npm install -g @openai/codex\n|   opencode: true   # brew install opencode\n|   copilot: true    # brew install github/copilot-cli/copilot\n|   claude: false    # npm install -g @anthropic-ai/claude-code\n|   gemini: false    # npm install -g @google-gemini/gemini-cli\n\n**~ai_apps~** — desktop apps installed via Homebrew Cask or VS Code extension:\n\n| ai_apps:\n|   codex: true      # brew install --cask codex-app\n|   claude: false    # brew install --cask claude\n|   copilot: true    # code --install-extension GitHub.copilot\n\n`dk apply` handles both sections. CLI tools are installed first, then desktop apps. Apps that require a specific platform (e.g., macOS-only brew casks) are skipped gracefully.\n\nTIP: Some AI tools require API keys or subscriptions (GitHub Copilot subscription, OpenAI API key). Check each tool's documentation for authentication requirements.",
       },
     ],
     website: '',
@@ -558,19 +558,19 @@ export const tools: Record<string, ToolDef> = {
     sections: [
       {
         title: 'Why team profiles?',
-        body: 'Every team has a stack — specific tools, runtimes, linters, and conventions. Without automation, each new hire spends hours (or days) setting up their machine, and inconsistencies creep in across the team. Datakraften\'s team profile solves this with a single shared YAML file.\n\nThe idea is simple: define your team\'s ideal workstation once, host the YAML file somewhere your team can reach it, and each developer\'s local config becomes a thin pointer — just ~profile: team~ and ~team.url~. On every `dk apply`, the remote YAML is fetched fresh, validated, and applied. No local copy, no drift.\n\n$ curl -fsSL https://datakraften.no/install | bash\n$ dk init\n$ dk apply\n\nNOTE: Onboarding goes from hours to minutes. Every machine is identical. No tribal knowledge needed. Updates to the shared config take effect on the next `dk apply` — no need to re-run `dk init`.',
+        body: "Every team has a stack — specific tools, runtimes, linters, and conventions. Without automation, each new hire spends hours (or days) setting up their machine, and inconsistencies creep in across the team. Datakraften's team profile solves this with a single shared YAML file.\n\nThe idea is simple: define your team's ideal workstation once, host the YAML file somewhere your team can reach it, and each developer's local config becomes a thin pointer — just ~profile: team~ and ~team.url~. On every `dk apply`, the remote YAML is fetched fresh, validated, and applied. No local copy, no drift.\n\n$ curl -fsSL https://datakraften.no/install | bash\n$ dk init\n$ dk apply\n\nNOTE: Onboarding goes from hours to minutes. Every machine is identical. No tribal knowledge needed. Updates to the shared config take effect on the next `dk apply` — no need to re-run `dk init`.",
       },
       {
         title: 'Setting up a team config',
-        body: 'The remote YAML defines everything — it IS the config. Create a file with the exact toolset your team needs and host it somewhere accessible. Each developer\'s local config only needs:\n\n| profile: team\n| team:\n|   url: https://raw.githubusercontent.com/your-org/team-config/main/datakraften.yaml\n\nHere is an example of what the remote YAML file itself might look like:\n\n| system_packages:\n|   - build-essential\n|   - curl\n|   - git\n|   - unzip\n|   - postgresql-client\n|   - redis-tools\n|\n| brew_packages:\n|   - fish\n|   - starship\n|   - atuin\n|   - fzf\n|   - gh\n|   - docker\n|\n| runtimes:\n|   node:\n|     enabled: true\n|     version: lts\n|   python:\n|     enabled: true\n|   dotnet:\n|     enabled: true\n|\n| shell:\n|   fish:\n|     enabled: true\n|     managed_config: true\n|\n| editors:\n|   vscode:\n|     enabled: true\n|   zed:\n|     enabled: true\n|\n| ai_tools:\n|   codex: true\n|   opencode: true\n|   copilot: true\n|   claude: false\n|   gemini: false\n| ai_apps:\n|   codex: true\n|   claude: false\n|   copilot: true\n\nNOTE: Commit this file to your team\'s infrastructure repo or a shared gist, then share the raw URL. Every developer who runs `dk init` with this URL gets exactly this setup — and every `dk apply` re-fetches it fresh, so updates are instant.',
+        body: "The remote YAML defines everything — it IS the config. Create a file with the exact toolset your team needs and host it somewhere accessible. Each developer's local config only needs:\n\n| profile: team\n| team:\n|   url: https://raw.githubusercontent.com/your-org/team-config/main/datakraften.yaml\n\nHere is an example of what the remote YAML file itself might look like:\n\n| system_packages:\n|   - build-essential\n|   - curl\n|   - git\n|   - unzip\n|   - postgresql-client\n|   - redis-tools\n|\n| brew_packages:\n|   - fish\n|   - starship\n|   - atuin\n|   - fzf\n|   - gh\n|   - docker\n|\n| runtimes:\n|   node:\n|     enabled: true\n|     version: lts\n|   python:\n|     enabled: true\n|   dotnet:\n|     enabled: true\n|\n| shell:\n|   fish:\n|     enabled: true\n|     managed_config: true\n|\n| editors:\n|   vscode:\n|     enabled: true\n|   zed:\n|     enabled: true\n|\n| ai_tools:\n|   codex: true\n|   opencode: true\n|   copilot: true\n|   claude: false\n|   gemini: false\n| ai_apps:\n|   codex: true\n|   claude: false\n|   copilot: true\n\nNOTE: Commit this file to your team's infrastructure repo or a shared gist, then share the raw URL. Every developer who runs `dk init` with this URL gets exactly this setup — and every `dk apply` re-fetches it fresh, so updates are instant.",
       },
       {
         title: 'Hosting your YAML',
-        body: 'Any HTTPS-accessible URL works. Popular options:\n\n- GitHub repository — commit the YAML to your team\'s repo and use the raw.githubusercontent.com URL\n- GitHub Gist — create a secret or public gist and use the raw URL\n- Internal wiki — host it behind your company\'s SSO or VPN\n- S3 / Cloud Storage — with a signed URL or public bucket\n- Your own server — any static file server works\n\nThe URL is set during `dk init` (or `dk profile use team`). Datakraften fetches the remote YAML to validate it, then stores only the URL locally. On every `dk apply`, the remote YAML is re-fetched fresh — the remote file is always the single source of truth. This means the environment is always up to date with the latest version of the shared config.\n\nTIP: Use a versioned path (e.g. /v1/datakraften.yaml or a git tag) to control when team members pick up changes. When you update the shared config, tell your team to run `dk apply` to pull the latest version immediately.',
+        body: "Any HTTPS-accessible URL works. Popular options:\n\n- GitHub repository — commit the YAML to your team's repo and use the raw.githubusercontent.com URL\n- GitHub Gist — create a secret or public gist and use the raw URL\n- Internal wiki — host it behind your company's SSO or VPN\n- S3 / Cloud Storage — with a signed URL or public bucket\n- Your own server — any static file server works\n\nThe URL is set during `dk init` (or `dk profile use team`). Datakraften fetches the remote YAML to validate it, then stores only the URL locally. On every `dk apply`, the remote YAML is re-fetched fresh — the remote file is always the single source of truth. This means the environment is always up to date with the latest version of the shared config.\n\nTIP: Use a versioned path (e.g. /v1/datakraften.yaml or a git tag) to control when team members pick up changes. When you update the shared config, tell your team to run `dk apply` to pull the latest version immediately.",
       },
       {
         title: 'Best practices',
-        body: 'Start with the default profile, test it, then iterate:\n\n- Begin with the default profile on your own machine — run `dk init` then `dk apply`\n\n- Customize your remote YAML for your team\'s stack. Add specific packages, remove what you don\'t need.\n\n- Host the YAML and share the raw URL. Ask a teammate to run `dk init` with it on a fresh machine.\n\n- Keep the remote YAML minimal — install only what every developer needs. Let individuals add their own tools on top.\n\n- Version your config. Use a git tag or a versioned path so you can roll back if something breaks.\n\n- Document exceptions. Not everything fits in YAML. Add a comment or a README alongside your remote config for manual steps.\n\n- Run `dk doctor` after `dk apply` to verify everything is set up correctly.\n\n- Update periodically. Point your team to run `dk apply` when you push a new version of the remote YAML — changes take effect immediately.',
+        body: "Start with the default profile, test it, then iterate:\n\n- Begin with the default profile on your own machine — run `dk init` then `dk apply`\n\n- Customize your remote YAML for your team's stack. Add specific packages, remove what you don't need.\n\n- Host the YAML and share the raw URL. Ask a teammate to run `dk init` with it on a fresh machine.\n\n- Keep the remote YAML minimal — install only what every developer needs. Let individuals add their own tools on top.\n\n- Version your config. Use a git tag or a versioned path so you can roll back if something breaks.\n\n- Document exceptions. Not everything fits in YAML. Add a comment or a README alongside your remote config for manual steps.\n\n- Run `dk doctor` after `dk apply` to verify everything is set up correctly.\n\n- Update periodically. Point your team to run `dk apply` when you push a new version of the remote YAML — changes take effect immediately.",
       },
       {
         title: 'Example: Node.js team config',

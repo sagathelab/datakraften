@@ -20,17 +20,18 @@ export default function DocsHub() {
 
   const filtered = query.trim()
     ? categories
-        .map(cat => ({
+        .map((cat) => ({
           ...cat,
-          ids: cat.ids.filter(id => {
+          ids: cat.ids.filter((id) => {
             const t = tools[id]
-            return t && (
-              t.title.toLowerCase().includes(query.toLowerCase()) ||
-              t.subtitle.toLowerCase().includes(query.toLowerCase())
+            return (
+              t &&
+              (t.title.toLowerCase().includes(query.toLowerCase()) ||
+                t.subtitle.toLowerCase().includes(query.toLowerCase()))
             )
           }),
         }))
-        .filter(cat => cat.ids.length > 0)
+        .filter((cat) => cat.ids.length > 0)
     : categories
 
   return (
@@ -38,22 +39,29 @@ export default function DocsHub() {
       <div className="doc-content py-8">
         <h1 className="text-3xl font-bold text-magenta font-share-tech mb-2">Documentation</h1>
         <p className="text-base text-text-dim mb-6">
-          Everything you need to know about the tools in your bootstrapped and AI-powered development environment.
+          Everything you need to know about the tools in your bootstrapped and AI-powered
+          development environment.
         </p>
 
         <div className="relative mb-8">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim text-sm pointer-events-none">~</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim text-sm pointer-events-none">
+            ~
+          </span>
           <input
             type="text"
             placeholder="Search documentation..."
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             className="w-full bg-bg-card border border-fuchsia-500/20 rounded-lg py-2.5 pl-8 pr-4 text-sm text-text-primary placeholder:text-text-dim/50 focus:outline-none focus:border-magenta transition-colors font-jetbrains"
           />
         </div>
 
         {filtered.map((cat) => (
-          <section key={cat.title} id={cat.title.toLowerCase().replace(/[\s&]+/g, '-')} className="mb-8 scroll-mt-16">
+          <section
+            key={cat.title}
+            id={cat.title.toLowerCase().replace(/[\s&]+/g, '-')}
+            className="mb-8 scroll-mt-16"
+          >
             <div className="flex items-baseline gap-3 mb-4">
               <h2 className="text-lg font-bold text-text-primary">{cat.title}</h2>
               <span className="text-xs text-text-dim">{cat.desc}</span>
@@ -62,14 +70,7 @@ export default function DocsHub() {
               {cat.ids.map((id) => {
                 const tool = tools[id]
                 if (!tool) return null
-                return (
-                  <DocCard
-                    key={id}
-                    to={`/docs/${id}`}
-                    cmd={tool.title}
-                    desc={tool.subtitle}
-                  />
-                )
+                return <DocCard key={id} to={`/docs/${id}`} cmd={tool.title} desc={tool.subtitle} />
               })}
             </div>
           </section>
@@ -81,9 +82,9 @@ export default function DocsHub() {
 
         <div className="disclaimer mt-12 pt-6 border-t border-fuchsia-500/20">
           <p className="text-sm text-text-dim">
-            Datakraften orchestrates existing tools -- it does not replace them.
-            Each tool retains its own license, documentation, and update mechanism.
-            See the respective official sites for detailed documentation.
+            Datakraften orchestrates existing tools -- it does not replace them. Each tool retains
+            its own license, documentation, and update mechanism. See the respective official sites
+            for detailed documentation.
           </p>
         </div>
       </div>

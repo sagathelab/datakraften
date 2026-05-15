@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && cp dist/index.html dist/404.html && node scripts/static-routes.mjs",
-    "lint": "eslint .",
+    "lint": "eslint . && stylelint \"src/**/*.css\"",
+    "lint:eslint": "eslint .",
+    "lint:css": "stylelint \"src/**/*.css\"",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -22,9 +26,13 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^10.3.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "prettier": "^3.8.3",
+    "stylelint": "^17.11.1",
+    "stylelint-config-standard": "^40.0.0",
     "tailwindcss": "^4.3.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",

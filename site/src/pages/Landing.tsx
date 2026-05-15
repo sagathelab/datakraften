@@ -71,19 +71,19 @@ export default function Landing() {
         <h2 className="font-share-tech text-magenta text-center mb-8 text-xl">What you get</h2>
         <div className="space-y-6 text-text-body text-sm sm:text-base leading-relaxed">
           <p>
-            <span className="text-magenta font-bold">~</span> A complete, AI-ready development environment
-            — from shell to editor to cloud tools — installed and configured with a single command.
-            No more hour-long setup guides or scattered READMEs.
+            <span className="text-magenta font-bold">~</span> A complete, AI-ready development
+            environment — from shell to editor to cloud tools — installed and configured with a
+            single command. No more hour-long setup guides or scattered READMEs.
           </p>
           <p>
-            <span className="text-magenta font-bold">~</span> Consistency across your team.
-            Share a YAML profile and every developer gets the same toolchain, runtimes, and shell config.
+            <span className="text-magenta font-bold">~</span> Consistency across your team. Share a
+            YAML profile and every developer gets the same toolchain, runtimes, and shell config.
             Onboarding goes from days to minutes.
           </p>
           <p>
-            <span className="text-magenta font-bold">~</span> Idempotent and transparent.
-            Run it as many times as you want — it only installs what's missing.
-            Everything is orchestrated through battle-tested tools you already know.
+            <span className="text-magenta font-bold">~</span> Idempotent and transparent. Run it as
+            many times as you want — it only installs what's missing. Everything is orchestrated
+            through battle-tested tools you already know.
           </p>
         </div>
       </section>
@@ -93,7 +93,10 @@ export default function Landing() {
 
 function Step({ num, text, desc, to }: { num: string; text: string; desc: string; to: string }) {
   return (
-    <Link to={to} className="flex flex-col items-center gap-1.5 p-4 border border-fuchsia-500/20 rounded-lg min-w-[140px] bg-bg-card hover:border-magenta hover:bg-fuchsia-500/5 transition-all">
+    <Link
+      to={to}
+      className="flex flex-col items-center gap-1.5 p-4 border border-fuchsia-500/20 rounded-lg min-w-[140px] bg-bg-card hover:border-magenta hover:bg-fuchsia-500/5 transition-all"
+    >
       <span className="text-2xl font-bold text-magenta leading-none">{num}</span>
       <span className="text-base text-text-primary">{text}</span>
       <span className="text-sm text-text-dim text-center">{desc}</span>
@@ -103,7 +106,13 @@ function Step({ num, text, desc, to }: { num: string; text: string; desc: string
 
 function Arrow() {
   return (
-    <svg className="w-6 h-6 text-text-dim hidden sm:block flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      className="w-6 h-6 text-text-dim hidden sm:block flex-shrink-0"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <path d="M5 12h14M13 5l7 7-7 7" />
     </svg>
   )

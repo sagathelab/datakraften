@@ -37,10 +37,18 @@ function renderInlineCode(text: string) {
           </Link>
         )
       }
-      return <code key={i} className="inline-code">{code}</code>
+      return (
+        <code key={i} className="inline-code">
+          {code}
+        </code>
+      )
     }
     if (part.startsWith('~') && part.endsWith('~')) {
-      return <mark key={i} className="inline-highlight">{part.slice(1, -1)}</mark>
+      return (
+        <mark key={i} className="inline-highlight">
+          {part.slice(1, -1)}
+        </mark>
+      )
     }
     return <span key={i}>{part}</span>
   })
@@ -50,13 +58,15 @@ function CodeBlock({ lines }: { lines: string[] }) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = useCallback(() => {
-    const text = lines.map(l => {
-      if (l.startsWith('$ ')) return l.slice(2)
-      if (l.startsWith('> ')) return l.slice(2)
-      if (l.startsWith('// ')) return l.slice(3)
-      if (l.startsWith('# ')) return l.slice(2)
-      return l
-    }).join('\n')
+    const text = lines
+      .map((l) => {
+        if (l.startsWith('$ ')) return l.slice(2)
+        if (l.startsWith('> ')) return l.slice(2)
+        if (l.startsWith('// ')) return l.slice(3)
+        if (l.startsWith('# ')) return l.slice(2)
+        return l
+      })
+      .join('\n')
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
@@ -71,33 +81,62 @@ function CodeBlock({ lines }: { lines: string[] }) {
         title="Copy"
       >
         {copied ? (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
         ) : (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
         )}
       </button>
-      {lines.filter(l => l.trim() !== '').map((line, li) => {
-        if (line.startsWith('$ ') || line === '$') {
-          return (
-            <div key={li}>
-              <span className="code-prompt">$</span>
-              <span className="ml-2">{renderInlineCode(line.slice(2))}</span>
-            </div>
-          )
-        }
-        if (line.startsWith('> ')) {
-          return (
-            <div key={li} className="code-output">{renderInlineCode(line.slice(2))}</div>
-          )
-        }
-        if (line.startsWith('// ') || line.startsWith('# ') || line.startsWith('<!-- ')) {
-          const comment = line.replace(/^\/\/ |^# |^<!-- /, '')
-          return (
-            <div key={li} className="code-comment">{renderInlineCode(comment)}</div>
-          )
-        }
-        return <div key={li}>{renderInlineCode(line)}</div>
-      })}
+      {lines
+        .filter((l) => l.trim() !== '')
+        .map((line, li) => {
+          if (line.startsWith('$ ') || line === '$') {
+            return (
+              <div key={li}>
+                <span className="code-prompt">$</span>
+                <span className="ml-2">{renderInlineCode(line.slice(2))}</span>
+              </div>
+            )
+          }
+          if (line.startsWith('> ')) {
+            return (
+              <div key={li} className="code-output">
+                {renderInlineCode(line.slice(2))}
+              </div>
+            )
+          }
+          if (line.startsWith('// ') || line.startsWith('# ') || line.startsWith('<!-- ')) {
+            const comment = line.replace(/^\/\/ |^# |^<!-- /, '')
+            return (
+              <div key={li} className="code-comment">
+                {renderInlineCode(comment)}
+              </div>
+            )
+          }
+          return <div key={li}>{renderInlineCode(line)}</div>
+        })}
     </div>
   )
 }
@@ -106,7 +145,7 @@ function YamlBlock({ lines }: { lines: string[] }) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = useCallback(() => {
-    const text = lines.map(l => l.replace(/^\| /, '')).join('\n')
+    const text = lines.map((l) => l.replace(/^\| /, '')).join('\n')
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
@@ -121,19 +160,44 @@ function YamlBlock({ lines }: { lines: string[] }) {
         title="Copy"
       >
         {copied ? (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
         ) : (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
         )}
       </button>
-      {lines.filter(l => l.trim() !== '').map((line, li) => {
-        const content = line.replace(/^\| /, '').replace(/^\|$/, '')
-        return (
-          <div key={li} className="yaml-line">
-            {renderInlineCode(content)}
-          </div>
-        )
-      })}
+      {lines
+        .filter((l) => l.trim() !== '')
+        .map((line, li) => {
+          const content = line.replace(/^\| /, '').replace(/^\|$/, '')
+          return (
+            <div key={li} className="yaml-line">
+              {renderInlineCode(content)}
+            </div>
+          )
+        })}
     </div>
   )
 }
@@ -141,10 +205,13 @@ function YamlBlock({ lines }: { lines: string[] }) {
 function renderBody(body: string) {
   const lines = body.split('\n')
   const blocks: { type: 'code' | 'text' | 'tip' | 'note' | 'list' | 'yaml'; lines: string[] }[] = []
-  let current: { type: 'code' | 'text' | 'tip' | 'note' | 'list' | 'yaml'; lines: string[] } | null = null
+  let current: {
+    type: 'code' | 'text' | 'tip' | 'note' | 'list' | 'yaml'
+    lines: string[]
+  } | null = null
 
   const codePrefixes = ['$ ', '# ', '// ', '<!-- ', '> ']
-  const isCode = (l: string) => codePrefixes.some(p => l.startsWith(p)) || l === '$'
+  const isCode = (l: string) => codePrefixes.some((p) => l.startsWith(p)) || l === '$'
   const isTip = (l: string) => l.startsWith('TIP:')
   const isNote = (l: string) => l.startsWith('NOTE:')
   const isEmpty = (l: string) => l.trim() === ''
@@ -153,33 +220,54 @@ function renderBody(body: string) {
 
   for (const line of lines) {
     if (isTip(line)) {
-      if (current && current.type !== 'tip') { blocks.push(current); current = null }
+      if (current && current.type !== 'tip') {
+        blocks.push(current)
+        current = null
+      }
       if (!current) current = { type: 'tip', lines: [] }
       current.lines.push(line.slice(5).trim())
     } else if (isNote(line)) {
-      if (current && current.type !== 'note') { blocks.push(current); current = null }
+      if (current && current.type !== 'note') {
+        blocks.push(current)
+        current = null
+      }
       if (!current) current = { type: 'note', lines: [] }
       current.lines.push(line.slice(5).trim())
     } else if (isYaml(line)) {
-      if (current && current.type !== 'yaml') { blocks.push(current); current = null }
+      if (current && current.type !== 'yaml') {
+        blocks.push(current)
+        current = null
+      }
       if (!current) current = { type: 'yaml', lines: [] }
       current.lines.push(line)
     } else if (isCode(line)) {
-      if (current && current.type !== 'code') { blocks.push(current); current = null }
+      if (current && current.type !== 'code') {
+        blocks.push(current)
+        current = null
+      }
       if (!current) current = { type: 'code', lines: [] }
       current.lines.push(line)
     } else if (isListItem(line)) {
-      if (current && current.type !== 'list') { blocks.push(current); current = null }
+      if (current && current.type !== 'list') {
+        blocks.push(current)
+        current = null
+      }
       if (!current) current = { type: 'list', lines: [] }
       current.lines.push(line.slice(2))
     } else if (isEmpty(line)) {
       if (current && (current.type === 'code' || current.type === 'yaml')) {
         current.lines.push(line)
       } else {
-        if (current) { blocks.push(current); current = null }
+        if (current) {
+          blocks.push(current)
+          current = null
+        }
       }
     } else {
-      if (current && current.type !== 'text') { blocks.push(current); current = null }
+      if (current && current.type !== 'text') {
+        blocks.push(current)
+        current = null
+      }
       if (!current) current = { type: 'text', lines: [] }
       current.lines.push(line)
     }
@@ -198,8 +286,7 @@ function renderBody(body: string) {
     if (block.type === 'tip') {
       return (
         <div key={bi} className="tip-box">
-          <span className="text-magenta font-bold">&#9654;</span>
-          {' '}
+          <span className="text-magenta font-bold">&#9654;</span>{' '}
           {block.lines.map((l, li) => (
             <Fragment key={li}>
               {li > 0 && <br />}
@@ -213,8 +300,7 @@ function renderBody(body: string) {
     if (block.type === 'note') {
       return (
         <div key={bi} className="note-box">
-          <span className="text-text-dim font-bold">~</span>
-          {' '}
+          <span className="text-text-dim font-bold">~</span>{' '}
           {block.lines.map((l, li) => (
             <Fragment key={li}>
               {li > 0 && <br />}
@@ -227,7 +313,10 @@ function renderBody(body: string) {
 
     if (block.type === 'list') {
       return (
-        <ul key={bi} className="list-disc list-inside text-sm text-text-body leading-relaxed mb-3 space-y-1">
+        <ul
+          key={bi}
+          className="list-disc list-inside text-sm text-text-body leading-relaxed mb-3 space-y-1"
+        >
           {block.lines.map((l, li) => (
             <li key={li}>{renderInlineCode(l)}</li>
           ))}
@@ -244,7 +333,7 @@ function renderBody(body: string) {
 }
 
 export default function ToolGuide({ title, subtitle, sections, website }: ToolGuideProps) {
-  const toc = sections.filter(s => s.title)
+  const toc = sections.filter((s) => s.title)
 
   return (
     <Layout variant="docs" title={title}>
@@ -256,7 +345,12 @@ export default function ToolGuide({ title, subtitle, sections, website }: ToolGu
           {sections.map((section, i) => (
             <div key={i} className="mb-6">
               {section.title && (
-                <h2 id={section.id || section.title.toLowerCase().replace(/\s+/g, '-')} className="text-lg font-bold text-text-primary mb-2 scroll-mt-16">{section.title}</h2>
+                <h2
+                  id={section.id || section.title.toLowerCase().replace(/\s+/g, '-')}
+                  className="text-lg font-bold text-text-primary mb-2 scroll-mt-16"
+                >
+                  {section.title}
+                </h2>
               )}
               {renderBody(section.body)}
             </div>
@@ -279,7 +373,9 @@ export default function ToolGuide({ title, subtitle, sections, website }: ToolGu
         {toc.length > 1 && (
           <aside className="hidden lg:block w-56 flex-shrink-0">
             <nav className="sticky top-20 space-y-1.5">
-              <span className="block text-xs text-text-dim uppercase tracking-wider font-semibold mb-3">On this page</span>
+              <span className="block text-xs text-text-dim uppercase tracking-wider font-semibold mb-3">
+                On this page
+              </span>
               {toc.map((s, i) => (
                 <a
                   key={i}

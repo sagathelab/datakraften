@@ -1,8 +1,8 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-  --font-share-tech: "Share Tech Mono", monospace;
-  --font-jetbrains: "JetBrains Mono", monospace;
+  --font-share-tech: 'Share Tech Mono', monospace;
+  --font-jetbrains: 'JetBrains Mono', monospace;
   --color-magenta: #ff00ff;
   --color-magenta-dark: #b026ff;
   --color-bg-primary: #0a0a0b;
@@ -41,7 +41,7 @@
 }
 
 .logo-pre {
-  font-family: "Share Tech Mono", monospace;
+  font-family: 'Share Tech Mono', monospace;
   font-size: 16px;
   line-height: 1.25;
   color: #ff00ff;
@@ -70,16 +70,26 @@
 }
 
 @keyframes taglineGlow {
-  0% { opacity: 0; text-shadow: 0 0 20px #ff00ff; }
-  100% { opacity: 1; text-shadow: 0 0 10px #ff00ff; }
+  0% {
+    opacity: 0;
+    text-shadow: 0 0 20px #ff00ff;
+  }
+  100% {
+    opacity: 1;
+    text-shadow: 0 0 10px #ff00ff;
+  }
 }
 
 @keyframes blink {
-  50% { opacity: 0; }
+  50% {
+    opacity: 0;
+  }
 }
 
 @keyframes blinkCaret {
-  50% { opacity: 0; }
+  50% {
+    opacity: 0;
+  }
 }
 
 .scanlines {
@@ -104,7 +114,7 @@ body {
 }
 
 .inline-code {
-  font-family: "JetBrains Mono", monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 0.9rem;
   background: #1a1a2e;
   color: #ff00ff;
@@ -134,7 +144,7 @@ body {
   color: #ff00ff;
   padding: 0 0.3rem;
   border-radius: 3px;
-  font-family: "JetBrains Mono", monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 0.9rem;
 }
 
@@ -146,7 +156,7 @@ body {
   padding: 1rem 1.25rem;
   overflow-x: auto;
   margin: 0.75rem 0 1.25rem;
-  font-family: "JetBrains Mono", monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 0.95rem;
   color: var(--color-text-primary);
   line-height: 1.6;
@@ -205,7 +215,7 @@ body {
   padding: 0.75rem 1rem;
   overflow-x: auto;
   margin: 0.75rem 0 1.25rem;
-  font-family: "JetBrains Mono", monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 0.9rem;
   line-height: 1.6;
 }
