@@ -8,11 +8,11 @@ import (
 )
 
 type DockerStatus struct {
-	CliInstalled bool
-	DaemonRunning bool
-	DockerSocket bool
+	CliInstalled   bool
+	DaemonRunning  bool
+	DockerSocket   bool
 	WSLIntegration bool
-	Message      string
+	Message        string
 }
 
 func Detect() DockerStatus {

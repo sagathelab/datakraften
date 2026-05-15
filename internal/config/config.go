@@ -45,12 +45,12 @@ type Config struct {
 		Go     RuntimeConfig `mapstructure:"go"`
 		Dotnet RuntimeConfig `mapstructure:"dotnet"`
 	} `mapstructure:"runtimes"`
-	Tools    map[string]bool            `mapstructure:"tools"`
-	Editors  map[string]string          `mapstructure:"editors"`
-	AITools  map[string]RuntimeConfig   `mapstructure:"ai_tools"`
-	AIApps   map[string]RuntimeConfig   `mapstructure:"ai_apps"`
-	Custom   CustomConfig      `mapstructure:"custom"`
-	Team     TeamConfig        `mapstructure:"team"`
+	Tools   map[string]bool          `mapstructure:"tools"`
+	Editors map[string]string        `mapstructure:"editors"`
+	AITools map[string]RuntimeConfig `mapstructure:"ai_tools"`
+	AIApps  map[string]RuntimeConfig `mapstructure:"ai_apps"`
+	Custom  CustomConfig             `mapstructure:"custom"`
+	Team    TeamConfig               `mapstructure:"team"`
 }
 
 func DefaultConfigPath() string {

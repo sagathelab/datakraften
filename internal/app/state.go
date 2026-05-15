@@ -9,11 +9,11 @@ import (
 )
 
 type State struct {
-	Version      string   `json:"version"`
-	LastApply    string   `json:"last_apply,omitempty"`
-	ActiveSource string  `json:"active_source"`
+	Version        string   `json:"version"`
+	LastApply      string   `json:"last_apply,omitempty"`
+	ActiveSource   string   `json:"active_source"`
 	InstalledTools []string `json:"installed_tools,omitempty"`
-	ManagedShell  bool     `json:"managed_shell"`
+	ManagedShell   bool     `json:"managed_shell"`
 }
 
 func stateDir() string {

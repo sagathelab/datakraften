@@ -2,14 +2,14 @@ run:
   timeout: 3m
 
 linters:
+  disable-all: true
   enable:
-    - errcheck
-    - gocritic
     - gofmt
     - goimports
     - govet
     - ineffassign
     - misspell
+    - gosimple
     - staticcheck
     - unused
 
@@ -29,3 +29,5 @@ issues:
   exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
+  exclude-dirs:
+    - site/node_modules

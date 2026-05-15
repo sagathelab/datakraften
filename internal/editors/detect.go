@@ -8,24 +8,24 @@ import (
 )
 
 type EditorStatus struct {
-	Name    string
-	Command string
-	Installed bool
-	Path    string
+	Name        string
+	Command     string
+	Installed   bool
+	Path        string
 	WindowsSide bool
-	Message string
+	Message     string
 }
 
 func DetectVSCode() EditorStatus {
 	path := exec.CommandPath("code")
 	installed := path != ""
 	return EditorStatus{
-		Name:      "VS Code",
-		Command:   "code",
-		Installed: installed,
-		Path:      path,
+		Name:        "VS Code",
+		Command:     "code",
+		Installed:   installed,
+		Path:        path,
 		WindowsSide: installed && strings.HasPrefix(path, "/mnt/"),
-		Message:  editorMessage("VS Code", installed, path),
+		Message:     editorMessage("VS Code", installed, path),
 	}
 }
 
@@ -33,12 +33,12 @@ func DetectZed() EditorStatus {
 	path := exec.CommandPath("zed")
 	installed := path != ""
 	return EditorStatus{
-		Name:      "Zed",
-		Command:   "zed",
-		Installed: installed,
-		Path:      path,
+		Name:        "Zed",
+		Command:     "zed",
+		Installed:   installed,
+		Path:        path,
 		WindowsSide: installed && strings.HasPrefix(path, "/mnt/"),
-		Message:  editorMessage("Zed", installed, path),
+		Message:     editorMessage("Zed", installed, path),
 	}
 }
 
@@ -46,12 +46,12 @@ func DetectCursor() EditorStatus {
 	path := exec.CommandPath("cursor")
 	installed := path != ""
 	return EditorStatus{
-		Name:      "Cursor",
-		Command:   "cursor",
-		Installed: installed,
-		Path:      path,
+		Name:        "Cursor",
+		Command:     "cursor",
+		Installed:   installed,
+		Path:        path,
 		WindowsSide: installed && strings.HasPrefix(path, "/mnt/"),
-		Message:  editorMessage("Cursor", installed, path),
+		Message:     editorMessage("Cursor", installed, path),
 	}
 }
 

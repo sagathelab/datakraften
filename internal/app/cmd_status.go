@@ -15,13 +15,13 @@ import (
 
 type StatusReport struct {
 	WSL struct {
-		Detected bool   `json:"detected"`
-		Version  int    `json:"version,omitempty"`
-		Distro   string `json:"distro,omitempty"`
+		Detected  bool   `json:"detected"`
+		Version   int    `json:"version,omitempty"`
+		Distro    string `json:"distro,omitempty"`
 		DistroVer string `json:"distro_version,omitempty"`
-		Systemd  bool   `json:"systemd"`
+		Systemd   bool   `json:"systemd"`
 	} `json:"wsl"`
-	Tools map[string]bool `json:"tools"`
+	Tools    map[string]bool `json:"tools"`
 	Runtimes struct {
 		Node   string `json:"node,omitempty"`
 		Python string `json:"python,omitempty"`

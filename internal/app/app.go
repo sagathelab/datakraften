@@ -8,9 +8,9 @@ import (
 )
 
 var (
-	version   = "dev"
-	commit    = "none"
-	verbose   bool
+	version    = "dev"
+	commit     = "none"
+	verbose    bool
 	jsonOutput bool
 )
 
@@ -36,11 +36,6 @@ func newApp() *App {
 		Use:     "dk",
 		Short:   "Datakraften — The WSL-first developer workstation platform",
 		Version: fmt.Sprintf("%s (commit: %s)", version, commit),
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			if cmd.Name() != "dk" && cmd.Parent() != nil && cmd.Parent().Name() == "dk" {
-				// Only set on root command
-			}
-		},
 	}
 
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")

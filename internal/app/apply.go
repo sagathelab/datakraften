@@ -405,15 +405,6 @@ func shouldInstallRuntime(cfg *config.Config, name string) bool {
 	return true
 }
 
-func tryFix(run func() error, desc string) bool {
-	if err := run(); err != nil {
-		fmt.Printf("    ⚠ Auto-fix %s failed: %s\n", desc, err)
-		return false
-	}
-	fmt.Printf("    ✓ Auto-fix applied: %s\n", desc)
-	return true
-}
-
 func RunDoctorSystem(r *doctor.Report) {
 	wsl, wslVer := system.DetectWSL()
 	distro, distroVer := system.Distro()
@@ -530,7 +521,7 @@ func RunDoctorEditors(r *doctor.Report) {
 		status := "pass"
 		msg := ""
 		if ed.Installed && !ed.WindowsSide {
-			status = "pass"
+			msg = ""
 		} else if ed.Installed {
 			status = "fail"
 			msg = "Windows-side path"

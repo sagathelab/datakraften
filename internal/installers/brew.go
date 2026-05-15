@@ -63,7 +63,7 @@ func BrewEnsureInstalled() (bool, error) {
 
 	r := exec.RunWithInput("\n\n",
 		"bash", "-c",
-		fmt.Sprintf(`echo | NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`),
+		`echo | NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`,
 	)
 	if r.Code != 0 {
 		return false, fmt.Errorf("homebrew install failed: %s", r.Stderr)

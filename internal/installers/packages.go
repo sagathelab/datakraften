@@ -10,11 +10,11 @@ import (
 type PackageManager string
 
 const (
-	APT   PackageManager = "apt"
-	DNF   PackageManager = "dnf"
-	YUM   PackageManager = "yum"
+	APT    PackageManager = "apt"
+	DNF    PackageManager = "dnf"
+	YUM    PackageManager = "yum"
 	PACMAN PackageManager = "pacman"
-	BREW  PackageManager = "brew"
+	BREW   PackageManager = "brew"
 )
 
 func DetectPackageManager() PackageManager {
