@@ -118,6 +118,7 @@ function renderBody(body: string) {
         if (current) { blocks.push(current); current = null }
       }
     } else {
+      if (current && current.type !== 'text') { blocks.push(current); current = null }
       if (!current) current = { type: 'text', lines: [] }
       current.lines.push(line)
     }
