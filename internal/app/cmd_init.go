@@ -2,12 +2,11 @@ package app
 
 import (
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/sagathelab/datakraften/internal/config"
 	"github.com/sagathelab/datakraften/internal/installers"
 	"github.com/sagathelab/datakraften/internal/profiles"
 	"github.com/sagathelab/datakraften/internal/system"
@@ -69,6 +68,34 @@ func newInitCmd() *cobra.Command {
 			}
 
 			if alreadyInit {
+				if profile == "team" {
+					thinCfg, err := promptTeamURL()
+					if err != nil {
+						return err
+					}
+					os.WriteFile(configPath, []byte(thinCfg), 0644)
+
+					state := LoadState()
+					state.ActiveProfile = profile
+					state.Save()
+
+					fmt.Println()
+					fmt.Println("  Config preview:")
+					fmt.Printf("    profile: team\n")
+					for _, line := range strings.Split(thinCfg, "\n") {
+						if strings.TrimSpace(line) != "" {
+							fmt.Printf("    %s\n", line)
+						}
+					}
+					fmt.Println()
+					fmt.Printf("  Writing config to: %s\n", configPath)
+					fmt.Println()
+					fmt.Printf("  ✓ Profile updated to: %s\n", profile)
+					fmt.Println()
+					fmt.Println("  Run 'dk apply' to apply this profile.")
+					return nil
+				}
+
 				data, err := os.ReadFile(configPath)
 				if err == nil {
 					lines := strings.Split(string(data), "\n")
@@ -79,13 +106,6 @@ func newInitCmd() *cobra.Command {
 						}
 					}
 					updatedCfg := strings.Join(lines, "\n")
-
-					if profile == "team" {
-						useRemote, remoteCfg := promptTeamURL()
-						if useRemote {
-							updatedCfg = remoteCfg
-						}
-					}
 
 					os.WriteFile(configPath, []byte(updatedCfg), 0644)
 
@@ -231,61 +251,11 @@ ai_apps:
 					return fmt.Errorf("failed to write config: %w", err)
 				}
 			case "team":
-				useRemote, remoteCfg := promptTeamURL()
-				if useRemote {
-					cfg = remoteCfg
-				} else {
-					cfg = fmt.Sprintf(`version: 1
-profile: team
-
-system:
-  package_manager: %s
-
-tooling:
-  package_manager: brew
-
-shell:
-  default: fish
-  prompt: starship
-  history: atuin
-  fuzzy_finder: fzf
-
-tools:
-  github_cli: true
-  azure_cli: true
-  docker: true
-
-runtimes:
-  node:
-    enabled: true
-    manager: fnm
-    version: lts
-  python:
-    enabled: true
-    manager: uv
-    version: latest
-  dotnet:
-    enabled: true
-
-editors:
-  vscode: true
-  zed: true
-  cursor: optional
-
-ai_tools:
-  codex: true
-  opencode: true
-  copilot: true
-  claude: false
-  gemini: false
-ai_apps:
-  codex: true
-  claude: false
-  copilot: true
-`, nativePM)
+				thinCfg, err := promptTeamURL()
+				if err != nil {
+					return err
 				}
-
-				if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
+				if err := os.WriteFile(configPath, []byte(thinCfg), 0644); err != nil {
 					return fmt.Errorf("failed to write config: %w", err)
 				}
 			default:
@@ -357,13 +327,19 @@ ai_apps:
 			fmt.Println()
 			fmt.Printf("  Writing config to: %s\n", configPath)
 			fmt.Println()
-			if profile == "custom" || profile == "team" {
+			if profile == "custom" {
 				fmt.Printf("  ✓ Config created at %s\n", configPath)
 				fmt.Println()
 				fmt.Println("  Next steps:")
 				fmt.Println("    1. Edit the config file to customize your toolset")
 				fmt.Println("    2. Run 'dk apply' to install tools")
 				fmt.Println("    3. Run 'dk doctor' to verify")
+			} else if profile == "team" {
+				fmt.Printf("  ✓ Config created at %s\n", configPath)
+				fmt.Println()
+				fmt.Println("  Next steps:")
+				fmt.Println("    1. Run 'dk apply' to install tools (fetches remote config)")
+				fmt.Println("    2. Run 'dk doctor' to verify")
 			} else {
 				fmt.Println("  ✓ Config created")
 				fmt.Println()
@@ -402,50 +378,26 @@ func selectProfile() (string, error) {
 	return allProfiles[selected].Name, nil
 }
 
-func promptTeamURL() (bool, string) {
-	useRemote := false
-	prompt := &survey.Confirm{
-		Message: "Use team config from a remote YAML URL?",
-		Default: false,
-	}
-	survey.AskOne(prompt, &useRemote)
-
-	if !useRemote {
-		return false, ""
-	}
-
+func promptTeamURL() (string, error) {
 	var url string
 	urlPrompt := &survey.Input{
-		Message: "Remote config URL:",
+		Message: "Team config URL:",
 	}
-	survey.AskOne(urlPrompt, &url)
-
-	if url == "" {
-		fmt.Println("  No URL provided. Using local config as-is.")
-		return false, ""
+	if err := survey.AskOne(urlPrompt, &url, survey.WithValidator(survey.Required)); err != nil {
+		return "", err
 	}
 
 	fmt.Printf("    Fetching remote config from %s...\n", url)
-	resp, err := http.Get(url)
+
+	remoteCfg, err := config.FetchRemote(url)
 	if err != nil {
-		fmt.Printf("    ✗ Failed to fetch remote config: %s\n", err)
-		return false, ""
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("    ✗ Remote config returned status %d\n", resp.StatusCode)
-		fmt.Println("  Using local config as-is.")
-		return false, ""
+		fmt.Printf("    ✗ %s\n", err)
+		return "", fmt.Errorf("failed to load remote config")
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Printf("    ✗ Failed to read remote config: %s\n", err)
-		return false, ""
-	}
+	_ = remoteCfg
+	fmt.Println("    ✓ Remote config validated")
 
-	remoteCfg := fmt.Sprintf("profile: team\nteam:\n  url: %s\n%s", url, string(body))
-	fmt.Println("    ✓ Remote config applied")
-	return true, remoteCfg
+	thinCfg := fmt.Sprintf("profile: team\nteam:\n  url: %s\n", url)
+	return thinCfg, nil
 }

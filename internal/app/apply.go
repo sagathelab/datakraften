@@ -58,6 +58,32 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	verbosePrintf("packageManager=%s profile=%s\n", pm, cfg.Profile)
 	verbosePrintf("dryRun=%v\n", dryRun)
 
+	if cfg.Profile == "team" {
+		if cfg.Team.URL == "" {
+			report.Errors = append(report.Errors, "team profile requires a URL — set team.url in config")
+			fmt.Println("  ✗ Team profile is active but no team.url is set.")
+			fmt.Println("  Run 'dk init' or 'dk profile use team' to configure the URL.")
+			return report
+		}
+
+		fmt.Printf("  Fetching remote config from %s...\n", cfg.Team.URL)
+
+		remoteCfg, err := config.FetchRemote(cfg.Team.URL)
+		if err != nil {
+			report.Errors = append(report.Errors, fmt.Sprintf("remote config: %s", err))
+			fmt.Printf("    ✗ %s\n", err)
+			return report
+		}
+
+		fmt.Println("    ✓ Remote config loaded")
+
+		profile := cfg.Profile
+		team := cfg.Team
+		*cfg = *remoteCfg
+		cfg.Profile = profile
+		cfg.Team = team
+	}
+
 	fmt.Println()
 	fmt.Println("  System")
 	fmt.Println("  ------")

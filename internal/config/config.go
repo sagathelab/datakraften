@@ -1,7 +1,10 @@
 package config
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -83,6 +86,37 @@ func Load() (*Config, error) {
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("error parsing config: %w", err)
+	}
+
+	return &cfg, nil
+}
+
+func FetchRemote(url string) (*Config, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch remote config: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("remote config returned HTTP %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read remote config: %w", err)
+	}
+
+	v := viper.New()
+	v.SetConfigType("yaml")
+
+	if err := v.ReadConfig(bytes.NewReader(body)); err != nil {
+		return nil, fmt.Errorf("failed to parse remote config: %w", err)
+	}
+
+	var cfg Config
+	if err := v.Unmarshal(&cfg); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal remote config: %w", err)
 	}
 
 	return &cfg, nil

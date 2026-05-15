@@ -2,16 +2,12 @@ package app
 
 import (
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/sagathelab/datakraften/internal/config"
 	"github.com/sagathelab/datakraften/internal/profiles"
 	"github.com/spf13/cobra"
-	"github.com/AlecAivazis/survey/v2"
 )
 
 func newProfileCmd() *cobra.Command {
@@ -67,61 +63,37 @@ func newProfileUseCmd() *cobra.Command {
 			home, _ := os.UserHomeDir()
 			configPath := filepath.Join(home, ".config", "datakraften", "config.yaml")
 
-			data, err := os.ReadFile(configPath)
-			if err != nil {
-				fmt.Println("  No config found. Run 'dk init' first.")
-				return nil
-			}
-
-			lines := strings.Split(string(data), "\n")
-			replaced := false
-			for i, line := range lines {
-				if strings.HasPrefix(strings.TrimSpace(line), "profile:") {
-					lines[i] = fmt.Sprintf("profile: %s", name)
-					replaced = true
-					break
+			if name == "team" {
+				thinCfg, err := promptTeamURL()
+				if err != nil {
+					return err
 				}
-			}
+				if err := os.WriteFile(configPath, []byte(thinCfg), 0644); err != nil {
+					return fmt.Errorf("failed to write config: %w", err)
+				}
+			} else {
+				data, err := os.ReadFile(configPath)
+				if err != nil {
+					fmt.Println("  No config found. Run 'dk init' first.")
+					return nil
+				}
 
-			if !replaced {
-				lines = append([]string{fmt.Sprintf("profile: %s", name)}, lines...)
-			}
-
-			if err := os.WriteFile(configPath, []byte(strings.Join(lines, "\n")), 0644); err != nil {
-				return fmt.Errorf("failed to write config: %w", err)
-			}
-
-				if name == "team" {
-				cfg, err := config.Load()
-				if err == nil && cfg.Team.URL == "" {
-					useRemote := false
-					prompt := &survey.Confirm{
-						Message: "Add a remote team config (YAML URL)?",
-						Default: false,
+				lines := strings.Split(string(data), "\n")
+				replaced := false
+				for i, line := range lines {
+					if strings.HasPrefix(strings.TrimSpace(line), "profile:") {
+						lines[i] = fmt.Sprintf("profile: %s", name)
+						replaced = true
+						break
 					}
-					survey.AskOne(prompt, &useRemote)
+				}
 
-					if useRemote {
-						var url string
-						urlPrompt := &survey.Input{
-							Message: "Remote config URL:",
-						}
-						survey.AskOne(urlPrompt, &url)
+				if !replaced {
+					lines = append([]string{fmt.Sprintf("profile: %s", name)}, lines...)
+				}
 
-						if url != "" {
-							fmt.Printf("    Fetching remote config from %s...\n", url)
-							resp, fetchErr := http.Get(url)
-							if fetchErr == nil && resp.StatusCode == http.StatusOK {
-								body, readErr := io.ReadAll(resp.Body)
-								resp.Body.Close()
-								if readErr == nil {
-									remoteCfg := fmt.Sprintf("profile: team\nteam:\n  url: %s\n%s", url, string(body))
-									os.WriteFile(configPath, []byte(remoteCfg), 0644)
-									fmt.Println("    ✓ Remote config applied")
-								}
-							}
-						}
-					}
+				if err := os.WriteFile(configPath, []byte(strings.Join(lines, "\n")), 0644); err != nil {
+					return fmt.Errorf("failed to write config: %w", err)
 				}
 			}
 
