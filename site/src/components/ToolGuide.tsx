@@ -11,7 +11,7 @@ interface ToolGuideProps {
   title: string
   subtitle: string
   sections: ToolSection[]
-  website: string
+  website?: string
 }
 
 function renderInlineCode(text: string) {
@@ -124,31 +124,54 @@ function renderBody(body: string) {
 }
 
 export default function ToolGuide({ title, subtitle, sections, website }: ToolGuideProps) {
+  const toc = sections.filter(s => s.title)
+
   return (
     <Layout variant="docs" title={title}>
-      <div className="doc-content py-8">
-        <h1 className="text-3xl font-bold text-magenta font-share-tech mb-2">{title}</h1>
-        <p className="text-base text-text-dim mb-8">{subtitle}</p>
+      <div className="flex gap-10 py-8">
+        <div className="doc-content flex-1 min-w-0">
+          <h1 className="text-3xl font-bold text-magenta font-share-tech mb-2">{title}</h1>
+          <p className="text-base text-text-dim mb-8">{subtitle}</p>
 
-        {sections.map((section, i) => (
-          <div key={i} className="mb-6">
-            {section.title && (
-              <h2 id={section.id || section.title.toLowerCase().replace(/\s+/g, '-')} className="text-lg font-bold text-text-primary mb-2 scroll-mt-16">{section.title}</h2>
-            )}
-            {renderBody(section.body)}
-          </div>
-        ))}
+          {sections.map((section, i) => (
+            <div key={i} className="mb-6">
+              {section.title && (
+                <h2 id={section.id || section.title.toLowerCase().replace(/\s+/g, '-')} className="text-lg font-bold text-text-primary mb-2 scroll-mt-16">{section.title}</h2>
+              )}
+              {renderBody(section.body)}
+            </div>
+          ))}
 
-        <div className="mt-8 pt-4 border-t border-fuchsia-500/20">
-          <a
-            href={website}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-magenta hover:underline"
-          >
-            Official site &rarr;
-          </a>
+          {website && (
+            <div className="mt-8 pt-4 border-t border-fuchsia-500/20">
+              <a
+                href={website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-magenta hover:underline"
+              >
+                Official site &rarr;
+              </a>
+            </div>
+          )}
         </div>
+
+        {toc.length > 1 && (
+          <aside className="hidden lg:block w-56 flex-shrink-0">
+            <nav className="sticky top-20 space-y-1.5">
+              <span className="text-xs text-text-dim uppercase tracking-wider font-semibold">On this page</span>
+              {toc.map((s, i) => (
+                <a
+                  key={i}
+                  href={`#${s.id || s.title!.toLowerCase().replace(/\s+/g, '-')}`}
+                  className="block text-sm text-text-dim hover:text-magenta transition-colors leading-relaxed"
+                >
+                  {s.title}
+                </a>
+              ))}
+            </nav>
+          </aside>
+        )}
       </div>
     </Layout>
   )

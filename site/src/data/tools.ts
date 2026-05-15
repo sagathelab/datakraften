@@ -485,6 +485,79 @@ export const tools: Record<string, ToolDef> = {
     ],
     website: 'https://learn.microsoft.com/en-us/powershell/',
   },
+  config: {
+    id: 'config',
+    title: 'Configuration',
+    subtitle: 'Understanding the Datakraften YAML config structure in depth',
+    sections: [
+      {
+        title: 'Overview',
+        body: 'Datakraften uses a single YAML file at ~/.config/datakraften/config.yaml to define your entire development environment. Every setting — from system packages to AI tools — lives in this one file. After running dk init, you get a fully commented config that you can tweak and share.\n\nThe config is split into top-level sections, each controlling a different aspect of your workstation. Here is the full structure:',
+      },
+      {
+        title: 'profile',
+        body: 'The profile field selects which toolset to apply. Three built-in profiles:\n\n- minimal — just system essentials and git\n- default — balanced setup for most developers (runtimes, shell, editors, AI)\n- custom — your own config, optionally fetched from a remote YAML URL\n\n$ dk profile list\n\nWhen custom is active, a remote_url field must be set pointing to a YAML file hosted anywhere accessible via HTTPS. Datakraften fetches it fresh each time dk init runs and merges it into your local config.',
+      },
+      {
+        title: 'system_packages',
+        body: 'Packages installed via your native package manager (apt, dnf, yum, pacman, or brew). The bootstrapper auto-detects which manager to use.\n\nsystem_packages:\n  - build-essential\n  - curl\n  - git\n  - unzip\n\nThese are installed with sudo (where applicable) before any other step. dk apply skips already-installed packages automatically.\n\nTIP: Use your package manager\'s native name for each package — dk passes the name directly to apt install or dnf install.',
+      },
+      {
+        title: 'brew_packages',
+        body: 'Packages installed via Homebrew. Datakraften installs Homebrew if it\'s not already present, then uses it for the tools listed here. Most developer tooling comes through brew.\n\nbrew_packages:\n  - fish\n  - starship\n  - atuin\n  - fzf\n  - fd\n  - broot\n  - bottom\n  - gh\n  - docker\n  - docker-compose\n  - powershell\n\nTIP: Homebrew keeps packages in /home/linuxbrew/.linuxbrew — isolated from system packages, which means cleaner upgrades and fewer conflicts.',
+      },
+      {
+        title: 'runtimes',
+        body: 'Programming language runtimes and their version managers. Each runtime has its own enabled flag and optional version.\n\nruntimes:\n  node:\n    enabled: true\n    version: lts\n  python:\n    enabled: true\n  dotnet:\n    enabled: false\n\n- Node.js is managed by fnm (Fast Node Manager). Set version to lts for the latest LTS, or pin a specific version like 20 or 22.\n- Python is managed by uv. It installs the latest stable Python version and sets up uv as the default package manager.\n- .NET SDK is installed via Homebrew. Disabled by default in the minimal profile.\n\nTIP: Set enabled: false for runtimes you don\'t need — dk apply will skip them entirely.',
+      },
+      {
+        title: 'shell',
+        body: 'Shell configuration managed by Datakraften. Currently supports Fish shell with managed config blocks.\n\nshell:\n  fish:\n    enabled: true\n    managed_config: true\n\nWhen enabled, dk apply:\n- Installs Fish shell via Homebrew\n- Sets Fish as your default shell (effective after re-login)\n- Writes a managed config to ~/.config/fish/config.fish with Homebrew PATH, fnm integration, uv completions, Atuin, FZF, Starship, and aliases\n- Sets managed blocks so Datakraften can safely re-apply without duplicating entries\n\nTIP: You can edit ~/.config/fish/config.fish freely — Datakraften only touches sections between managed block markers.',
+      },
+      {
+        title: 'editors',
+        body: 'Code editor detection and auto-install. Datakraften detects which editors are already installed and optionally installs Zed.\n\neditors:\n  vscode:\n    enabled: true\n  zed:\n    enabled: true\n  cursor:\n    enabled: true\n\n- VS Code — detected on the Windows side when running under WSL (via Windows Registry), or as a native Linux install. Not installed by Datakraften; install manually from code.visualstudio.com.\n- Zed — detected on Linux/WSL. Can be auto-installed by dk apply if missing.\n- Cursor — detected on Windows side under WSL.\n\nTIP: On WSL, editors installed on Windows are detected automatically and the code (or cursor) command is made available inside your Linux environment.',
+      },
+      {
+        title: 'ai_tools',
+        body: 'AI-powered developer tools — the differentiating feature of Datakraften.\n\nai_tools:\n  enabled: true\n\nWhen enabled, dk apply installs:\n- gh-copilot — GitHub Copilot CLI for AI-assisted shell commands\n- codex-cli — OpenAI Codex CLI for code generation\n- opencode — AI-powered coding assistant\n- aider — pair programming with AI\n\nThese tools are automatically configured and ready to use after dk apply completes.\n\nTIP: Some AI tools require API keys or subscriptions (GitHub Copilot subscription, OpenAI API key). Check each tool\'s documentation for authentication requirements.',
+      },
+    ],
+    website: '',
+  },
+
+  teams: {
+    id: 'teams',
+    title: 'Team Profiles',
+    subtitle: 'Standardized dev environments across your whole team with shared YAML configs',
+    sections: [
+      {
+        title: 'Why team profiles?',
+        body: 'Every team has a stack — specific tools, runtimes, linters, and conventions. Without automation, each new hire spends hours (or days) setting up their machine, and inconsistencies creep in across the team. Datakraften\'s team profile feature solves this with a single shared YAML file.\n\nThe idea is simple: define your team\'s ideal workstation once, host the YAML file somewhere your team can reach it, and every developer runs:\n\n$ curl -fsSL https://datakraften.no/install | bash\n$ dk init\n$ dk apply\n\nOnboarding goes from hours to minutes. Every machine is identical. No tribal knowledge needed.',
+      },
+      {
+        title: 'Setting up a team config',
+        body: 'Create a YAML file with the exact toolset your team needs. Start from the default config that dk init generates, then customize:\n\nprofile: custom\nremote_url: https://raw.githubusercontent.com/your-org/team-config/main/datakraften.yaml\n\nsystem_packages:\n  - build-essential\n  - curl\n  - git\n  - unzip\n  - postgresql-client\n  - redis-tools\n\nbrew_packages:\n  - fish\n  - starship\n  - atuin\n  - fzf\n  - gh\n  - docker\n\nruntimes:\n  node:\n    enabled: true\n    version: lts\n  python:\n    enabled: true\n  dotnet:\n    enabled: true\n\nshell:\n  fish:\n    enabled: true\n    managed_config: true\n\neditors:\n  vscode:\n    enabled: true\n  zed:\n    enabled: true\n\nai_tools:\n  enabled: true\n\nCommit this file to your team\'s infrastructure repo or a shared gist, then share the raw URL with your team.',
+      },
+      {
+        title: 'Hosting your YAML',
+        body: 'Any HTTPS-accessible URL works. Popular options:\n\n- GitHub repository — commit the YAML to your team\'s repo and use the raw.githubusercontent.com URL\n- GitHub Gist — create a secret or public gist and use the raw URL\n- Internal wiki — host it behind your company\'s SSO or VPN\n- S3 / Cloud Storage — with a signed URL or public bucket\n- Your own server — any static file server works\n\nThe URL is fetched on dk init and written verbatim into the local config. Datakraften does not cache or re-fetch on dk apply — the config is local after init.\n\nTIP: Use a versioned path (e.g. /v1/datakraften.yaml or a git tag) to control when team members pick up changes. When you update the shared config, tell your team to run dk init again to pull the latest version.',
+      },
+      {
+        title: 'Best practices',
+        body: 'Start with the default profile, test it, then iterate:\n\n- Begin with the default profile on your own machine:\n  $ dk init\n  $ dk apply\n\n- Customize the generated config for your stack. Add your team\'s specific packages, remove what you don\'t need.\n\n- Host the config and share the URL. Ask a teammate to test it on a fresh machine.\n\n- Keep the config minimal — install only what every developer needs. Let individuals add their own tools on top.\n\n- Version your config. Use a git tag or a versioned path so you can roll back if something breaks.\n\n- Document exceptions. Not everything fits in YAML. Add a comment or a README alongside your config for manual steps.\n\n- Run dk doctor after apply to verify everything is set up correctly.\n\n- Update periodically. Point your team to re-run dk init when you push a new version of the shared config.',
+      },
+      {
+        title: 'Example: Node.js team config',
+        body: 'A minimal config for a Node.js backend team:\n\nsystem_packages:\n  - build-essential\n  - curl\n  - git\n\nbrew_packages:\n  - fish\n  - starship\n  - gh\n  - docker\n\nruntimes:\n  node:\n    enabled: true\n    version: lts\n  python:\n    enabled: false\n  dotnet:\n    enabled: false\n\nshell:\n  fish:\n    enabled: true\n\neditors:\n  vscode:\n    enabled: true\n\nai_tools:\n  enabled: true\n\nWith this config, every developer gets: Node.js LTS, fish shell with Starship, GitHub CLI, Docker, VS Code detection, and AI tools — nothing more, nothing less.',
+      },
+      {
+        title: 'Example: Full-stack team config',
+        body: 'A comprehensive config for a full-stack team working with Node.js, Python, and .NET:\n\nsystem_packages:\n  - build-essential\n  - curl\n  - git\n  - unzip\n  - postgresql-client\n  - redis-tools\n  - jq\n\nbrew_packages:\n  - fish\n  - starship\n  - atuin\n  - fzf\n  - fd\n  - broot\n  - bottom\n  - gh\n  - docker\n  - powershell\n\nruntimes:\n  node:\n    enabled: true\n    version: lts\n  python:\n    enabled: true\n  dotnet:\n    enabled: true\n\nshell:\n  fish:\n    enabled: true\n\neditors:\n  vscode:\n    enabled: true\n  zed:\n    enabled: true\n\nai_tools:\n  enabled: true\n\nThis is the same as the default profile, but with additional system tools (postgresql-client, redis-tools, jq) and PowerShell included for automation tasks.',
+      },
+    ],
+    website: '',
+  },
 }
 
 export const toolsList = Object.values(tools)
@@ -494,6 +567,11 @@ export const categories = [
     title: 'dk CLI',
     desc: 'Core Datakraften platform',
     ids: ['dk'],
+  },
+  {
+    title: 'Guides',
+    desc: 'Configuration and team workflow guides',
+    ids: ['config', 'teams'],
   },
   {
     title: 'Runtimes',

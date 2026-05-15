@@ -11,7 +11,7 @@ const routes = [
 ]
 
 const toolIds = [
-  'dk', 'node', 'python', 'dotnet', 'fish', 'starship', 'atuin',
+  'dk', 'config', 'teams', 'node', 'python', 'dotnet', 'fish', 'starship', 'atuin',
   'fzf', 'fd', 'broot', 'btm', 'brew', 'gh', 'gh-copilot',
   'az', 'docker', 'codex', 'opencode', 'vscode', 'zed', 'pwsh',
 ]

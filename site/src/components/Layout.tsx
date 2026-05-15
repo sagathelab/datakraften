@@ -13,7 +13,7 @@ export default function Layout({ children, variant = 'landing', title }: LayoutP
     <div className="min-h-screen text-text-primary font-jetbrains">
       <div className="scanlines" />
       <Navbar variant={variant} title={title} />
-      <main className="max-w-4xl mx-auto px-4">
+      <main className={`mx-auto px-4 ${variant === 'docs' ? 'max-w-6xl' : 'max-w-4xl'}`}>
         {children}
       </main>
       <Footer />
