@@ -26,7 +26,7 @@ export default function Navbar({ variant, title }: NavbarProps) {
         </Link>
         <Link to="/docs" className="text-text-dim hover:text-magenta transition-colors">Documentation</Link>
       </div>
-      {title && <span className="text-text-dim text-sm">{title}</span>}
+      {title && title !== "Documentation" && <span className="text-text-dim text-sm">{title}</span>}
     </nav>
   )
 }

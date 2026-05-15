@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/sagathelab/datakraften/internal/exec"
+	"github.com/sagathelab/datakraften/internal/installers"
 )
 
 func DotnetInstalled() bool {
@@ -23,10 +24,8 @@ func EnsureDotnet() (bool, error) {
 		return false, nil
 	}
 
-	fmt.Println("    Installing .NET SDK via Homebrew...")
-	r := exec.Run("brew", "install", "dotnet")
-	if r.Code != 0 {
-		return false, fmt.Errorf("dotnet install failed: %s", r.Stderr)
+	if err := installers.BrewInstall("dotnet"); err != nil {
+		return false, fmt.Errorf("dotnet install failed: %w", err)
 	}
 
 	return true, nil

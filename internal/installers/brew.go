@@ -56,6 +56,13 @@ func BrewEnsureInstalled() (bool, error) {
 		return false, nil
 	}
 
+	prefix := BrewPrefix()
+	brewBin := filepath.Join(prefix, "bin")
+	if info, err := os.Stat(filepath.Join(brewBin, "brew")); err == nil && !info.IsDir() {
+		os.Setenv("PATH", brewBin+":"+os.Getenv("PATH"))
+		return false, nil
+	}
+
 	fmt.Println("    Installing Homebrew...")
 	home := system.HomeDir()
 
@@ -67,7 +74,6 @@ func BrewEnsureInstalled() (bool, error) {
 		return false, fmt.Errorf("homebrew install failed: %s", r.Stderr)
 	}
 
-	brewBin := filepath.Join(BrewPrefix(), "bin")
 	profilePath := filepath.Join(home, ".profile")
 
 	initLine := fmt.Sprintf(`eval "$(%s/brew shellenv)"`, brewBin)
