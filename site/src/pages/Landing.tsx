@@ -13,7 +13,7 @@ export default function Landing() {
           FROM ZERO TO SHIP IN ONE COMMAND
         </p>
         <p className="font-share-tech text-magenta uppercase tracking-[0.15em] text-sm sm:text-base mt-1 animate-tagline-glow">
-          From zero to ship · AI-native · Opinionated · Team-ready
+          Bootstrap dev · AI-native · Opinionated · Team-ready
         </p>
       </section>
 
