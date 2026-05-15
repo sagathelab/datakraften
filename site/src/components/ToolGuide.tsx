@@ -68,8 +68,13 @@ function CodeBlock({ lines }: { lines: string[] }) {
       <button
         onClick={handleCopy}
         className={`code-copy ${copied ? 'code-copy--copied' : ''}`}
+        title="Copy"
       >
-        {copied ? 'Copied' : 'Copy'}
+        {copied ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        )}
       </button>
       {lines.filter(l => l.trim() !== '').map((line, li) => {
         if (line.startsWith('$ ') || line === '$') {
@@ -113,8 +118,13 @@ function YamlBlock({ lines }: { lines: string[] }) {
       <button
         onClick={handleCopy}
         className={`yaml-copy ${copied ? 'yaml-copy--copied' : ''}`}
+        title="Copy"
       >
-        {copied ? 'Copied' : 'Copy'}
+        {copied ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        )}
       </button>
       {lines.filter(l => l.trim() !== '').map((line, li) => {
         const content = line.replace(/^\| /, '').replace(/^\|$/, '')
