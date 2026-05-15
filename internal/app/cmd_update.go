@@ -1,305 +1,189 @@
 package app
 
 import (
-	"crypto/sha256"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"runtime"
 	"strings"
-	"time"
 
+	"github.com/sagathelab/datakraften/internal/exec"
+	"github.com/sagathelab/datakraften/internal/installers"
 	"github.com/spf13/cobra"
 )
 
-type githubRelease struct {
-	TagName string `json:"tag_name"`
-	Assets  []struct {
-		Name               string `json:"name"`
-		BrowserDownloadURL string `json:"browser_download_url"`
-	} `json:"assets"`
-}
-
-type githubAPIError struct {
-	Message string `json:"message"`
-}
-
 func newUpdateCmd() *cobra.Command {
-	return &cobra.Command{
+	var list bool
+	var dryRun bool
+
+	cmd := &cobra.Command{
 		Use:   "update",
-		Short: "Update dk to the latest version",
+		Short: "Update managed tools to their latest versions",
+		Long:  `Update all managed developer tools (brew packages, runtimes, AI tools) or a specific tool by name.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			execPath, err := os.Executable()
-			if err != nil {
-				return fmt.Errorf("cannot determine executable path: %w", err)
+			if list {
+				return listUpdatable()
 			}
 
-			if !jsonOutput {
-				fmt.Println("  Checking for updates...")
+			if len(args) > 0 {
+				return updateTool(args[0], dryRun)
 			}
 
-			client := &http.Client{Timeout: 30 * time.Second}
-			token := githubToken()
-
-			apiURL := "https://api.github.com/repos/sagathelab/datakraften/releases/latest"
-			if verbose {
-				fmt.Fprintf(os.Stderr, "  [verbose] GET %s\n", apiURL)
-				if token != "" {
-					fmt.Fprintf(os.Stderr, "  [verbose] using GitHub token authentication\n")
-				}
-			}
-
-			req, err := newGitHubRequest(http.MethodGet, apiURL, token)
-			if err != nil {
-				return fmt.Errorf("cannot create release request: %w", err)
-			}
-
-			resp, err := client.Do(req)
-			if err != nil {
-				return fmt.Errorf("cannot fetch latest release: %w", err)
-			}
-			defer resp.Body.Close()
-
-			if verbose {
-				fmt.Fprintf(os.Stderr, "  [verbose] response: %s\n", resp.Status)
-			}
-
-			if resp.StatusCode != http.StatusOK {
-				message := parseGitHubAPIMessage(resp.Body)
-				if message == "" {
-					message = resp.Status
-				}
-				if resp.StatusCode == http.StatusNotFound {
-					if hasReleases, _ := repoHasReleases(client, token); !hasReleases {
-						return fmt.Errorf("no releases found in repository — publish a release on GitHub first")
-					}
-					return fmt.Errorf("cannot fetch latest release (%s): %s. If this is a private repository, set GH_TOKEN or GITHUB_TOKEN", resp.Status, message)
-				}
-				return fmt.Errorf("cannot fetch latest release (%s): %s", resp.Status, message)
-			}
-
-			var release githubRelease
-			if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-				return fmt.Errorf("cannot parse release info: %w", err)
-			}
-			if release.TagName == "" {
-				return fmt.Errorf("latest release response did not include a tag name")
-			}
-
-			if !jsonOutput {
-				fmt.Printf("  Latest version: %s\n", release.TagName)
-				fmt.Printf("  Current version: %s\n", version)
-				fmt.Println()
-			}
-
-			if version == release.TagName || version == "dev" {
-				if jsonOutput {
-					printUpdateJSON(version, release.TagName, false, "", 0, nil)
-				} else {
-					fmt.Println("  ✓ Already up to date.")
-				}
-				return nil
-			}
-
-			binaryName := fmt.Sprintf("dk-%s-%s", runtime.GOOS, runtime.GOARCH)
-			checksumName := binaryName + ".sha256"
-
-			var binaryURL, checksumURL string
-			for _, a := range release.Assets {
-				if a.Name == binaryName {
-					binaryURL = a.BrowserDownloadURL
-				}
-				if a.Name == checksumName {
-					checksumURL = a.BrowserDownloadURL
-				}
-			}
-
-			if binaryURL == "" {
-				return fmt.Errorf("no binary found for %s/%s", runtime.GOOS, runtime.GOARCH)
-			}
-
-			if verbose {
-				fmt.Fprintf(os.Stderr, "  [verbose] binary: %s\n", binaryURL)
-				if checksumURL != "" {
-					fmt.Fprintf(os.Stderr, "  [verbose] checksum: %s\n", checksumURL)
-				}
-			}
-
-			if !jsonOutput {
-				fmt.Printf("  Downloading %s...\n", binaryName)
-			}
-
-			binReq, err := newGitHubRequest(http.MethodGet, binaryURL, token)
-			if err != nil {
-				return fmt.Errorf("cannot create binary download request: %w", err)
-			}
-			binResp, err := client.Do(binReq)
-			if err != nil {
-				return fmt.Errorf("download failed: %w", err)
-			}
-			defer binResp.Body.Close()
-			if binResp.StatusCode != http.StatusOK {
-				message := parseGitHubAPIMessage(binResp.Body)
-				if message == "" {
-					message = binResp.Status
-				}
-				return fmt.Errorf("download failed (%s): %s", binResp.Status, message)
-			}
-
-			tmpPath := execPath + ".new"
-			f, err := os.Create(tmpPath)
-			if err != nil {
-				return fmt.Errorf("cannot create temp file: %w", err)
-			}
-
-			var checksumErr error
-			hash := sha256.New()
-			written, err := io.Copy(f, io.TeeReader(binResp.Body, hash))
-			if err != nil {
-				f.Close()
-				os.Remove(tmpPath)
-				return fmt.Errorf("download incomplete: %w", err)
-			}
-			f.Close()
-
-			if checksumURL != "" {
-				if verbose {
-					fmt.Fprintf(os.Stderr, "  [verbose] verifying checksum...\n")
-				}
-				chkReq, err := newGitHubRequest(http.MethodGet, checksumURL, token)
-				if err == nil {
-					chkResp, err := client.Do(chkReq)
-					if err == nil {
-						defer chkResp.Body.Close()
-						if chkResp.StatusCode == http.StatusOK {
-							chkBytes, _ := io.ReadAll(chkResp.Body)
-							parts := strings.Fields(string(chkBytes))
-							if len(parts) > 0 {
-								expected := strings.TrimSpace(parts[0])
-								got := fmt.Sprintf("%x", hash.Sum(nil))
-								if got != expected {
-									os.Remove(tmpPath)
-									checksumErr = fmt.Errorf("checksum mismatch: expected %s, got %s", expected, got)
-								} else if verbose {
-									fmt.Fprintf(os.Stderr, "  [verbose] checksum verified ✓\n")
-								}
-							}
-						}
-					}
-				}
-			}
-
-			if checksumErr != nil {
-				return checksumErr
-			}
-
-			if err := os.Rename(tmpPath, execPath); err != nil {
-				if err := os.Remove(execPath); err != nil {
-					os.Remove(tmpPath)
-					return fmt.Errorf("cannot replace binary: %w", err)
-				}
-				if err := os.Rename(tmpPath, execPath); err != nil {
-					os.Remove(tmpPath)
-					return fmt.Errorf("cannot replace binary: %w", err)
-				}
-			}
-
-			if err := os.Chmod(execPath, 0755); err != nil {
-				return fmt.Errorf("cannot set permissions: %w", err)
-			}
-
-			if jsonOutput {
-				printUpdateJSON(version, release.TagName, true, binaryName, written, nil)
-			} else {
-				fmt.Printf("  ✓ Updated to %s (%d bytes)\n", release.TagName, written)
-				fmt.Println()
-				fmt.Println("  Run 'dk doctor' to verify your setup.")
-			}
-
-			return nil
+			return updateAll(dryRun)
 		},
 	}
+
+	cmd.Flags().BoolVarP(&list, "list", "l", false, "List tools that have updates available")
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Show what would be updated without making changes")
+
+	return cmd
 }
 
-func repoHasReleases(client *http.Client, token string) (bool, error) {
-	req, err := newGitHubRequest(http.MethodGet, "https://api.github.com/repos/sagathelab/datakraften/releases?per_page=1", token)
-	if err != nil {
-		return false, err
+func listUpdatable() error {
+	fmt.Println("  Updatable tools")
+	fmt.Println("  ---------------")
+
+	fmt.Println("    brew — all Homebrew packages")
+	fmt.Println("    fnm — Node.js runtime")
+	fmt.Println("    uv — Python runtime")
+	fmt.Println("    npm — global npm packages")
+
+	if exec.CommandExists("code") {
+		fmt.Println("    code — VS Code extensions")
 	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return false, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return false, nil
-	}
-	var releases []json.RawMessage
-	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
-		return false, err
-	}
-	return len(releases) > 0, nil
+
+	fmt.Println()
+	fmt.Println("  Run 'dk update <tool>' to update a specific tool.")
+
+	return nil
 }
 
-func githubToken() string {
-	if token := strings.TrimSpace(os.Getenv("GH_TOKEN")); token != "" {
-		return token
+func updateTool(name string, dryRun bool) error {
+	switch strings.ToLower(name) {
+	case "brew":
+		return updateBrew(dryRun)
+	case "fnm", "node":
+		return updateFnm(dryRun)
+	case "uv", "python":
+		return updateUv(dryRun)
+	case "npm":
+		return updateNpm(dryRun)
+	default:
+		return fmt.Errorf("unknown tool: %s — run 'dk update --list' to see available tools", name)
 	}
-	return strings.TrimSpace(os.Getenv("GITHUB_TOKEN"))
 }
 
-func newGitHubRequest(method, url, token string) (*http.Request, error) {
-	req, err := http.NewRequest(method, url, nil)
-	if err != nil {
-		return nil, err
+func updateAll(dryRun bool) error {
+	fmt.Println("  Updating all managed tools")
+	fmt.Println("  -------------------------")
+
+	if err := updateBrew(dryRun); err != nil {
+		fmt.Printf("    ⚠ brew: %s\n", err)
+	}
+	if err := updateFnm(dryRun); err != nil {
+		fmt.Printf("    ⚠ fnm: %s\n", err)
+	}
+	if err := updateUv(dryRun); err != nil {
+		fmt.Printf("    ⚠ uv: %s\n", err)
+	}
+	if err := updateNpm(dryRun); err != nil {
+		fmt.Printf("    ⚠ npm: %s\n", err)
 	}
 
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "datakraften-dk")
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
-
-	return req, nil
+	fmt.Println()
+	fmt.Println("  ✓ Update complete")
+	return nil
 }
 
-type updateResult struct {
-	CurrentVersion string `json:"current_version"`
-	LatestVersion  string `json:"latest_version"`
-	Updated        bool   `json:"updated"`
-	Binary         string `json:"binary,omitempty"`
-	BytesWritten   int64  `json:"bytes_written,omitempty"`
+func updateBrew(dryRun bool) error {
+	if !installers.BrewInstalled() {
+		fmt.Println("    – Homebrew not installed, skipping")
+		return nil
+	}
+
+	if dryRun {
+		fmt.Println("    ~ Would run: brew update && brew upgrade")
+		return nil
+	}
+
+	fmt.Print("    Updating Homebrew...")
+	r := exec.Run("brew", "update")
+	if r.Code != 0 {
+		return fmt.Errorf("brew update failed: %s", strings.TrimSpace(r.Stderr))
+	}
+	fmt.Println(" done")
+
+	fmt.Print("    Upgrading packages...")
+	r = exec.Run("brew", "upgrade")
+	if r.Code != 0 {
+		return fmt.Errorf("brew upgrade failed: %s", strings.TrimSpace(r.Stderr))
+	}
+	fmt.Println(" done")
+
+	return nil
 }
 
-func printUpdateJSON(currentVer, latestVer string, updated bool, binary string, bytesWritten int64, err error) {
-	result := updateResult{
-		CurrentVersion: currentVer,
-		LatestVersion:  latestVer,
-		Updated:        updated,
-		Binary:         binary,
-		BytesWritten:   bytesWritten,
+func updateFnm(dryRun bool) error {
+	if !exec.CommandExists("fnm") {
+		fmt.Println("    – fnm not installed, skipping")
+		return nil
 	}
-	if err != nil {
-		result.Binary = ""
-		result.BytesWritten = 0
+
+	if dryRun {
+		fmt.Println("    ~ Would run: fnm install --lts")
+		return nil
 	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	enc.Encode(result)
+
+	fmt.Print("    Updating Node.js LTS via fnm...")
+	r := exec.Run("fnm", "install", "--lts")
+	if r.Code != 0 {
+		return fmt.Errorf("fnm install lts failed: %s", strings.TrimSpace(r.Stderr))
+	}
+	fmt.Println(" done")
+
+	r = exec.Run("fnm", "default", "lts-latest")
+	if r.Code != 0 {
+		return fmt.Errorf("fnm default failed: %s", strings.TrimSpace(r.Stderr))
+	}
+
+	return nil
 }
 
-func parseGitHubAPIMessage(r io.Reader) string {
-	body, err := io.ReadAll(io.LimitReader(r, 4096))
-	if err != nil {
-		return ""
+func updateUv(dryRun bool) error {
+	if !exec.CommandExists("uv") {
+		fmt.Println("    – uv not installed, skipping")
+		return nil
 	}
 
-	var apiErr githubAPIError
-	if err := json.Unmarshal(body, &apiErr); err == nil && strings.TrimSpace(apiErr.Message) != "" {
-		return strings.TrimSpace(apiErr.Message)
+	if dryRun {
+		fmt.Println("    ~ Would run: uv self update")
+		return nil
 	}
 
-	return strings.TrimSpace(string(body))
+	fmt.Print("    Updating uv...")
+	r := exec.Run("uv", "self", "update")
+	if r.Code != 0 {
+		return fmt.Errorf("uv self update failed: %s", strings.TrimSpace(r.Stderr))
+	}
+	fmt.Println(" done")
+
+	return nil
+}
+
+func updateNpm(dryRun bool) error {
+	if !exec.CommandExists("npm") {
+		fmt.Println("    – npm not installed, skipping")
+		return nil
+	}
+
+	if dryRun {
+		fmt.Println("    ~ Would run: npm update -g")
+		return nil
+	}
+
+	fmt.Print("    Updating global npm packages...")
+	r := exec.Run("npm", "update", "-g")
+	if r.Code != 0 {
+		return fmt.Errorf("npm update -g failed: %s", strings.TrimSpace(r.Stderr))
+	}
+	fmt.Println(" done")
+
+	return nil
 }

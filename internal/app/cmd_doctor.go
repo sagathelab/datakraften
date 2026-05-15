@@ -2,8 +2,10 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/sagathelab/datakraften/internal/doctor"
+	"github.com/sagathelab/datakraften/internal/exec"
 	"github.com/sagathelab/datakraften/internal/system"
 	"github.com/spf13/cobra"
 )
@@ -83,8 +85,9 @@ func newDoctorCmd() *cobra.Command {
 			}
 
 			if fix {
-				fmt.Println("  Auto-fix mode (not yet implemented)")
-				fmt.Println("  Run 'dk apply' to apply the full configuration.")
+				fmt.Println("  Auto-fix mode")
+				fmt.Println("  -------------")
+				runAutoFix(report, category)
 				fmt.Println()
 			}
 
@@ -93,9 +96,67 @@ func newDoctorCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&fix, "fix", "f", false, "Attempt to fix detected issues")
-	cmd.Flags().StringVarP(&category, "category", "c", "", "Only check a specific category (system, tools, runtimes, shell, docker, editors, ai, auth)")
+	cmd.Flags().StringVarP(&category, "category", "c", "", "Only check a specific category (system, tools, runtimes, shell, docker, editors)")
 
 	return cmd
+}
+
+func runAutoFix(r *doctor.Report, category string) {
+	fixed := 0
+	skipped := 0
+
+	for _, c := range r.Checks {
+		if category != "" && c.Category != category {
+			continue
+		}
+		if c.Status == "pass" {
+			continue
+		}
+		if c.Fix == "" {
+			fmt.Printf("    – %s: no auto-fix available\n", c.Title)
+			skipped++
+			continue
+		}
+
+		if strings.HasPrefix(c.Fix, "run '") {
+			fmt.Printf("    → %s: %s\n", c.Title, c.Fix)
+			skipped++
+			continue
+		}
+
+		if strings.HasPrefix(c.Fix, "Install") || strings.HasPrefix(c.Fix, "Start") || strings.HasPrefix(c.Fix, "Enable") || strings.HasPrefix(c.Fix, "If") {
+			fmt.Printf("    → %s: %s\n", c.Title, c.Fix)
+			skipped++
+			continue
+		}
+
+		if strings.HasPrefix(c.Fix, "sudo ") || strings.Contains(c.Fix, "apt-get") || strings.Contains(c.Fix, "brew ") {
+			parts := strings.Fields(c.Fix)
+			if len(parts) >= 2 {
+				cmd := parts[0]
+				args := parts[1:]
+				fmt.Printf("    Attempting: %s\n", c.Fix)
+				r := exec.Run(cmd, args...)
+				if r.Code == 0 {
+					fmt.Printf("    ✓ %s fixed\n", c.Title)
+					fixed++
+				} else {
+					fmt.Printf("    ✗ %s fix failed: %s\n", c.Title, r.Stderr)
+					skipped++
+				}
+				continue
+			}
+		}
+
+		fmt.Printf("    → %s: %s\n", c.Title, c.Fix)
+		skipped++
+	}
+
+	if fixed == 0 && skipped == 0 {
+		fmt.Println("    ✓ No issues to fix")
+	} else {
+		fmt.Printf("    Fixed: %d, Manual action needed: %d\n", fixed, skipped)
+	}
 }
 
 func buildDoctorReport(r *doctor.Report, category string) {

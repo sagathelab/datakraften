@@ -8,6 +8,7 @@ type Profile struct {
 var allProfiles = []Profile{
 	{Name: "minimal", Description: "Core system packages only"},
 	{Name: "default", Description: "Full developer workstation"},
+	{Name: "ai", Description: "AI-native development — Codex, Claude Code, Gemini, OpenCode, Copilot, runtimes, and shell"},
 	{Name: "custom", Description: "Custom configuration — edit everything locally"},
 	{Name: "team", Description: "Team config — shared setup from a remote YAML URL"},
 }

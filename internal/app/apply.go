@@ -365,6 +365,15 @@ func shouldInstallRuntime(cfg *config.Config, name string) bool {
 	return true
 }
 
+func tryFix(run func() error, desc string) bool {
+	if err := run(); err != nil {
+		fmt.Printf("    ⚠ Auto-fix %s failed: %s\n", desc, err)
+		return false
+	}
+	fmt.Printf("    ✓ Auto-fix applied: %s\n", desc)
+	return true
+}
+
 func RunDoctorSystem(r *doctor.Report) {
 	wsl, wslVer := system.DetectWSL()
 	distro, distroVer := system.Distro()
@@ -372,9 +381,11 @@ func RunDoctorSystem(r *doctor.Report) {
 	shell_ := system.CurrentShell()
 
 	r.Add(doctor.Check{ID: "wsl", Title: "WSL detected", Category: "system", Severity: "info",
-		Status: boolStatus(wsl && wslVer > 0), Message: fmt.Sprintf("WSL%d: %s %s", wslVer, distro, distroVer)})
+		Status: boolStatus(wsl && wslVer > 0), Message: fmt.Sprintf("WSL%d: %s %s", wslVer, distro, distroVer),
+		Fix: "If WSL is not detected, ensure you are running inside WSL: 'wsl --install' from PowerShell"})
 	r.Add(doctor.Check{ID: "systemd", Title: "systemd available", Category: "system", Severity: "info",
-		Status: boolStatus(systemd)})
+		Status: boolStatus(systemd),
+		Fix: "Enable systemd in /etc/wsl.conf: add [boot]\nsystemd=true, then 'wsl --terminate' from PowerShell"})
 	r.Add(doctor.Check{ID: "shell", Title: "Current shell", Category: "system", Severity: "info",
 		Status: "pass", Message: shell_})
 
@@ -411,8 +422,12 @@ func RunDoctorTools(r *doctor.Report) {
 	}
 
 	for _, t := range tools {
+		fix := ""
+		if !t.installed {
+			fix = "run 'dk apply' to install missing tools"
+		}
 		r.Add(doctor.Check{ID: t.id, Title: t.name + " installed", Category: "tools",
-			Severity: "warning", Status: boolStatus(t.installed)})
+			Severity: "warning", Status: boolStatus(t.installed), Fix: fix})
 	}
 
 	fmt.Println("  Tools")
@@ -430,12 +445,18 @@ func RunDoctorRuntimes(r *doctor.Report) {
 	pv := runtimes.PythonVersion()
 	dv := runtimes.DotnetVersion()
 
+	fixRuntime := func(missing string) string {
+		if missing != "" {
+			return ""
+		}
+		return "run 'dk apply' to install missing runtime"
+	}
 	r.Add(doctor.Check{ID: "runtime.node", Title: "Node.js", Category: "runtimes",
-		Severity: "warning", Status: boolStatus(nv != ""), Message: nv})
+		Severity: "warning", Status: boolStatus(nv != ""), Message: nv, Fix: fixRuntime(nv)})
 	r.Add(doctor.Check{ID: "runtime.python", Title: "Python", Category: "runtimes",
-		Severity: "warning", Status: boolStatus(pv != ""), Message: pv})
+		Severity: "warning", Status: boolStatus(pv != ""), Message: pv, Fix: fixRuntime(pv)})
 	r.Add(doctor.Check{ID: "runtime.dotnet", Title: ".NET SDK", Category: "runtimes",
-		Severity: "warning", Status: boolStatus(dv != ""), Message: dv})
+		Severity: "warning", Status: boolStatus(dv != ""), Message: dv, Fix: fixRuntime(dv)})
 
 	fmt.Println("  Runtimes")
 	if nv != "" {
@@ -469,8 +490,14 @@ func RunDoctorEditors(r *doctor.Report) {
 			status = "fail"
 			msg = "not found"
 		}
+		fix := ""
+		if !ed.Installed {
+			fix = fmt.Sprintf("Install %s manually from the official website or run 'dk apply' if supported", ed.Name)
+		} else if ed.WindowsSide {
+			fix = fmt.Sprintf("Install the Linux version of %s inside WSL: 'brew install --cask %s' if available, or download from the official site", ed.Name, strings.ToLower(ed.Name))
+		}
 		r.Add(doctor.Check{ID: "editor." + ed.Name, Title: ed.Name + " CLI", Category: "editors",
-			Severity: "info", Status: status, Message: msg})
+			Severity: "info", Status: status, Message: msg, Fix: fix})
 
 		if ed.Installed && !ed.WindowsSide {
 			fmt.Printf("    ✓ %s\n", ed.Name)
@@ -491,8 +518,14 @@ func RunDoctorDocker(r *doctor.Report) {
 		status = "pass"
 		msg = "running"
 	}
+	fix := ""
+	if !dockerStatus.CliInstalled {
+		fix = "Install Docker Desktop from https://www.docker.com/products/docker-desktop/ and enable WSL integration"
+	} else if !dockerStatus.DaemonRunning {
+		fix = "Start Docker Desktop from the Windows Start menu, then ensure WSL integration is enabled in Docker Desktop settings"
+	}
 	r.Add(doctor.Check{ID: "docker", Title: "Docker", Category: "docker",
-		Severity: "warning", Status: status, Message: msg})
+		Severity: "warning", Status: status, Message: msg, Fix: fix})
 
 	fmt.Println("  Docker")
 	if dockerStatus.CliInstalled && dockerStatus.DaemonRunning {

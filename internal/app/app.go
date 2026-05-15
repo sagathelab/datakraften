@@ -51,6 +51,7 @@ func newApp() *App {
 	rootCmd.AddCommand(newDoctorCmd())
 	rootCmd.AddCommand(newStatusCmd())
 	rootCmd.AddCommand(newProfileCmd())
+	rootCmd.AddCommand(newUpgradeCmd())
 	rootCmd.AddCommand(newUpdateCmd())
 
 	a.RootCmd = rootCmd

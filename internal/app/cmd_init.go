@@ -353,7 +353,7 @@ ai_apps:
 		},
 	}
 
-	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to initialize (minimal, default, custom, team)")
+	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to initialize (minimal, default, ai, custom, team)")
 
 	return cmd
 }

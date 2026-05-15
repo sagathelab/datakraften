@@ -1,5 +1,5 @@
 version: 1
-profile: default
+profile: ai
 
 system:
   package_manager: apt
@@ -23,14 +23,12 @@ runtimes:
     manager: uv
     version: latest
   dotnet:
-    enabled: true
-    version: latest
+    enabled: false
 
 tools:
   github_cli: true
   azure_cli: true
   docker: true
-  powershell: true
 
 editors:
   vscode: true
@@ -41,9 +39,9 @@ ai_tools:
   codex: true
   opencode: true
   copilot: true
-  claude: false
-  gemini: false
+  claude: true
+  gemini: true
 ai_apps:
   codex: true
-  claude: false
+  claude: true
   copilot: true

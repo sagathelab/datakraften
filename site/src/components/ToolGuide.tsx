@@ -8,6 +8,7 @@ const dkLinks: Record<string, string> = {
   doctor: '/docs/dk#doctor',
   status: '/docs/dk#status',
   update: '/docs/dk#update',
+  upgrade: '/docs/dk#upgrade',
   profile: '/docs/dk#profile',
 }
 
