@@ -129,6 +129,15 @@ body {
   text-decoration-color: #ff00ff;
 }
 
+.inline-highlight {
+  background: rgba(255, 0, 255, 0.15);
+  color: #ff00ff;
+  padding: 0 0.3rem;
+  border-radius: 3px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.9rem;
+}
+
 .code-block {
   background: #1a1a2e;
   border: 1px solid rgba(255, 0, 255, 0.3);

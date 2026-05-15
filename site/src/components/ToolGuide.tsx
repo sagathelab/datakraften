@@ -25,7 +25,7 @@ interface ToolGuideProps {
 }
 
 function renderInlineCode(text: string) {
-  const parts = text.split(/(`[^`]+`)/g)
+  const parts = text.split(/(`[^`]+`|~[^~]+~)/g)
   return parts.map((part, i) => {
     if (part.startsWith('`') && part.endsWith('`')) {
       const code = part.slice(1, -1)
@@ -38,6 +38,9 @@ function renderInlineCode(text: string) {
         )
       }
       return <code key={i} className="inline-code">{code}</code>
+    }
+    if (part.startsWith('~') && part.endsWith('~')) {
+      return <mark key={i} className="inline-highlight">{part.slice(1, -1)}</mark>
     }
     return <span key={i}>{part}</span>
   })
