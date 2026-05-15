@@ -553,7 +553,7 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'Next steps',
-        body: 'After installing dk, the workflow is:\n\n---\n\n**1. Initialize** — detect your system and generate config:\n\n$ dk init\n\n**2. Apply** — install everything in your active profile (idempotent — safe to re-run):\n\n$ dk apply\n\n**3. Verify** — comprehensive diagnostics:\n\n$ dk doctor\n\n**4. Develop** — your workstation is ready. Run `dk status` anytime for a quick overview.\n\n---\n\nTIP: Start with the default profile. Just run `dk init` then `dk apply`. You can switch later with `dk profile use <name>`.',
+        body: 'After installing dk, the workflow is:\n\n1. **Initialize** — detects your system and generates config via `dk init`\n2. **Apply** — installs everything in your active profile via `dk apply` (idempotent — safe to re-run)\n3. **Verify** — comprehensive diagnostics via `dk doctor`\n4. **Develop** — your workstation is ready. Run `dk status` anytime for a quick overview.\n\nTIP: Start with the default profile. Run `dk init` then `dk apply`. You can switch later with `dk profile use <name>`.',
       },
     ],
     website: 'https://github.com/sagathelab/datakraften',
