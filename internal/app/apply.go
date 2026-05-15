@@ -45,6 +45,7 @@ type ApplyReport struct {
 	Dotnet   RuntimeStatus
 	DotnetVer string
 	AITools  []string
+	AIApps   []string
 	Shell    bool
 	Errors   []string
 }
@@ -283,6 +284,27 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 		}
 	} else {
 		fmt.Println("    ~ Would install AI tools")
+	}
+
+	fmt.Println()
+	fmt.Println("  AI Apps")
+	fmt.Println("  --------")
+
+	if !dryRun {
+		installed, err := ai.EnsureAIApps(cfg)
+		if err != nil {
+			report.Errors = append(report.Errors, fmt.Sprintf("AI apps: %s", err))
+			fmt.Printf("    ✗ AI apps: %s\n", err)
+		} else {
+			report.AIApps = installed
+			if len(installed) == 0 {
+				fmt.Println("    ✓ AI apps (already installed)")
+			} else {
+				fmt.Printf("    ✓ %d AI app(s) installed: %s\n", len(installed), strings.Join(installed, ", "))
+			}
+		}
+	} else {
+		fmt.Println("    ~ Would install AI apps")
 	}
 
 	fmt.Println()

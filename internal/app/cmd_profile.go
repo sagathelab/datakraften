@@ -91,9 +91,9 @@ func newProfileUseCmd() *cobra.Command {
 				return fmt.Errorf("failed to write config: %w", err)
 			}
 
-			if name == "custom" {
+				if name == "team" {
 				cfg, err := config.Load()
-				if err == nil && cfg.Custom.URL == "" {
+				if err == nil && cfg.Team.URL == "" {
 					useRemote := false
 					prompt := &survey.Confirm{
 						Message: "Add a remote team config (YAML URL)?",
@@ -115,7 +115,7 @@ func newProfileUseCmd() *cobra.Command {
 								body, readErr := io.ReadAll(resp.Body)
 								resp.Body.Close()
 								if readErr == nil {
-									remoteCfg := fmt.Sprintf("profile: custom\ncustom:\n  url: %s\n%s", url, string(body))
+									remoteCfg := fmt.Sprintf("profile: team\nteam:\n  url: %s\n%s", url, string(body))
 									os.WriteFile(configPath, []byte(remoteCfg), 0644)
 									fmt.Println("    ✓ Remote config applied")
 								}

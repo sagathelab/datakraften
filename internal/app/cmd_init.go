@@ -80,8 +80,8 @@ func newInitCmd() *cobra.Command {
 					}
 					updatedCfg := strings.Join(lines, "\n")
 
-					if profile == "custom" {
-						useRemote, remoteCfg := promptRemoteURL()
+					if profile == "team" {
+						useRemote, remoteCfg := promptTeamURL()
 						if useRemote {
 							updatedCfg = remoteCfg
 						}
@@ -170,7 +170,8 @@ tools: {}
 
 editors: {}
 
-ai: {}
+ai_tools: {}
+ai_apps: {}
 `, nativePM)
 
 				if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
@@ -214,15 +215,74 @@ editors:
   zed: true
   cursor: optional
 
-ai:
+ai_tools:
   codex: false
   opencode: false
-  github_copilot: false
+  copilot: false
+  claude: false
+  gemini: false
+ai_apps:
+  codex: false
+  claude: false
+  copilot: false
 `, nativePM)
 
-				useRemote, remoteCfg := promptRemoteURL()
+				if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
+					return fmt.Errorf("failed to write config: %w", err)
+				}
+			case "team":
+				useRemote, remoteCfg := promptTeamURL()
 				if useRemote {
 					cfg = remoteCfg
+				} else {
+					cfg = fmt.Sprintf(`version: 1
+profile: team
+
+system:
+  package_manager: %s
+
+tooling:
+  package_manager: brew
+
+shell:
+  default: fish
+  prompt: starship
+  history: atuin
+  fuzzy_finder: fzf
+
+tools:
+  github_cli: true
+  azure_cli: true
+  docker: true
+
+runtimes:
+  node:
+    enabled: true
+    manager: fnm
+    version: lts
+  python:
+    enabled: true
+    manager: uv
+    version: latest
+  dotnet:
+    enabled: true
+
+editors:
+  vscode: true
+  zed: true
+  cursor: optional
+
+ai_tools:
+  codex: true
+  opencode: true
+  copilot: true
+  claude: false
+  gemini: false
+ai_apps:
+  codex: true
+  claude: false
+  copilot: true
+`, nativePM)
 				}
 
 				if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
@@ -266,12 +326,16 @@ editors:
   zed: true
   cursor: optional
 
-ai:
+ai_tools:
   codex: true
   opencode: true
-  github_copilot: true
-  claude_code: optional
-  gemini_cli: optional
+  copilot: true
+  claude: false
+  gemini: false
+ai_apps:
+  codex: true
+  claude: false
+  copilot: true
 `, profile, nativePM)
 
 				if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
@@ -293,7 +357,7 @@ ai:
 			fmt.Println()
 			fmt.Printf("  Writing config to: %s\n", configPath)
 			fmt.Println()
-			if profile == "custom" {
+			if profile == "custom" || profile == "team" {
 				fmt.Printf("  ✓ Config created at %s\n", configPath)
 				fmt.Println()
 				fmt.Println("  Next steps:")
@@ -313,7 +377,7 @@ ai:
 		},
 	}
 
-	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to initialize (minimal, default, custom)")
+	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to initialize (minimal, default, custom, team)")
 
 	return cmd
 }
@@ -338,10 +402,10 @@ func selectProfile() (string, error) {
 	return allProfiles[selected].Name, nil
 }
 
-func promptRemoteURL() (bool, string) {
+func promptTeamURL() (bool, string) {
 	useRemote := false
 	prompt := &survey.Confirm{
-		Message: "Use remote team config (YAML URL)?",
+		Message: "Use team config from a remote YAML URL?",
 		Default: false,
 	}
 	survey.AskOne(prompt, &useRemote)
@@ -381,7 +445,7 @@ func promptRemoteURL() (bool, string) {
 		return false, ""
 	}
 
-	remoteCfg := fmt.Sprintf("profile: custom\ncustom:\n  url: %s\n%s", url, string(body))
+	remoteCfg := fmt.Sprintf("profile: team\nteam:\n  url: %s\n%s", url, string(body))
 	fmt.Println("    ✓ Remote config applied")
 	return true, remoteCfg
 }
