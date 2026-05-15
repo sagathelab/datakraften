@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react'
+
 const LINES = [
   '██████╗  █████╗ ████████╗ █████╗ ██╗  ██╗██████╗  █████╗ ███████╗████████╗███████╗███╗   ██╗',
   '██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗██║ ██╔╝██╔══██╗██╔══██╗██╔════╝╚══██╔══╝██╔════╝████╗  ██║',
@@ -8,19 +10,61 @@ const LINES = [
 ]
 
 export default function LogoSvg() {
+  const shellRef = useRef<HTMLDivElement>(null)
+  const preRef = useRef<HTMLPreElement>(null)
+  const [scale, setScale] = useState(1)
+  const [height, setHeight] = useState(0)
+
+  useEffect(() => {
+    const shell = shellRef.current
+    const pre = preRef.current
+    if (!shell || !pre) {
+      return
+    }
+
+    const updateScale = () => {
+      const shellWidth = shell.clientWidth
+      const contentWidth = pre.scrollWidth
+      const contentHeight = pre.scrollHeight
+      if (!shellWidth || !contentWidth || !contentHeight) {
+        return
+      }
+
+      const nextScale = Math.min(1, shellWidth / contentWidth)
+      setScale(nextScale)
+      setHeight(contentHeight * nextScale)
+    }
+
+    updateScale()
+
+    const observer = new ResizeObserver(updateScale)
+    observer.observe(shell)
+    window.addEventListener('resize', updateScale)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', updateScale)
+    }
+  }, [])
+
   return (
-    <svg
-      className="logo-svg"
-      viewBox="0 0 920 200"
-      xmlns="http://www.w3.org/2000/svg"
+    <div
+      ref={shellRef}
+      className="logo-shell"
       aria-label="Datakraften logo"
+      role="img"
+      style={height > 0 ? { height: `${height}px` } : undefined}
     >
-      <foreignObject x="0" y="0" width="920" height="200">
-        {/* @ts-expect-error: xmlns needed for HTML inside foreignObject */}
-        <div xmlns="http://www.w3.org/1999/xhtml" className="logo-fo">
-          <pre className="logo-pre">{LINES.join('\n')}</pre>
-        </div>
-      </foreignObject>
-    </svg>
+      <div
+        className="logo-stage"
+        style={{
+          transform: `scale(${scale})`,
+        }}
+      >
+        <pre ref={preRef} className="logo-pre">
+          {LINES.join('\n')}
+        </pre>
+      </div>
+    </div>
   )
 }
