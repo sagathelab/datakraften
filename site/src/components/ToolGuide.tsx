@@ -63,7 +63,7 @@ function YamlBlock({ lines }: { lines: string[] }) {
         {copied ? 'Copied' : 'Copy'}
       </button>
       {lines.map((line, li) => {
-        const content = line.replace(/^\| /, '')
+        const content = line.replace(/^\| /, '').replace(/^\|$/, '')
         if (content.trim() === '') {
           return <div key={li} className="yaml-line" dangerouslySetInnerHTML={{ __html: '&nbsp;' }} />
         }
@@ -88,7 +88,7 @@ function renderBody(body: string) {
   const isNote = (l: string) => l.startsWith('NOTE:')
   const isEmpty = (l: string) => l.trim() === ''
   const isListItem = (l: string) => l.startsWith('- ')
-  const isYaml = (l: string) => l.startsWith('| ')
+  const isYaml = (l: string) => l.startsWith('| ') || l === '|'
 
   for (const line of lines) {
     if (isTip(line)) {
