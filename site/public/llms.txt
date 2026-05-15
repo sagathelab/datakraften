@@ -1,0 +1,49 @@
+# Datakraften — AI-Native Developer Workstation Bootstrap
+
+> Datakraften (dk) bootstraps your entire developer workstation in one command.  
+> WSL-first, opinionated, idempotent, and team-ready.
+
+## What it does
+
+`dk` is a CLI that orchestrates existing package managers (apt, brew, dnf, pacman), runtime version managers (fnm for Node, uv for Python), shell configuration (Fish + Starship + Atuin), editor detection (VS Code, Zed, Cursor), and AI tool setup — all from a single YAML config.
+
+## Key features
+
+- **One-command setup**: `curl -fsSL https://datakraften.no/install | bash && dk init && dk apply`
+- **AI-native**: Installs and configures AI dev tools out of the box
+- **Idempotent**: Safe to run `dk apply` repeatedly — only installs what's missing
+- **Team-ready**: Share a remote YAML profile for consistent team environments
+- **Diagnostics**: `dk doctor` checks system, tools, runtimes, editors, Docker, and shell
+- **3 profiles**: `minimal` (bare essentials), `default` (full dev setup), `custom` (remote YAML)
+
+## CLI commands
+
+- `dk init` — Generate interactive config with profile selection
+- `dk apply` — Install everything (packages, runtimes, shell, editors, AI tools)
+- `dk doctor` — Run diagnostic checks across all categories
+- `dk status` — Show installed tools and versions
+- `dk profile list` — List available profiles
+- `dk profile use <name>` — Switch profile
+- `dk update` — Self-update the CLI
+
+## Supported platforms
+
+- **WSL** (primary target) — auto-detects WSL 2, systemd, Windows-side editors
+- **Linux** — native Ubuntu/Debian, Fedora, Arch
+- **macOS** — via Homebrew (partial support)
+
+## Tooling provided
+
+| Category | Tools |
+|---|---|
+| Shell | Fish, Starship prompt, Atuin history, fzf |
+| Editors | VS Code, Zed, Cursor (with WSL-side detection) |
+| Runtimes | Node (fnm), Python (uv), .NET |
+| AI | GitHub Copilot CLI, aider, Continue.dev |
+
+## Links
+
+- Homepage: https://datakraften.no
+- Install: `curl -fsSL https://datakraften.no/install | bash`
+- GitHub: https://github.com/datakraften/datakraften
+- Docs: https://datakraften.no/docs

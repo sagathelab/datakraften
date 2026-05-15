@@ -28,4 +28,14 @@ for (const id of toolIds) {
   writeFileSync(outPath, src)
 }
 
+const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://datakraften.no/</loc><priority>1.0</priority></url>
+  <url><loc>https://datakraften.no/docs</loc><priority>0.9</priority></url>
+${routes.slice(1).map(r => `  <url><loc>https://datakraften.no${r}</loc><priority>0.6</priority></url>`).join('\n')}
+${toolIds.map(id => `  <url><loc>https://datakraften.no/docs/${id}</loc><priority>0.8</priority></url>`).join('\n')}
+</urlset>`
+writeFileSync(join(dist, 'sitemap.xml'), sitemap)
+
 console.log(`✓ Generated static HTML for ${routes.length + toolIds.length} routes`)
+console.log('✓ Generated sitemap.xml')

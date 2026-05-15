@@ -10,10 +10,10 @@ export default function Landing() {
       <section className="hero text-center pt-12 pb-8">
         <LogoSvg />
         <p className="font-share-tech text-text-dim uppercase tracking-[0.1em] text-base sm:text-lg mt-4">
-          Bootstrap modern developer environments
+          From zero to AI-ready dev environment in one command
         </p>
         <p className="font-share-tech text-magenta uppercase tracking-[0.15em] text-sm sm:text-base mt-1 animate-tagline-glow">
-          for AI-powered development
+          WSL-first · AI-native · Opinionated · Team-ready
         </p>
       </section>
 
