@@ -281,6 +281,13 @@ ai:
 			state.Save()
 
 			fmt.Println()
+			fmt.Println("  Config preview:")
+			if data, err := os.ReadFile(configPath); err == nil {
+				for _, line := range strings.Split(string(data), "\n") {
+					fmt.Printf("    %s\n", line)
+				}
+			}
+			fmt.Println()
 			if profile == "custom" {
 				fmt.Printf("  ✓ Config created at %s\n", configPath)
 				fmt.Println()
