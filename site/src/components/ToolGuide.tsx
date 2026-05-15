@@ -269,7 +269,7 @@ export default function ToolGuide({ title, subtitle, sections, website }: ToolGu
         {toc.length > 1 && (
           <aside className="hidden lg:block w-56 flex-shrink-0">
             <nav className="sticky top-20 space-y-1.5">
-              <span className="text-xs text-text-dim uppercase tracking-wider font-semibold">On this page</span>
+              <span className="block text-xs text-text-dim uppercase tracking-wider font-semibold mb-3">On this page</span>
               {toc.map((s, i) => (
                 <a
                   key={i}
