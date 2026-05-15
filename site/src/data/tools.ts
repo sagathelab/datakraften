@@ -547,14 +547,6 @@ export const tools: Record<string, ToolDef> = {
         title: 'Manual install',
         body: 'Download the latest release from GitHub, verify the checksum, and install manually:\n\n$ curl -fsSL -o dk https://github.com/sagathelab/datakraften/releases/latest/download/dk-linux-amd64\n$ curl -fsSL -o dk.sha256 https://github.com/sagathelab/datakraften/releases/latest/download/dk-linux-amd64.sha256\n$ sha256sum --check dk.sha256\n$ chmod +x dk\n$ mkdir -p ~/.local/bin\n$ mv dk ~/.local/bin/\n\nReplace `linux-amd64` with `linux-arm64`, `darwin-amd64`, or `darwin-arm64` as needed.\n\nOr use the package manager of your choice:\n\n$ brew install sagathelab/tap/datakraften\n\nNOTE: The Homebrew tap is community-maintained. For the latest version, use the direct download or the bootstrap script.',
       },
-      {
-        title: 'Updating',
-        body: 'Update to the latest version at any time:\n\n$ dk update\n\nThis checks the latest GitHub release, downloads the matching binary for your platform, and verifies the SHA256 checksum before replacing the current binary.\n\nTIP: Run `dk update` periodically to get the latest features and fixes.',
-      },
-      {
-        title: 'Next steps',
-        body: 'After installing dk, the workflow is:\n\n1. **Initialize** — detects your system and generates config via `dk init`\n2. **Apply** — installs everything in your active profile via `dk apply` (idempotent — safe to re-run)\n3. **Verify** — comprehensive diagnostics via `dk doctor`\n4. **Develop** — your workstation is ready. Run `dk status` anytime for a quick overview.\n\nTIP: Start with the default profile. Run `dk init` then `dk apply`. You can switch later with `dk profile use <name>`.',
-      },
     ],
     website: 'https://github.com/sagathelab/datakraften',
   },
