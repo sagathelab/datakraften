@@ -67,7 +67,7 @@ function CodeBlock({ lines }: { lines: string[] }) {
     <div className="code-block">
       <button
         onClick={handleCopy}
-        className={`yaml-copy ${copied ? 'yaml-copy--copied' : ''}`}
+        className={`code-copy ${copied ? 'code-copy--copied' : ''}`}
       >
         {copied ? 'Copied' : 'Copy'}
       </button>

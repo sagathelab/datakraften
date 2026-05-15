@@ -214,7 +214,8 @@ body {
   color: #7ee787;
 }
 
-.yaml-copy {
+.yaml-copy,
+.code-copy {
   position: absolute;
   top: 6px;
   right: 6px;
@@ -222,11 +223,14 @@ body {
   font-size: 0.7rem;
   padding: 2px 8px;
   border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.yaml-copy {
   border: 1px solid rgba(0, 180, 120, 0.3);
   background: rgba(0, 180, 120, 0.08);
   color: #7ee787;
-  cursor: pointer;
-  transition: all 0.2s;
 }
 
 .yaml-copy:hover {
@@ -237,4 +241,20 @@ body {
 .yaml-copy--copied {
   border-color: rgba(0, 180, 120, 0.8);
   background: rgba(0, 180, 120, 0.2);
+}
+
+.code-copy {
+  border: 1px solid rgba(255, 0, 255, 0.3);
+  background: rgba(255, 0, 255, 0.08);
+  color: #ff00ff;
+}
+
+.code-copy:hover {
+  background: rgba(255, 0, 255, 0.15);
+  border-color: rgba(255, 0, 255, 0.6);
+}
+
+.code-copy--copied {
+  border-color: rgba(255, 0, 255, 0.8);
+  background: rgba(255, 0, 255, 0.2);
 }
