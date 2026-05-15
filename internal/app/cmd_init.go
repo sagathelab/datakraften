@@ -88,12 +88,21 @@ func newInitCmd() *cobra.Command {
 					}
 
 					os.WriteFile(configPath, []byte(updatedCfg), 0644)
+
+					fmt.Println()
+					fmt.Println("  Config preview:")
+					for _, line := range strings.Split(updatedCfg, "\n") {
+						fmt.Printf("    %s\n", line)
+					}
+					fmt.Println()
+					fmt.Printf("  Writing config to: %s\n", configPath)
 				}
 
 				state := LoadState()
 				state.ActiveProfile = profile
 				state.Save()
 
+				fmt.Println()
 				fmt.Printf("  ✓ Profile updated to: %s\n", profile)
 				fmt.Println()
 				fmt.Println("  Run 'dk apply' to apply this profile.")
@@ -164,8 +173,6 @@ editors: {}
 ai: {}
 `, nativePM)
 
-				fmt.Printf("  Writing config to: %s\n", configPath)
-				fmt.Println()
 				if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
 					return fmt.Errorf("failed to write config: %w", err)
 				}
@@ -218,8 +225,6 @@ ai:
 					cfg = remoteCfg
 				}
 
-				fmt.Printf("  Writing config to: %s\n", configPath)
-				fmt.Println()
 				if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
 					return fmt.Errorf("failed to write config: %w", err)
 				}
@@ -269,8 +274,6 @@ ai:
   gemini_cli: optional
 `, profile, nativePM)
 
-				fmt.Printf("  Writing config to: %s\n", configPath)
-				fmt.Println()
 				if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
 					return fmt.Errorf("failed to write config: %w", err)
 				}
@@ -287,6 +290,8 @@ ai:
 					fmt.Printf("    %s\n", line)
 				}
 			}
+			fmt.Println()
+			fmt.Printf("  Writing config to: %s\n", configPath)
 			fmt.Println()
 			if profile == "custom" {
 				fmt.Printf("  ✓ Config created at %s\n", configPath)
