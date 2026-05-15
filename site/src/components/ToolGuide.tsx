@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { Fragment, useState, useCallback } from 'react'
 import Layout from './Layout'
 
 interface ToolSection {
@@ -24,22 +24,66 @@ function renderInlineCode(text: string) {
   })
 }
 
+function YamlBlock({ lines }: { lines: string[] }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = useCallback(() => {
+    const text = lines.map(l => l.replace(/^\| /, '')).join('\n')
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }, [lines])
+
+  return (
+    <div className="yaml-block">
+      <button
+        onClick={handleCopy}
+        className={`yaml-copy ${copied ? 'yaml-copy--copied' : ''}`}
+      >
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+      {lines.map((line, li) => {
+        const content = line.replace(/^\| /, '')
+        if (content.trim() === '') {
+          return <div key={li} className="yaml-line" dangerouslySetInnerHTML={{ __html: '&nbsp;' }} />
+        }
+        return (
+          <div key={li} className="yaml-line">
+            {renderInlineCode(content)}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function renderBody(body: string) {
   const lines = body.split('\n')
-  const blocks: { type: 'code' | 'text' | 'tip' | 'list'; lines: string[] }[] = []
-  let current: { type: 'code' | 'text' | 'tip' | 'list'; lines: string[] } | null = null
+  const blocks: { type: 'code' | 'text' | 'tip' | 'note' | 'list' | 'yaml'; lines: string[] }[] = []
+  let current: { type: 'code' | 'text' | 'tip' | 'note' | 'list' | 'yaml'; lines: string[] } | null = null
 
   const codePrefixes = ['$ ', '# ', '// ', '<!-- ', '> ']
-  const isCode = (l: string) => codePrefixes.some(p => l.startsWith(p))
+  const isCode = (l: string) => codePrefixes.some(p => l.startsWith(p)) || l === '$'
   const isTip = (l: string) => l.startsWith('TIP:')
+  const isNote = (l: string) => l.startsWith('NOTE:')
   const isEmpty = (l: string) => l.trim() === ''
   const isListItem = (l: string) => l.startsWith('- ')
+  const isYaml = (l: string) => l.startsWith('| ')
 
   for (const line of lines) {
     if (isTip(line)) {
       if (current && current.type !== 'tip') { blocks.push(current); current = null }
       if (!current) current = { type: 'tip', lines: [] }
       current.lines.push(line.slice(5).trim())
+    } else if (isNote(line)) {
+      if (current && current.type !== 'note') { blocks.push(current); current = null }
+      if (!current) current = { type: 'note', lines: [] }
+      current.lines.push(line.slice(5).trim())
+    } else if (isYaml(line)) {
+      if (current && current.type !== 'yaml') { blocks.push(current); current = null }
+      if (!current) current = { type: 'yaml', lines: [] }
+      current.lines.push(line)
     } else if (isCode(line)) {
       if (current && current.type !== 'code') { blocks.push(current); current = null }
       if (!current) current = { type: 'code', lines: [] }
@@ -48,12 +92,13 @@ function renderBody(body: string) {
       if (current && current.type !== 'list') { blocks.push(current); current = null }
       if (!current) current = { type: 'list', lines: [] }
       current.lines.push(line.slice(2))
-    } else {
-      if (current && current.type !== 'text') { blocks.push(current); current = null }
-      if (isEmpty(line)) {
+    } else if (isEmpty(line)) {
+      if (current && (current.type === 'code' || current.type === 'yaml')) {
+        current.lines.push(line)
+      } else {
         if (current) { blocks.push(current); current = null }
-        continue
       }
+    } else {
       if (!current) current = { type: 'text', lines: [] }
       current.lines.push(line)
     }
@@ -61,11 +106,18 @@ function renderBody(body: string) {
   if (current) blocks.push(current)
 
   return blocks.map((block, bi) => {
+    if (block.type === 'yaml') {
+      return <YamlBlock key={bi} lines={block.lines} />
+    }
+
     if (block.type === 'code') {
       return (
         <div key={bi} className="code-block">
           {block.lines.map((line, li) => {
-            if (line.startsWith('$ ')) {
+            if (line.trim() === '') {
+              return <div key={li}>&nbsp;</div>
+            }
+            if (line.startsWith('$ ') || line === '$') {
               return (
                 <div key={li}>
                   <span className="code-prompt">$</span>
@@ -94,6 +146,21 @@ function renderBody(body: string) {
       return (
         <div key={bi} className="tip-box">
           <span className="text-magenta font-bold">&#9654;</span>
+          {' '}
+          {block.lines.map((l, li) => (
+            <Fragment key={li}>
+              {li > 0 && <br />}
+              {renderInlineCode(l)}
+            </Fragment>
+          ))}
+        </div>
+      )
+    }
+
+    if (block.type === 'note') {
+      return (
+        <div key={bi} className="note-box">
+          <span className="text-text-dim font-bold">~</span>
           {' '}
           {block.lines.map((l, li) => (
             <Fragment key={li}>
