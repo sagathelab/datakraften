@@ -46,6 +46,57 @@ function renderInlineCode(text: string) {
   })
 }
 
+function CodeBlock({ lines }: { lines: string[] }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = useCallback(() => {
+    const text = lines.map(l => {
+      if (l.startsWith('$ ')) return l.slice(2)
+      if (l.startsWith('> ')) return l.slice(2)
+      if (l.startsWith('// ')) return l.slice(3)
+      if (l.startsWith('# ')) return l.slice(2)
+      return l
+    }).join('\n')
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }, [lines])
+
+  return (
+    <div className="code-block">
+      <button
+        onClick={handleCopy}
+        className={`yaml-copy ${copied ? 'yaml-copy--copied' : ''}`}
+      >
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+      {lines.filter(l => l.trim() !== '').map((line, li) => {
+        if (line.startsWith('$ ') || line === '$') {
+          return (
+            <div key={li}>
+              <span className="code-prompt">$</span>
+              <span className="ml-2">{renderInlineCode(line.slice(2))}</span>
+            </div>
+          )
+        }
+        if (line.startsWith('> ')) {
+          return (
+            <div key={li} className="code-output">{renderInlineCode(line.slice(2))}</div>
+          )
+        }
+        if (line.startsWith('// ') || line.startsWith('# ') || line.startsWith('<!-- ')) {
+          const comment = line.replace(/^\/\/ |^# |^<!-- /, '')
+          return (
+            <div key={li} className="code-comment">{renderInlineCode(comment)}</div>
+          )
+        }
+        return <div key={li}>{renderInlineCode(line)}</div>
+      })}
+    </div>
+  )
+}
+
 function YamlBlock({ lines }: { lines: string[] }) {
   const [copied, setCopied] = useState(false)
 
@@ -65,11 +116,8 @@ function YamlBlock({ lines }: { lines: string[] }) {
       >
         {copied ? 'Copied' : 'Copy'}
       </button>
-      {lines.map((line, li) => {
+      {lines.filter(l => l.trim() !== '').map((line, li) => {
         const content = line.replace(/^\| /, '').replace(/^\|$/, '')
-        if (content.trim() === '') {
-          return <div key={li} className="yaml-line" dangerouslySetInnerHTML={{ __html: '&nbsp;' }} />
-        }
         return (
           <div key={li} className="yaml-line">
             {renderInlineCode(content)}
@@ -134,35 +182,7 @@ function renderBody(body: string) {
     }
 
     if (block.type === 'code') {
-      return (
-        <div key={bi} className="code-block">
-          {block.lines.map((line, li) => {
-            if (line.trim() === '') {
-              return <div key={li}>&nbsp;</div>
-            }
-            if (line.startsWith('$ ') || line === '$') {
-              return (
-                <div key={li}>
-                  <span className="code-prompt">$</span>
-                  <span className="ml-2">{renderInlineCode(line.slice(2))}</span>
-                </div>
-              )
-            }
-            if (line.startsWith('> ')) {
-              return (
-                <div key={li} className="code-output">{renderInlineCode(line.slice(2))}</div>
-              )
-            }
-            if (line.startsWith('// ') || line.startsWith('# ') || line.startsWith('<!-- ')) {
-              const comment = line.replace(/^\/\/ |^# |^<!-- /, '')
-              return (
-                <div key={li} className="code-comment">{renderInlineCode(comment)}</div>
-              )
-            }
-            return <div key={li}>{renderInlineCode(line)}</div>
-          })}
-        </div>
-      )
+      return <CodeBlock key={bi} lines={block.lines} />
     }
 
     if (block.type === 'tip') {
