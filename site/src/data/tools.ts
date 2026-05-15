@@ -526,6 +526,39 @@ export const tools: Record<string, ToolDef> = {
     website: '',
   },
 
+  install: {
+    id: 'install',
+    title: 'Installation',
+    subtitle: 'Supported platforms, requirements, and how to get Datakraften on your machine',
+    sections: [
+      {
+        title: 'Supported platforms',
+        body: 'Datakraften is designed for developer workstations. The primary target is WSL2 (Ubuntu or Fedora), but it also works on native Linux and macOS.\n\n- **WSL2** (primary) — Ubuntu or Fedora distro on Windows. Full support for Windows-side editor detection (VS Code, Cursor) and Docker Desktop integration.\n- **Linux** (native) — works on any Debian/Ubuntu or Fedora-based distro. APT, DNF, YUM, and PACMAN package managers are supported.\n- **macOS** (experimental) — works with Homebrew as the native package manager. Some features (WSL-specific editor detection, Docker Desktop WSL integration) are skipped.\n\nNOTE: Datakraften does not support Windows itself (no native PowerShell or cmd support). Use WSL2 for the full experience.',
+      },
+      {
+        title: 'System requirements',
+        body: 'Before installing, make sure your system meets these requirements:\n\n- **OS** — Windows 10+ with WSL2 enabled (recommended), or any Linux distro with APT/DNF/YUM/PACMAN\n- **Architecture** — x86_64 or ARM64\n- **Internet** — the bootstrap script downloads tools from GitHub, npm, and Homebrew\n- **sudo access** — system packages are installed with sudo\n- **curl or wget** — needed for the one-liner install\n\nMinimal disk usage: the dk CLI binary is ~15 MB. Total install (with all tools) can be 1-3 GB depending on the profile.',
+      },
+      {
+        title: 'Quick install (recommended)',
+        body: 'One command to download and run the bootstrap script:\n\n$ curl -fsSL https://datakraften.no/install | bash\n\nWhat the script does:\n1. Detects your OS and architecture\n2. Downloads the latest dk binary from GitHub Releases\n3. Verifies the SHA256 checksum\n4. Installs to ~/.local/bin/dk\n5. Adds ~/.local/bin to PATH if not already present\n\nAfter the script completes, close and reopen your terminal, or run `source ~/.profile`.\n\nTIP: The script is intentionally minimal — it only installs the dk CLI. Run `dk init` and `dk apply` next to bootstrap your full environment.',
+      },
+      {
+        title: 'Manual install',
+        body: 'Download the latest release from GitHub, verify the checksum, and install manually:\n\n$ curl -fsSL -o dk https://github.com/sagathelab/datakraften/releases/latest/download/dk-linux-amd64\n$ curl -fsSL -o dk.sha256 https://github.com/sagathelab/datakraften/releases/latest/download/dk-linux-amd64.sha256\n$ sha256sum --check dk.sha256\n$ chmod +x dk\n$ mkdir -p ~/.local/bin\n$ mv dk ~/.local/bin/\n\nReplace `linux-amd64` with `linux-arm64`, `darwin-amd64`, or `darwin-arm64` as needed.\n\nOr use the package manager of your choice:\n\n$ brew install sagathelab/tap/datakraften\n\nNOTE: The Homebrew tap is community-maintained. For the latest version, use the direct download or the bootstrap script.',
+      },
+      {
+        title: 'Updating',
+        body: 'Update to the latest version at any time:\n\n$ dk update\n\nThis checks the latest GitHub release, downloads the matching binary for your platform, and verifies the SHA256 checksum before replacing the current binary.\n\nTIP: Run `dk update` periodically to get the latest features and fixes.',
+      },
+      {
+        title: 'Next steps',
+        body: 'After installing dk, the workflow is:\n\n1. **Initialize** — `dk init` detects your system and writes a config to ~/.config/datakraften/config.yaml\n2. **Apply** — `dk apply` installs everything defined in your profile (system packages, Homebrew, runtimes, shell config, editors, AI tools)\n3. **Verify** — `dk doctor` runs comprehensive diagnostics to confirm everything is working\n4. **Develop** — your workstation is ready\n\nTIP: Start with the default profile (`dk init` → `dk apply`). You can switch later with `dk profile use <name>`.',
+      },
+    ],
+    website: 'https://github.com/sagathelab/datakraften',
+  },
+
   teams: {
     id: 'teams',
     title: 'Team Profiles',
@@ -566,7 +599,7 @@ export const categories = [
   {
     title: 'dk CLI',
     desc: 'Core Datakraften platform',
-    ids: ['dk'],
+    ids: ['dk', 'install'],
   },
   {
     title: 'Guides',
