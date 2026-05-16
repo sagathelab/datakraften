@@ -44,12 +44,12 @@ export const tools: Record<string, ToolDef> = {
       {
         title: 'dk apply',
         id: 'apply',
-        body: 'Install everything defined in your configuration. Idempotent -- safe to run repeatedly.\n\n$ dk apply\n$ dk apply --dry-run\n\nNOTE: Preview without installing\n\nWhat it installs:\n- System packages -- via apt, dnf, yum, pacman, or brew\n- Homebrew -- installs brew if missing, then brew packages\n- Runtimes -- Node.js via fnm, Python via uv, Go, .NET SDK\n- Shell -- Fish shell config with managed blocks\n- AI tools -- CLI tools + desktop apps\n- Skips already-installed tools. Uses sudo only for system packages.\n\nTeam source:\nIf your config has source: team, `dk apply` fetches the remote YAML fresh before installing. The remote file is the single source of truth — your local config only stores ~source: team~ and ~url~. If the remote YAML is invalid or unreachable, `dk apply` aborts.\n\nDry-run mode:\nUse --dry-run to see what would be installed without making changes:\n\n$ dk apply --dry-run\n> [dry-run] would install system packages: git curl build-essential ...\n> [dry-run] would install brew packages: fish starship atuin fzf ...\n> [dry-run] would install Node.js via fnm (LTS)',
+        body: 'Install everything defined in your configuration. Idempotent -- safe to run repeatedly.\n\nApply your configuration:\n$ dk apply\n\nPreview what would happen without making changes:\n$ dk apply --dry-run\n\nNOTE: Preview without installing\n\nWhat it installs:\n- System packages -- via apt, dnf, yum, pacman, or brew\n- Homebrew -- installs brew if missing, then brew packages\n- Runtimes -- Node.js via fnm, Python via uv, Go, .NET SDK\n- Shell -- Fish shell config with managed blocks\n- AI tools -- CLI tools + desktop apps\n- Skips already-installed tools. Uses sudo only for system packages.\n\nTeam source:\nIf your config has source: team, `dk apply` fetches the remote YAML fresh before installing. The remote file is the single source of truth — your local config only stores ~source: team~ and ~url~. If the remote YAML is invalid or unreachable, `dk apply` aborts.\n\nDry-run mode:\nUse --dry-run to see what would be installed without making changes:\n\n$ dk apply --dry-run\n> [dry-run] would install system packages: git curl build-essential ...\n> [dry-run] would install brew packages: fish starship atuin fzf ...\n> [dry-run] would install Node.js via fnm (LTS)',
       },
       {
         title: 'dk doctor',
         id: 'doctor',
-        body: 'Run comprehensive diagnostics on your system. Checks every category that dk apply configures.\n\n$ dk doctor\n$ dk doctor --json\n\nNOTE: Machine-readable output\n\nCheck categories:\n- System -- distribution, kernel, WSL version, systemd\n- Tools -- git, curl, build tools, Homebrew\n- Runtimes -- Node.js, Python, Go, .NET SDK\n- Editors -- VS Code, Zed, Cursor detection\n- Docker -- daemon status, socket access, WSL integration\n- Shell -- Fish config, Starship prompt, Atuin, FZF',
+        body: 'Run comprehensive diagnostics on your system. Checks every category that dk apply configures.\n\nRun a full diagnostic:\n$ dk doctor\n\nGet machine-readable output:\n$ dk doctor --json\n\nNOTE: Machine-readable output\n\nCheck categories:\n- System -- distribution, kernel, WSL version, systemd\n- Tools -- git, curl, build tools, Homebrew\n- Runtimes -- Node.js, Python, Go, .NET SDK\n- Editors -- VS Code, Zed, Cursor detection\n- Docker -- daemon status, socket access, WSL integration\n- Shell -- Fish config, Starship prompt, Atuin, FZF',
       },
       {
         title: 'dk status',
@@ -68,7 +68,7 @@ export const tools: Record<string, ToolDef> = {
       {
         title: 'dk update',
         id: 'update',
-        body: 'Update managed developer tools to their latest versions. Supports updating all tools at once or targeting a specific tool.\n\n$ dk update\n\nUpdate all tools — Homebrew packages, Node.js LTS via fnm, Python via uv, and global npm packages.\n\nUpdate a specific tool:\n\n$ dk update brew\n$ dk update fnm\n$ dk update uv\n$ dk update npm\n\nList available updatable tools:\n\n$ dk update --list\n\nDry-run to preview updates:\n\n$ dk update --dry-run',
+        body: 'Update managed developer tools to their latest versions. Supports updating all tools at once or targeting a specific tool.\n\nUpdate all tools — Homebrew packages, Node.js LTS via fnm, Python via uv, and global npm packages:\n$ dk update\n\nUpdate a specific tool:\n$ dk update brew\n\n$ dk update fnm\n\n$ dk update uv\n\n$ dk update npm\n\nList available updatable tools:\n$ dk update --list\n\nPreview updates without applying them:\n$ dk update --dry-run',
       },
     ],
     website: 'https://github.com/sagathelab/datakraften',
@@ -632,6 +632,23 @@ export const tools: Record<string, ToolDef> = {
       },
     ],
     website: '',
+    commonTasks: [
+      {
+        title: 'Set up a team config',
+        command: 'dk init --team <url>',
+        details: 'Point your local config to a shared remote YAML that defines the full workstation for your team.',
+      },
+      {
+        title: 'Create a custom config',
+        command: 'dk init --custom',
+        details: 'Generate a local config file that you own — edit it freely without overwrite risk.',
+      },
+      {
+        title: 'Apply your configuration',
+        command: 'dk apply',
+        details: 'Install everything defined in your config — system packages, runtimes, shell config, editors, and AI tools.',
+      },
+    ],
   },
 
   install: {
@@ -665,7 +682,7 @@ export const tools: Record<string, ToolDef> = {
     subtitle: 'Standardized dev environments across your whole team with shared YAML configs',
     sections: [
       {
-        title: 'Why team profiles?',
+        title: 'Why team configs?',
         body: "Every team has a stack — specific tools, runtimes, linters, and conventions. Without automation, each new hire spends hours (or days) setting up their machine, and inconsistencies creep in across the team. Datakraften's team config solves this with a single shared YAML file.\n\nThe idea is simple: define your team's ideal workstation once, host the YAML file somewhere your team can reach it, and each developer's local config becomes a thin pointer — just ~source: team~ and ~url~. On every `dk apply`, the remote YAML is fetched fresh, validated, and applied. No local copy, no drift.\n\n$ curl -fsSL https://datakraften.no/install | bash\n$ dk init --team https://example.com/team.yaml\n$ dk apply\n\nNOTE: Onboarding goes from hours to minutes. Every machine is identical. No tribal knowledge needed. Updates to the shared config take effect on the next `dk apply`.",
       },
       {

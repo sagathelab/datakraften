@@ -60,13 +60,8 @@ function CodeBlock({ lines }: { lines: string[] }) {
 
   const handleCopy = useCallback(() => {
     const text = lines
-      .map((l) => {
-        if (l.startsWith('$ ')) return l.slice(2)
-        if (l.startsWith('> ')) return l.slice(2)
-        if (l.startsWith('// ')) return l.slice(3)
-        if (l.startsWith('# ')) return l.slice(2)
-        return l
-      })
+      .filter((l) => l.startsWith('$ '))
+      .map((l) => l.slice(2))
       .join('\n')
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
@@ -398,6 +393,57 @@ function extractCommonTasks(commonTasks: ToolTask[] | undefined, sections: ToolS
   return tasks.slice(0, 4)
 }
 
+function TaskCommand({ command }: { command: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const copy = useCallback(() => {
+    navigator.clipboard.writeText(command).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1200)
+    })
+  }, [command])
+
+  return (
+    <div className="flex items-center gap-1.5 mb-2">
+      <code className="inline-code">{command}</code>
+      <button
+        onClick={copy}
+        className="flex items-center p-0.5 cursor-pointer transition-all duration-200 bg-none border-none text-text-dim opacity-60 hover:opacity-100 hover:text-magenta"
+        title="Copy command"
+      >
+        {copied ? (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        ) : (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        )}
+      </button>
+    </div>
+  )
+}
+
 export default function ToolGuide({
   title,
   subtitle,
@@ -453,9 +499,7 @@ export default function ToolGuide({
                     <h3 className="text-sm font-semibold uppercase tracking-wide text-magenta mb-2">
                       {task.title}
                     </h3>
-                    {task.command && (
-                      <code className="inline-code mb-2 inline-block">{task.command}</code>
-                    )}
+                    {task.command && <TaskCommand command={task.command} />}
                     {task.details && (
                       <p className="mt-2 text-sm text-text-body leading-relaxed">{task.details}</p>
                     )}
