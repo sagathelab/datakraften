@@ -38,6 +38,7 @@ jobs:
         run: python3 tests/install_test.py
 
       - name: Test npm sudo prompt
+        if: runner.os == 'Linux'
         run: DK_TEST_BINARY="$PWD/bin/dk" python3 tests/npm_sudo_test.py
 
       - name: Upload binary

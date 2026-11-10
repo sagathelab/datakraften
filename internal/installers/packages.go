@@ -84,7 +84,23 @@ func (pm PackageManager) CheckInstalled(pkg string) bool {
 		}
 		return false
 	case DNF, YUM:
+		if strings.HasPrefix(pkg, "@") {
+			r := exec.Run(string(pm), "group", "list", "--installed")
+			if r.Code != 0 {
+				return false
+			}
+			for _, line := range strings.Split(r.Stdout, "\n") {
+				fields := strings.Fields(line)
+				if len(fields) > 0 && (fields[0] == strings.TrimPrefix(pkg, "@") || (pkg == "@development-tools" && strings.EqualFold(strings.TrimSpace(line), "Development Tools"))) {
+					return true
+				}
+			}
+			return false
+		}
 		r := exec.Run("rpm", "-q", pkg)
+		if r.Code != 0 {
+			r = exec.Run("rpm", "-q", "--whatprovides", pkg)
+		}
 		return r.Code == 0
 	case PACMAN:
 		r := exec.Run("pacman", "-Q", pkg)

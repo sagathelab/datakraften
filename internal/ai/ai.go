@@ -117,6 +117,9 @@ func ghExtensionInstalled(repo string) bool {
 	if !commandExists("gh") {
 		return false
 	}
+	if repo == "github/gh-copilot" && runCommand("gh", "copilot", "--help").Code == 0 {
+		return true
+	}
 
 	r := runCommand("gh", "extension", "list")
 	if r.Code != 0 {
@@ -242,6 +245,9 @@ func installApp(app desktopApp) (installStatus, string, error) {
 		fmt.Printf("    Installing %s VS Code extension...\n", app.name)
 		r := runCommand("code", "--install-extension", app.extID)
 		if r.Code != 0 {
+			if app.extID == "GitHub.copilot" && strings.Contains(strings.ToLower(r.Stderr), "extension 'github.copilot-chat' is a built-in extension") && strings.Contains(strings.ToLower(r.Stderr), "cannot be downgraded") {
+				return installStatusSkipped, "Copilot Chat is built into VS Code; the additional extension could not be installed", nil
+			}
 			return installStatusSkipped, "", fmt.Errorf("code --install-extension failed: %s", r.Stderr)
 		}
 		return installStatusInstalled, "", nil
