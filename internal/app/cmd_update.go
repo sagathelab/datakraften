@@ -1,8 +1,11 @@
 package app
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
+	"os"
+	osexec "os/exec"
 	"strings"
 
 	"github.com/sagathelab/datakraften/internal/config"
@@ -226,9 +229,42 @@ func updateNpm(dryRun bool) error {
 	r = exec.Run("npm", args...)
 	if r.Code != 0 {
 		fmt.Println(" failed")
+		if strings.Contains(r.Stderr, "EACCES") || strings.Contains(r.Stderr, "EPERM") {
+			return retryNpmWithSudo(packages, r.Stderr)
+		}
 		return npm.CommandError("npm update -g", r.Stderr)
 	}
 	fmt.Println(" done")
 
+	return nil
+}
+
+func retryNpmWithSudo(packages []string, originalError string) error {
+	if !exec.CommandExists("sudo") {
+		return npm.CommandError("npm update -g", originalError)
+	}
+	prefixResult := exec.Run("npm", "config", "get", "prefix")
+	prefix := strings.TrimSpace(prefixResult.Stdout)
+	if prefixResult.Code != 0 || !strings.HasPrefix(prefix, "/") || strings.ContainsAny(prefix, "\r\n") {
+		return fmt.Errorf("cannot determine npm prefix for sudo retry; original error: %s", strings.TrimSpace(originalError))
+	}
+	tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+	if err != nil {
+		return fmt.Errorf("npm needs administrator access but no interactive terminal is available: %w", npm.CommandError("npm update -g", originalError))
+	}
+	defer tty.Close()
+	fmt.Fprintf(tty, "  npm cannot write to %s. Update %s with sudo? [y/N] ", prefix, strings.Join(packages, ", "))
+	answer, err := bufio.NewReader(tty).ReadString('\n')
+	if err != nil || (strings.TrimSpace(strings.ToLower(answer)) != "y" && strings.TrimSpace(strings.ToLower(answer)) != "yes") {
+		return fmt.Errorf("sudo retry declined: %w", npm.CommandError("npm update -g", originalError))
+	}
+	npmPath := exec.CommandPath("npm")
+	args := append([]string{npmPath, "update", "-g", "--prefix", prefix}, packages...)
+	cmd := osexec.Command("sudo", args...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = tty, tty, tty
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("sudo npm update failed: %w", err)
+	}
+	fmt.Println("    ✓ npm packages updated with sudo")
 	return nil
 }

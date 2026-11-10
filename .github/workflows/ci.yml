@@ -37,6 +37,9 @@ jobs:
       - name: Test installer
         run: python3 tests/install_test.py
 
+      - name: Test npm sudo prompt
+        run: DK_TEST_BINARY="$PWD/bin/dk" python3 tests/npm_sudo_test.py
+
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:

@@ -109,7 +109,7 @@ export const tools: Record<string, ToolDef> = {
       {
         question: 'Why does `dk update` fail on npm permissions?',
         answer:
-          'System-owned npm paths can cause EACCES. Use a Node version manager or preview `dk npm setup --dry-run` and run `dk npm setup` to configure a user-owned prefix. Existing global packages are not moved and may need reinstalling. Custom prefixes can conflict with Node version managers.',
+          'System-owned npm paths can cause EACCES. When an update fails for permissions, dk offers an interactive sudo retry for the selected packages and current prefix. Alternatively, use a Node version manager or preview `dk npm setup --dry-run` and run `dk npm setup` for a user-owned prefix. Existing packages are not moved; custom prefixes can conflict with version managers.',
       },
     ],
     faqs: [
