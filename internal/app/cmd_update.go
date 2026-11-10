@@ -49,15 +49,14 @@ func newUpdateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVarP(&list, "list", "l", false, "List tools that have updates available")
+	cmd.Flags().BoolVarP(&list, "list", "l", false, "List supported update targets")
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Show what would be updated without making changes")
 
 	return cmd
 }
 
 func listUpdatable() error {
-	fmt.Println("  Updatable tools")
-	fmt.Println("  ---------------")
+	displayTitle(os.Stdout, "update", "Available update targets")
 
 	fmt.Println("    brew — all Homebrew packages")
 	fmt.Println("    fnm — Node.js runtime")
@@ -90,14 +89,19 @@ func updateTool(name string, dryRun bool) error {
 }
 
 func updateAll(dryRun bool) error {
-	fmt.Println("  Updating all managed tools")
-	fmt.Println("  -------------------------")
+	subtitle := "Updating managed tools"
+	if dryRun {
+		subtitle = "Preview only; no updates will be made"
+	}
+	displayTitle(os.Stdout, "update", subtitle)
 
 	var failures []string
 
-	for _, step := range updateSteps {
+	for i, step := range updateSteps {
+		fmt.Printf("\n  [%d/%d] %s\n", i+1, len(updateSteps), step.name)
 		if err := step.run(dryRun); err != nil {
 			failures = append(failures, fmt.Sprintf("%s: %s", step.name, err))
+			fmt.Printf("    ✗ %s failed; details below\n", step.name)
 		}
 	}
 
@@ -107,7 +111,11 @@ func updateAll(dryRun bool) error {
 		return fmt.Errorf("update failed: %s", strings.Join(failures, "; "))
 	}
 
-	fmt.Println("  ✓ Update complete")
+	if dryRun {
+		fmt.Println("  Preview complete; no updates made")
+	} else {
+		fmt.Println("  ✓ Update complete")
+	}
 	return nil
 }
 
@@ -122,19 +130,19 @@ func updateBrew(dryRun bool) error {
 		return nil
 	}
 
-	fmt.Print("    Updating Homebrew...")
+	fmt.Println("    Updating Homebrew...")
 	r := exec.Run("brew", "update")
 	if r.Code != 0 {
 		return fmt.Errorf("brew update failed: %s", strings.TrimSpace(r.Stderr))
 	}
-	fmt.Println(" done")
+	fmt.Println("    ✓ Command completed")
 
-	fmt.Print("    Upgrading packages...")
+	fmt.Println("    Upgrading packages...")
 	r = exec.Run("brew", "upgrade")
 	if r.Code != 0 {
 		return fmt.Errorf("brew upgrade failed: %s", strings.TrimSpace(r.Stderr))
 	}
-	fmt.Println(" done")
+	fmt.Println("    ✓ Command completed")
 
 	return nil
 }
@@ -150,13 +158,14 @@ func updateFnm(dryRun bool) error {
 		return nil
 	}
 
-	fmt.Print("    Updating Node.js LTS via fnm...")
+	fmt.Println("    Updating Node.js LTS via fnm...")
 	r := exec.Run("fnm", "install", "--lts")
 	if r.Code != 0 {
 		return fmt.Errorf("fnm install lts failed: %s", strings.TrimSpace(r.Stderr))
 	}
-	fmt.Println(" done")
+	fmt.Println("    ✓ Command completed")
 
+	fmt.Println("    Setting fnm default to latest LTS...")
 	r = exec.Run("fnm", "default", "lts-latest")
 	if r.Code != 0 {
 		return fmt.Errorf("fnm default failed: %s", strings.TrimSpace(r.Stderr))
@@ -176,12 +185,12 @@ func updateUv(dryRun bool) error {
 		return nil
 	}
 
-	fmt.Print("    Updating uv...")
+	fmt.Println("    Updating uv...")
 	r := exec.Run("uv", "self", "update")
 	if r.Code != 0 {
 		return fmt.Errorf("uv self update failed: %s", strings.TrimSpace(r.Stderr))
 	}
-	fmt.Println(" done")
+	fmt.Println("    ✓ Command completed")
 
 	return nil
 }
@@ -224,17 +233,17 @@ func updateNpm(dryRun bool) error {
 		return nil
 	}
 
-	fmt.Printf("    Updating npm packages (%s)...", strings.Join(packages, ", "))
+	fmt.Printf("    Updating npm packages (%s)...\n", strings.Join(packages, ", "))
 	args := append([]string{"update", "-g"}, packages...)
 	r = exec.Run("npm", args...)
 	if r.Code != 0 {
-		fmt.Println(" failed")
+		fmt.Println("    ✗ npm update failed")
 		if strings.Contains(r.Stderr, "EACCES") || strings.Contains(r.Stderr, "EPERM") {
 			return retryNpmWithSudo(packages, r.Stderr)
 		}
 		return npm.CommandError("npm update -g", r.Stderr)
 	}
-	fmt.Println(" done")
+	fmt.Println("    ✓ Command completed")
 
 	return nil
 }

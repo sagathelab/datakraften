@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/sagathelab/datakraften/internal/doctor"
@@ -28,8 +29,7 @@ func newDoctorCmd() *cobra.Command {
 				return nil
 			}
 
-			fmt.Println("  Datakraften Doctor")
-			fmt.Println()
+			displayTitle(os.Stdout, "doctor", "Environment diagnostics")
 
 			if state.LastApply != "" {
 				fmt.Printf("  Last apply: %s\n", state.LastApply)
@@ -74,6 +74,8 @@ func newDoctorCmd() *cobra.Command {
 			}
 
 			if category == "" || category == "shell" {
+				report.Add(doctor.Check{ID: "shell", Title: "Current shell", Category: "shell",
+					Severity: "info", Status: "pass", Message: system.CurrentShell()})
 				fmt.Println("  Shell")
 				fmt.Printf("    ✓ Current shell: %s\n", system.CurrentShell())
 				if state.ManagedShell {
@@ -84,9 +86,11 @@ func newDoctorCmd() *cobra.Command {
 				fmt.Println()
 			}
 
+			report.Print()
+			fmt.Println()
+
 			if fix {
-				fmt.Println("  Auto-fix mode")
-				fmt.Println("  -------------")
+				fmt.Println("  Auto-fix")
 				runAutoFix(report, category)
 				fmt.Println()
 			}

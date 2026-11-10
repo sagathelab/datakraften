@@ -41,7 +41,7 @@ func newUpgradeCmd() *cobra.Command {
 			}
 
 			if !jsonOutput {
-				fmt.Println("  Checking for updates...")
+				displayTitle(os.Stdout, "upgrade", "Checking for a new dk release")
 			}
 
 			client := &http.Client{Timeout: 30 * time.Second}
@@ -93,8 +93,9 @@ func newUpgradeCmd() *cobra.Command {
 			}
 
 			if !jsonOutput {
-				fmt.Printf("  Latest version: %s\n", release.TagName)
-				fmt.Printf("  Current version: %s\n", version)
+				fmt.Println("  Release")
+				fmt.Printf("    Current: %s\n", version)
+				fmt.Printf("    Latest:  %s\n", release.TagName)
 				fmt.Println()
 			}
 
@@ -102,7 +103,11 @@ func newUpgradeCmd() *cobra.Command {
 				if jsonOutput {
 					printUpdateJSON(version, release.TagName, false, "", 0, nil)
 				} else {
-					fmt.Println("  ✓ Already up to date.")
+					if version == "dev" && version != release.TagName {
+						fmt.Println("  – Development build; upgrade skipped.")
+					} else {
+						fmt.Println("  ✓ Already up to date.")
+					}
 				}
 				return nil
 			}
@@ -131,7 +136,7 @@ func newUpgradeCmd() *cobra.Command {
 				if jsonOutput {
 					printUpdateJSON(version, release.TagName, false, binaryName, 0, nil)
 				} else {
-					fmt.Printf("  Would upgrade to %s (%s).\n", release.TagName, binaryName)
+					fmt.Printf("  – Dry run: would upgrade to %s (%s).\n", release.TagName, binaryName)
 				}
 				return nil
 			}
@@ -174,7 +179,8 @@ func newUpgradeCmd() *cobra.Command {
 			} else {
 				fmt.Printf("  ✓ Updated to %s (%d bytes)\n", release.TagName, written)
 				fmt.Println()
-				fmt.Println("  Run 'dk doctor' to verify your setup.")
+				fmt.Println("  Next steps")
+				fmt.Println("    Run 'dk doctor' to verify your setup.")
 			}
 
 			return nil

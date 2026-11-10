@@ -14,6 +14,7 @@ func newNpmCmd() *cobra.Command {
 	root := &cobra.Command{Use: "npm", Short: "Configure npm for your user"}
 	var dryRun bool
 	setup := &cobra.Command{Use: "setup", Short: "Set a user-owned npm prefix", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
+		displayTitle(os.Stdout, "npm setup", "Configure a user-owned npm prefix")
 		if !exec.CommandExists("npm") {
 			return fmt.Errorf("npm is not installed")
 		}
@@ -37,9 +38,14 @@ func newNpmCmd() *cobra.Command {
 		default:
 			return fmt.Errorf("unsupported shell %q; configure npm and PATH manually", shellName)
 		}
-		fmt.Printf("  Set npm user prefix to %s and add its bin directory to %s.\n", prefix, path)
-		fmt.Println("  Existing global packages may need reinstalling; Node version managers may conflict with a custom prefix.")
+		fmt.Println("  Configuration")
+		fmt.Printf("    npm prefix: %s\n", prefix)
+		fmt.Printf("    Shell config: %s\n", path)
+		fmt.Println()
+		fmt.Println("  Note: Existing global packages may need reinstalling; Node version managers may conflict with a custom prefix.")
+		fmt.Println()
 		if dryRun {
+			fmt.Println("  – Dry run: no changes made.")
 			return nil
 		}
 		data, err := os.ReadFile(path)
@@ -75,7 +81,10 @@ func newNpmCmd() *cobra.Command {
 		if r.Code != 0 {
 			return fmt.Errorf("npm config failed: %s", strings.TrimSpace(r.Stderr))
 		}
-		fmt.Println("  Restart your shell to use the new PATH.")
+		fmt.Println("  ✓ npm prefix and shell PATH configured")
+		fmt.Println()
+		fmt.Println("  Next steps")
+		fmt.Println("    Restart your shell to use the new PATH.")
 		return nil
 	}}
 	setup.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Show changes without applying them")

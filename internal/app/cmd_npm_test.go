@@ -47,8 +47,18 @@ func TestNpmSetupDryRun(t *testing.T) {
 	}
 	cmd := newNpmCmd()
 	cmd.SetArgs([]string{"setup", "--dry-run"})
-	if err := cmd.Execute(); err != nil {
-		t.Fatal(err)
+	output := captureStdout(t, func() {
+		if err := cmd.Execute(); err != nil {
+			t.Fatal(err)
+		}
+	})
+	for _, want := range []string{"Datakraften / npm setup", "Configuration", "Dry run: no changes made"} {
+		if !strings.Contains(output, want) {
+			t.Errorf("output missing %q: %s", want, output)
+		}
+	}
+	if strings.Contains(output, "configured") {
+		t.Fatalf("dry run reported a completed change: %s", output)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".zshrc")); !os.IsNotExist(err) {
 		t.Fatalf("dry run wrote config: %v", err)

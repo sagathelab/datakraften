@@ -115,6 +115,9 @@ func TestUpdateAllPrintsSuccessWhenNoFailuresOccur(t *testing.T) {
 	if !strings.Contains(output, "✓ Update complete") {
 		t.Fatalf("expected success summary, got %q", output)
 	}
+	if !strings.Contains(output, "[1/2] brew") || !strings.Contains(output, "[2/2] uv") {
+		t.Fatalf("expected ordered progress, got %q", output)
+	}
 	if strings.Contains(output, "✗ Update finished with errors") {
 		t.Fatalf("did not expect failure summary, got %q", output)
 	}
@@ -145,4 +148,23 @@ func captureStdout(t *testing.T, fn func()) string {
 
 	_ = w.Close()
 	return <-done
+}
+
+func TestUpdateAllDryRunIsPreview(t *testing.T) {
+	originalSteps := updateSteps
+	updateSteps = []updateStep{{name: "example", run: func(dry bool) error {
+		if !dry {
+			t.Fatal("expected dry run")
+		}
+		return nil
+	}}}
+	defer func() { updateSteps = originalSteps }()
+	output := captureStdout(t, func() {
+		if err := updateAll(true); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if !strings.Contains(output, "Preview complete; no updates made") || strings.Contains(output, "Update complete") {
+		t.Fatalf("misleading preview: %q", output)
+	}
 }

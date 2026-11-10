@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,20 +40,23 @@ func (s RuntimeStatus) String() string {
 }
 
 type ApplyReport struct {
-	System    []string
-	BrewPkgs  []string
-	Node      RuntimeStatus
-	NodeVer   string
-	Python    RuntimeStatus
-	PythonVer string
-	Go        RuntimeStatus
-	GoVer     string
-	Dotnet    RuntimeStatus
-	DotnetVer string
-	AITools   ai.InstallReport
-	AIApps    ai.InstallReport
-	Shell     bool
-	Errors    []string
+	Started       bool
+	System        []string
+	SystemChecked bool
+	BrewChecked   bool
+	BrewPkgs      []string
+	Node          RuntimeStatus
+	NodeVer       string
+	Python        RuntimeStatus
+	PythonVer     string
+	Go            RuntimeStatus
+	GoVer         string
+	Dotnet        RuntimeStatus
+	DotnetVer     string
+	AITools       ai.InstallReport
+	AIApps        ai.InstallReport
+	Shell         bool
+	Errors        []string
 }
 
 func installReportSummary(report ai.InstallReport) string {
@@ -74,7 +78,7 @@ func installReportSummary(report ai.InstallReport) string {
 		parts = append(parts, fmt.Sprintf("failed: %s", strings.Join(report.Errors, "; ")))
 	}
 	if len(parts) == 0 {
-		return "(already installed)"
+		return "(no results reported)"
 	}
 	return strings.Join(parts, "; ")
 }
@@ -119,15 +123,17 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	fmt.Println()
-	fmt.Println("  System")
-	fmt.Println("  ------")
+	report.Started = true
+	fmt.Println("  [1/8] System packages")
 
 	if !dryRun {
+		fmt.Println("    Checking system dependencies...")
 		n, err := installers.NativeEnsurePackages(installers.NativeBasePackages())
 		if err != nil {
 			report.Errors = append(report.Errors, fmt.Sprintf("%s: %s", pm, err))
 			fmt.Printf("    ✗ System dependencies: %s\n", err)
 		} else {
+			report.SystemChecked = true
 			report.System = n
 			if len(n) == 0 {
 				fmt.Printf("    ✓ System dependencies via %s (already satisfied)\n", pm)
@@ -140,11 +146,11 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	fmt.Println()
-	fmt.Println("  Tooling")
-	fmt.Println("  -------")
+	fmt.Println("  [2/8] Developer tools")
 
 	if pm != installers.BREW {
 		if !dryRun {
+			fmt.Println("    Checking Homebrew...")
 			installed, err := installers.BrewEnsureInstalled()
 			if err != nil {
 				report.Errors = append(report.Errors, fmt.Sprintf("Brew: %s", err))
@@ -167,11 +173,13 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	verbosePrintf("brewPkgs=%v\n", installers.DefaultBrewPackages)
 
 	if !dryRun {
+		fmt.Println("    Checking Homebrew packages...")
 		n, err := installers.BrewEnsurePackages(installers.DefaultBrewPackages)
 		if err != nil {
 			report.Errors = append(report.Errors, fmt.Sprintf("Brew packages: %s", err))
 			fmt.Printf("    ✗ Brew packages: %s\n", err)
 		} else {
+			report.BrewChecked = true
 			report.BrewPkgs = n
 			if len(n) == 0 {
 				fmt.Println("    ✓ Brew packages (already installed)")
@@ -184,10 +192,10 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	fmt.Println()
-	fmt.Println("  Runtimes")
-	fmt.Println("  --------")
+	fmt.Println("  [3/8] Runtimes")
 
 	if shouldInstallRuntime(cfg, "node") && !dryRun {
+		fmt.Println("    Checking Node.js...")
 		installed, err := runtimes.EnsureNode()
 		if err != nil {
 			report.Errors = append(report.Errors, fmt.Sprintf("Node: %s", err))
@@ -213,6 +221,7 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	if shouldInstallRuntime(cfg, "python") && !dryRun {
+		fmt.Println("    Checking Python...")
 		installed, err := runtimes.EnsurePython()
 		if err != nil {
 			report.Errors = append(report.Errors, fmt.Sprintf("Python: %s", err))
@@ -238,6 +247,7 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	if shouldInstallRuntime(cfg, "go") && !dryRun {
+		fmt.Println("    Checking Go...")
 		installed, err := runtimes.EnsureGo()
 		if err != nil {
 			report.Errors = append(report.Errors, fmt.Sprintf("Go: %s", err))
@@ -263,6 +273,7 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	if shouldInstallRuntime(cfg, "dotnet") && !dryRun {
+		fmt.Println("    Checking .NET SDK...")
 		installed, err := runtimes.EnsureDotnet()
 		if err != nil {
 			report.Errors = append(report.Errors, fmt.Sprintf(".NET: %s", err))
@@ -288,8 +299,7 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	fmt.Println()
-	fmt.Println("  Shell")
-	fmt.Println("  -----")
+	fmt.Println("  [4/8] Shell")
 
 	if !dryRun {
 		if !shell.FishInstalled() {
@@ -317,11 +327,11 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	fmt.Println()
-	fmt.Println("  Editors")
-	fmt.Println("  -------")
+	fmt.Println("  [5/8] Editors")
 
 	if cfg.Editors != nil && cfg.Editors["zed"] == "true" {
 		if !dryRun {
+			fmt.Println("    Checking Zed...")
 			if err := editors.EnsureZed(); err != nil {
 				report.Errors = append(report.Errors, fmt.Sprintf("Zed: %s", err))
 				fmt.Printf("    ✗ Zed: %s\n", err)
@@ -344,10 +354,10 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	fmt.Println()
-	fmt.Println("  AI Tools")
-	fmt.Println("  --------")
+	fmt.Println("  [6/8] AI tools")
 
 	if !dryRun {
+		fmt.Println("    Checking AI tools...")
 		report.AITools = ai.EnsureAITools(cfg)
 		if report.AITools.HasFailures() {
 			report.Errors = append(report.Errors, prefixedInstallErrors("AI tools", report.AITools.Errors)...)
@@ -362,10 +372,10 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	fmt.Println()
-	fmt.Println("  AI Apps")
-	fmt.Println("  --------")
+	fmt.Println("  [7/8] AI apps")
 
 	if !dryRun {
+		fmt.Println("    Checking AI apps...")
 		report.AIApps = ai.EnsureAIApps(cfg)
 		if report.AIApps.HasFailures() {
 			report.Errors = append(report.Errors, prefixedInstallErrors("AI apps", report.AIApps.Errors)...)
@@ -380,8 +390,7 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	fmt.Println()
-	fmt.Println("  Docker")
-	fmt.Println("  ------")
+	fmt.Println("  [8/8] Docker")
 
 	dockerStatus := docker.Detect()
 	if dockerStatus.CliInstalled && dockerStatus.DaemonRunning {
@@ -423,20 +432,20 @@ func RunDoctorSystem(r *doctor.Report) {
 	r.Add(doctor.Check{ID: "shell", Title: "Current shell", Category: "system", Severity: "info",
 		Status: "pass", Message: shell_})
 
-	fmt.Println("  System")
+	fmt.Fprintln(doctorOutput(), "  System")
 	if wsl {
-		fmt.Printf("    ✓ WSL%d detected\n", wslVer)
+		fmt.Fprintf(doctorOutput(), "    ✓ WSL%d detected\n", wslVer)
 	} else {
-		fmt.Println("    – Not running in WSL")
+		fmt.Fprintln(doctorOutput(), "    – Not running in WSL")
 	}
 	if distro != "" {
-		fmt.Printf("    ✓ %s %s\n", distro, distroVer)
+		fmt.Fprintf(doctorOutput(), "    ✓ %s %s\n", distro, distroVer)
 	}
 	if systemd {
-		fmt.Println("    ✓ systemd available")
+		fmt.Fprintln(doctorOutput(), "    ✓ systemd available")
 	}
 	if shell_ != "" {
-		fmt.Printf("    ✓ Shell: %s\n", shell_)
+		fmt.Fprintf(doctorOutput(), "    ✓ Shell: %s\n", shell_)
 	}
 }
 
@@ -464,6 +473,7 @@ func RunDoctorTools(r *doctor.Report) {
 			Severity: "warning", Status: boolStatus(t.installed), Fix: fix})
 	}
 
+	fmt.Fprintln(doctorOutput(), "  Tools")
 	if exec.CommandExists("npm") {
 		result := exec.Run("npm", "config", "get", "prefix")
 		prefix := strings.TrimSpace(result.Stdout)
@@ -484,15 +494,14 @@ func RunDoctorTools(r *doctor.Report) {
 			}
 		}
 		r.Add(doctor.Check{ID: "tool.npm.prefix", Title: "npm global prefix", Category: "tools", Severity: "warning", Status: status, Message: message, Fix: fix})
-		fmt.Printf("    %s\n", message)
+		fmt.Fprintf(doctorOutput(), "    %s\n", message)
 	}
 
-	fmt.Println("  Tools")
 	for _, t := range tools {
 		if t.installed {
-			fmt.Printf("    ✓ %s\n", t.name)
+			fmt.Fprintf(doctorOutput(), "    ✓ %s\n", t.name)
 		} else {
-			fmt.Printf("    – %s not installed\n", t.name)
+			fmt.Fprintf(doctorOutput(), "    – %s not installed\n", t.name)
 		}
 	}
 }
@@ -518,31 +527,31 @@ func RunDoctorRuntimes(r *doctor.Report) {
 	r.Add(doctor.Check{ID: "runtime.dotnet", Title: ".NET SDK", Category: "runtimes",
 		Severity: "warning", Status: boolStatus(dv != ""), Message: dv, Fix: fixRuntime(dv)})
 
-	fmt.Println("  Runtimes")
+	fmt.Fprintln(doctorOutput(), "  Runtimes")
 	if nv != "" {
-		fmt.Printf("    ✓ Node.js %s\n", nv)
+		fmt.Fprintf(doctorOutput(), "    ✓ Node.js %s\n", nv)
 	} else {
-		fmt.Println("    – Node.js not installed")
+		fmt.Fprintln(doctorOutput(), "    – Node.js not installed")
 	}
 	if pv != "" {
-		fmt.Printf("    ✓ Python %s\n", pv)
+		fmt.Fprintf(doctorOutput(), "    ✓ Python %s\n", pv)
 	} else {
-		fmt.Println("    – Python not installed")
+		fmt.Fprintln(doctorOutput(), "    – Python not installed")
 	}
 	if gv != "" {
-		fmt.Printf("    ✓ Go %s\n", gv)
+		fmt.Fprintf(doctorOutput(), "    ✓ Go %s\n", gv)
 	} else {
-		fmt.Println("    – Go not installed")
+		fmt.Fprintln(doctorOutput(), "    – Go not installed")
 	}
 	if dv != "" {
-		fmt.Printf("    ✓ .NET SDK %s\n", dv)
+		fmt.Fprintf(doctorOutput(), "    ✓ .NET SDK %s\n", dv)
 	} else {
-		fmt.Println("    – .NET SDK not installed")
+		fmt.Fprintln(doctorOutput(), "    – .NET SDK not installed")
 	}
 }
 
 func RunDoctorEditors(r *doctor.Report) {
-	fmt.Println("  Editors")
+	fmt.Fprintln(doctorOutput(), "  Editors")
 	for _, ed := range editors.DetectAll() {
 		status := "pass"
 		msg := ""
@@ -565,11 +574,11 @@ func RunDoctorEditors(r *doctor.Report) {
 			Severity: "info", Status: status, Message: msg, Fix: fix})
 
 		if ed.Installed && !ed.WindowsSide {
-			fmt.Printf("    ✓ %s\n", ed.Name)
+			fmt.Fprintf(doctorOutput(), "    ✓ %s\n", ed.Name)
 		} else if ed.Installed {
-			fmt.Printf("    ⚠ %s (Windows-side path)\n", ed.Name)
+			fmt.Fprintf(doctorOutput(), "    ⚠ %s (Windows-side path)\n", ed.Name)
 		} else {
-			fmt.Printf("    – %s not found\n", ed.Name)
+			fmt.Fprintf(doctorOutput(), "    – %s not found\n", ed.Name)
 		}
 	}
 }
@@ -592,11 +601,11 @@ func RunDoctorDocker(r *doctor.Report) {
 	r.Add(doctor.Check{ID: "docker", Title: "Docker", Category: "docker",
 		Severity: "warning", Status: status, Message: msg, Fix: fix})
 
-	fmt.Println("  Docker")
+	fmt.Fprintln(doctorOutput(), "  Docker")
 	if dockerStatus.CliInstalled && dockerStatus.DaemonRunning {
-		fmt.Println("    ✓ Docker running")
+		fmt.Fprintln(doctorOutput(), "    ✓ Docker running")
 	} else {
-		fmt.Printf("    ⚠ %s\n", dockerStatus.Message)
+		fmt.Fprintf(doctorOutput(), "    ⚠ %s\n", dockerStatus.Message)
 	}
 }
 
@@ -605,4 +614,11 @@ func boolStatus(ok bool) string {
 		return "pass"
 	}
 	return "fail"
+}
+
+func doctorOutput() io.Writer {
+	if jsonOutput {
+		return io.Discard
+	}
+	return os.Stdout
 }

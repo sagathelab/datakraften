@@ -145,6 +145,7 @@ No arguments creates a default config (source: default).
 Use --custom to create a custom config (source: custom) that you own.
 Use --team to create a thin config pointing to a remote YAML (source: team).`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			displayTitle(os.Stdout, "init", "Configure your workstation")
 			home, _ := os.UserHomeDir()
 			configDir := filepath.Join(home, ".config", "datakraften")
 			configPath := filepath.Join(configDir, "config.yaml")
@@ -212,9 +213,7 @@ func initDefault(configPath, configDir string, existing bool) error {
 	wsl, wslVer := system.DetectWSL()
 	distro, distroVer := system.Distro()
 
-	fmt.Println("  Datakraften init")
-	fmt.Println()
-	fmt.Println("  Detected:")
+	fmt.Println("  Environment")
 	if wsl {
 		fmt.Printf("    ✓ WSL%d\n", wslVer)
 	} else {
@@ -223,19 +222,19 @@ func initDefault(configPath, configDir string, existing bool) error {
 	if distro != "" {
 		fmt.Printf("    ✓ %s %s\n", distro, distroVer)
 	}
-	fmt.Printf("    ✓ Source: default\n")
+	fmt.Printf("    Source: default\n")
 	fmt.Println()
 
-	fmt.Println("  Config preview:")
+	fmt.Println("  Config preview")
 	for _, line := range strings.Split(cfg, "\n") {
 		fmt.Printf("    %s\n", line)
 	}
 	fmt.Println()
-	fmt.Printf("  Writing config to: %s\n", configPath)
+	fmt.Printf("  Config: %s\n", configPath)
 	fmt.Println()
 	fmt.Println("  ✓ Default config created")
 	fmt.Println()
-	fmt.Println("  Next steps:")
+	fmt.Println("  Next steps")
 	fmt.Println("    1. Run 'dk apply' to install tools")
 	fmt.Println("    2. Run 'dk doctor' to verify")
 
@@ -295,16 +294,16 @@ func initCustomPrompt(configPath, configDir string, existing bool) error {
 	state.Save()
 
 	fmt.Println()
-	fmt.Println("  Config preview:")
+	fmt.Println("  Config preview")
 	for _, line := range strings.Split(cfg, "\n") {
 		fmt.Printf("    %s\n", line)
 	}
 	fmt.Println()
-	fmt.Printf("  Writing config to: %s\n", configPath)
+	fmt.Printf("  Config: %s\n", configPath)
 	fmt.Println()
 	fmt.Printf("  ✓ Custom config created at %s\n", configPath)
 	fmt.Println()
-	fmt.Println("  Next steps:")
+	fmt.Println("  Next steps")
 	fmt.Println("    1. Edit the config file to customize your toolset")
 	fmt.Println("    2. Run 'dk apply' to install tools")
 	fmt.Println("    3. Run 'dk doctor' to verify")
@@ -369,16 +368,16 @@ func initCustomMerge(configPath, configDir string, existing bool, customFile str
 	state.Save()
 
 	fmt.Println()
-	fmt.Println("  Config preview:")
+	fmt.Println("  Config preview")
 	for _, line := range strings.Split(finalCfg, "\n") {
 		fmt.Printf("    %s\n", line)
 	}
 	fmt.Println()
-	fmt.Printf("  Writing config to: %s\n", configPath)
+	fmt.Printf("  Config: %s\n", configPath)
 	fmt.Println()
 	fmt.Printf("  ✓ Custom config created from %s\n", customFile)
 	fmt.Println()
-	fmt.Println("  Next steps:")
+	fmt.Println("  Next steps")
 	fmt.Println("    1. Edit the config file to customize your toolset")
 	fmt.Println("    2. Run 'dk apply' to install tools")
 	fmt.Println("    3. Run 'dk doctor' to verify")
@@ -447,14 +446,14 @@ func initTeam(configPath, configDir string, existing bool, url string) error {
 		url = input
 	}
 
-	fmt.Printf("    Fetching remote config from %s...\n", url)
+	fmt.Printf("  Fetching remote config from %s...\n", url)
 
 	_, err := config.FetchRemote(url)
 	if err != nil {
-		fmt.Printf("    ✗ %s\n", err)
+		fmt.Printf("  ✗ %s\n", err)
 		return fmt.Errorf("failed to load remote config")
 	}
-	fmt.Println("    ✓ Remote config validated")
+	fmt.Println("  ✓ Remote config validated")
 
 	thinCfg := fmt.Sprintf(teamConfigYAML, url)
 
@@ -470,18 +469,18 @@ func initTeam(configPath, configDir string, existing bool, url string) error {
 	state.Save()
 
 	fmt.Println()
-	fmt.Println("  Config preview:")
+	fmt.Println("  Config preview")
 	for _, line := range strings.Split(thinCfg, "\n") {
 		if strings.TrimSpace(line) != "" {
 			fmt.Printf("    %s\n", line)
 		}
 	}
 	fmt.Println()
-	fmt.Printf("  Writing config to: %s\n", configPath)
+	fmt.Printf("  Config: %s\n", configPath)
 	fmt.Println()
-	fmt.Printf("  ✓ Team config created\n")
+	fmt.Println("  ✓ Team config created")
 	fmt.Println()
-	fmt.Println("  Next steps:")
+	fmt.Println("  Next steps")
 	fmt.Println("    1. Run 'dk apply' to install tools (fetches remote config)")
 	fmt.Println("    2. Run 'dk doctor' to verify")
 

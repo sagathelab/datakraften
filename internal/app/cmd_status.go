@@ -90,14 +90,12 @@ func newStatusCmd() *cobra.Command {
 
 				enc := json.NewEncoder(os.Stdout)
 				enc.SetIndent("", "  ")
-				enc.Encode(r)
-				return nil
+				return enc.Encode(r)
 			}
 
-			fmt.Println("  Datakraften status")
-			fmt.Println()
+			displayTitle(os.Stdout, "status", "Environment overview")
 
-			fmt.Println("  WSL")
+			fmt.Println("  System")
 			if wsl {
 				fmt.Printf("    ✓ WSL%d detected\n", wslVer)
 			} else {
@@ -166,8 +164,10 @@ func newStatusCmd() *cobra.Command {
 			fmt.Println()
 
 			if state.LastApply != "" {
-				fmt.Printf("  Last apply: %s\n", state.LastApply)
-				fmt.Printf("  Source: %s\n", state.ActiveSource)
+				fmt.Println("  Configuration")
+				fmt.Printf("    Last apply  %s\n", state.LastApply)
+				fmt.Printf("    Source      %s\n", state.ActiveSource)
+				fmt.Println()
 			}
 
 			return nil

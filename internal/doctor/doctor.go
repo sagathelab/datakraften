@@ -25,28 +25,24 @@ func (r *Report) Add(c Check) {
 }
 
 func (r *Report) Print() {
-	critical := 0
-	warnings := 0
+	critical, warnings, info, passed := 0, 0, 0, 0
 
 	for _, c := range r.Checks {
-		if c.Status == "fail" && c.Severity == "critical" {
-			critical++
+		if c.Status == "pass" {
+			passed++
 		} else if c.Status == "fail" {
-			warnings++
+			switch c.Severity {
+			case "critical":
+				critical++
+			case "warning":
+				warnings++
+			default:
+				info++
+			}
 		}
 	}
-
-	if critical == 0 {
-		fmt.Println("  ✓ No critical issues found")
-	} else {
-		fmt.Printf("  ✗ %d critical issue(s) found\n", critical)
-	}
-
-	if warnings == 0 {
-		fmt.Println("  ✓ No warnings")
-	} else {
-		fmt.Printf("  ⚠ %d warning(s) found\n", warnings)
-	}
+	fmt.Println("  Summary")
+	fmt.Printf("    %d passed  ·  %d critical  ·  %d warnings  ·  %d informational\n", passed, critical, warnings, info)
 }
 
 func (r *Report) PrintJSON() {

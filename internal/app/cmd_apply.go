@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/sagathelab/datakraften/internal/config"
@@ -26,12 +27,11 @@ func newApplyCmd() *cobra.Command {
 				return nil
 			}
 
+			subtitle := fmt.Sprintf("Source: %s", cfg.Source)
 			if dryRun {
-				fmt.Printf("  Datakraften apply (dry-run) — source: %s\n", cfg.Source)
-			} else {
-				fmt.Printf("  Datakraften apply — source: %s\n", cfg.Source)
-				fmt.Println()
+				subtitle += " · preview only"
 			}
+			displayTitle(os.Stdout, "apply", subtitle)
 
 			if !yes && !dryRun {
 				fmt.Print("  Continue? [Y/n]: ")
@@ -46,24 +46,36 @@ func newApplyCmd() *cobra.Command {
 			report := RunApply(cfg, dryRun)
 
 			if dryRun {
-				fmt.Println("  (dry-run — no changes made)")
+				if len(report.Errors) > 0 {
+					fmt.Println("  Preview stopped due to errors; no changes made")
+				} else {
+					fmt.Println("  Preview complete; no changes made")
+				}
 				return nil
 			}
 
 			state.RecordApply(cfg.Source)
 			WriteLog("apply", fmt.Sprintf("Applied source: %s\n", cfg.Source))
 
+			if len(report.Errors) > 0 {
+				fmt.Printf("  Apply finished with %d error(s)\n", len(report.Errors))
+			} else {
+				fmt.Println("  Apply complete")
+			}
 			fmt.Println("  Summary")
-			fmt.Println("  -------")
 			if len(report.System) > 0 {
 				fmt.Printf("    System packages: %s\n", strings.Join(report.System, ", "))
-			} else {
+			} else if report.SystemChecked {
 				fmt.Println("    System packages: (already satisfied)")
+			} else {
+				fmt.Println("    System packages: not completed")
 			}
 			if len(report.BrewPkgs) > 0 {
 				fmt.Printf("    Brew packages: %s\n", strings.Join(report.BrewPkgs, ", "))
-			} else {
+			} else if report.BrewChecked {
 				fmt.Println("    Brew packages: (already installed)")
+			} else {
+				fmt.Println("    Brew packages: not completed")
 			}
 			if report.NodeVer != "" {
 				fmt.Printf("    Node.js %s (%s)\n", report.NodeVer, report.Node)
@@ -77,8 +89,12 @@ func newApplyCmd() *cobra.Command {
 			if report.DotnetVer != "" {
 				fmt.Printf("    .NET SDK %s (%s)\n", report.DotnetVer, report.Dotnet)
 			}
-			fmt.Printf("    AI tools: %s\n", installReportSummary(report.AITools))
-			fmt.Printf("    AI apps: %s\n", installReportSummary(report.AIApps))
+			if report.Started {
+				fmt.Printf("    AI tools: %s\n", installReportSummary(report.AITools))
+				fmt.Printf("    AI apps: %s\n", installReportSummary(report.AIApps))
+			} else {
+				fmt.Println("    AI tools and apps: not checked")
+			}
 			if len(report.Errors) > 0 {
 				fmt.Println()
 				fmt.Println("  Errors:")
@@ -89,8 +105,10 @@ func newApplyCmd() *cobra.Command {
 
 			fmt.Println()
 			fmt.Println("  Next steps:")
-			fmt.Println("    1. Restart your shell or run: exec fish")
-			fmt.Println("    2. Run 'dk doctor' to verify everything")
+			if report.Shell {
+				fmt.Println("    Restart your shell or run: exec fish")
+			}
+			fmt.Println("    Run 'dk doctor' to verify everything")
 			fmt.Println()
 
 			return nil

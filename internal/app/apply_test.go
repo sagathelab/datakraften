@@ -28,3 +28,10 @@ func TestDefaultConfigUsesGhManagerForCopilot(t *testing.T) {
 		t.Fatal("expected default config to declare Copilot with manager: gh")
 	}
 }
+
+func TestInstallReportSummaryDoesNotAssumeUnreportedResults(t *testing.T) {
+	got := installReportSummary(ai.InstallReport{Enabled: 1})
+	if strings.Contains(got, "already installed") {
+		t.Fatalf("unreported result presented as installed: %q", got)
+	}
+}
