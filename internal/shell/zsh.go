@@ -34,6 +34,7 @@ func ZshGenerateConfig(brewPrefix string, enableStarship bool, enableAtuin bool,
 	sb.WriteString("# Edit with caution — managed blocks are regenerated on 'dk apply'\n\n")
 
 	sb.WriteString(managedStart + "\n")
+	sb.WriteString("case \":$PATH:\" in *:\"$HOME/.local/bin\":*) ;; *) export PATH=\"$HOME/.local/bin:$PATH\" ;; esac\n")
 
 	if brewPrefix != "" {
 		sb.WriteString(fmt.Sprintf("eval \"$(%s/bin/brew shellenv)\"\n", brewPrefix))
@@ -71,29 +72,7 @@ func ZshGenerateConfig(brewPrefix string, enableStarship bool, enableAtuin bool,
 }
 
 func ZshWriteConfig(config string) error {
-	configDir := filepath.Dir(ZshConfigPath())
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create zsh config dir: %w", err)
-	}
-
-	existing := ZshDetectExistingConfig()
-
-	if strings.Contains(existing, managedStart) {
-		startIdx := strings.Index(existing, managedStart)
-		endIdx := strings.Index(existing, managedEnd)
-		if endIdx > startIdx {
-			before := existing[:startIdx]
-			after := existing[endIdx+len(managedEnd):]
-			existing = before + config + after
-		}
-	} else {
-		existing = config
-	}
-
-	if err := os.WriteFile(ZshConfigPath(), []byte(existing), 0644); err != nil {
-		return fmt.Errorf("failed to write zsh config: %w", err)
-	}
-	return nil
+	return writeConfig(ZshConfigPath(), config)
 }
 
 func ZshEnsureSetup(brewPrefix string) (bool, error) {

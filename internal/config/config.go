@@ -85,6 +85,7 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("error reading config: %w", err)
 	}
 
+	normalizeAI(v)
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("error parsing config: %w", err)
@@ -106,25 +107,6 @@ func Load() (*Config, error) {
 	// Backward compat: map old team.url: to flat url:
 	if cfg.URL == "" && cfg.Team.URL != "" {
 		cfg.URL = cfg.Team.URL
-	}
-
-	// Backward compat: migrate old bool format for ai_tools/ai_apps to struct format
-	raw := v.AllSettings()
-	if aiToolsRaw, ok := raw["ai_tools"].(map[string]interface{}); ok && cfg.AITools == nil {
-		cfg.AITools = make(map[string]RuntimeConfig)
-		for name, val := range aiToolsRaw {
-			if b, ok := val.(bool); ok {
-				cfg.AITools[name] = RuntimeConfig{Enabled: b}
-			}
-		}
-	}
-	if aiAppsRaw, ok := raw["ai_apps"].(map[string]interface{}); ok && cfg.AIApps == nil {
-		cfg.AIApps = make(map[string]RuntimeConfig)
-		for name, val := range aiAppsRaw {
-			if b, ok := val.(bool); ok {
-				cfg.AIApps[name] = RuntimeConfig{Enabled: b}
-			}
-		}
 	}
 
 	return &cfg, nil
@@ -153,10 +135,25 @@ func FetchRemote(url string) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse remote config: %w", err)
 	}
 
+	normalizeAI(v)
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal remote config: %w", err)
 	}
 
 	return &cfg, nil
+}
+
+func normalizeAI(v *viper.Viper) {
+	for _, key := range []string{"ai_tools", "ai_apps"} {
+		entries := v.GetStringMap(key)
+		for name, value := range entries {
+			if enabled, ok := value.(bool); ok {
+				entries[name] = map[string]interface{}{"enabled": enabled}
+			}
+		}
+		if len(entries) > 0 {
+			v.Set(key, entries)
+		}
+	}
 }

@@ -29,20 +29,9 @@ err()   { echo -e "${RED}  ✗ ${1}${NC}"; }
 install_from_source() {
 	info "Building dk from source..."
 
-	if ! command -v git &>/dev/null && ! command -v curl &>/dev/null; then
-		err "Need curl or git to download source."
-		exit 1
-	fi
-
-	if ! command -v go &>/dev/null; then
-		warn "Installing Go..."
-		GO_VERSION="1.22.5"
-		GO_TARBALL="go${GO_VERSION}.linux-amd64.tar.gz"
-		curl -fsSL "https://go.dev/dl/${GO_TARBALL}" -o "/tmp/${GO_TARBALL}"
-		sudo tar -C /usr/local -xzf "/tmp/${GO_TARBALL}"
-		rm "/tmp/${GO_TARBALL}"
-		export PATH="/usr/local/go/bin:${PATH}"
-		ok "Go $(go version) installed"
+	if ! command -v git &>/dev/null || ! command -v go &>/dev/null; then
+		err "Building from source requires git and Go 1.23 or newer."
+		return 1
 	fi
 
 	SOURCE_DIR="${HOME}/.local/share/datakraften/source"
@@ -133,16 +122,19 @@ elif command -v wget &>/dev/null; then
 fi
 
 if [ -n "${RELEASE_JSON}" ]; then
-	TAG_NAME=$(echo "${RELEASE_JSON}" | grep '"tag_name"' | cut -d'"' -f4)
+	TAG_NAME=$(printf '%s\n' "${RELEASE_JSON}" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
 fi
 
 if [ -z "${TAG_NAME}" ]; then
 	warn "No release found. Falling back to source build."
 	echo ""
 	install_from_source
-	exit 0
+	SOURCE_INSTALL=true
+else
+	SOURCE_INSTALL=false
 fi
 
+if [ "${SOURCE_INSTALL}" = false ]; then
 ok "Latest release: ${TAG_NAME}"
 
 # --- Download binary ---
@@ -150,15 +142,15 @@ ok "Latest release: ${TAG_NAME}"
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG_NAME}/${ASSET}"
 CHECKSUM_URL="${DOWNLOAD_URL}.sha256"
 
-# Remove any old temp files
-rm -f "/tmp/${ASSET}" "/tmp/${ASSET}.sha256"
+TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/datakraften.XXXXXXXX")
+trap 'rm -rf "${TEMP_DIR}"' EXIT
 
 info "Downloading ${ASSET}..."
 
 if command -v curl &>/dev/null; then
-	curl -fsSL "${DOWNLOAD_URL}" -o "/tmp/${ASSET}"
+	curl -fsSL "${DOWNLOAD_URL}" -o "${TEMP_DIR}/${ASSET}"
 else
-	wget -qO "/tmp/${ASSET}" "${DOWNLOAD_URL}"
+	wget -qO "${TEMP_DIR}/${ASSET}" "${DOWNLOAD_URL}"
 fi
 
 ok "Binary downloaded"
@@ -176,7 +168,7 @@ if [ -n "${CHECKSUM_RESPONSE}" ]; then
 	EXPECTED=$(echo "${CHECKSUM_RESPONSE}" | awk '{print $1}')
 	if [ -n "${EXPECTED}" ]; then
 		if command -v sha256sum &>/dev/null; then
-			GOT=$(sha256sum "/tmp/${ASSET}" | awk '{print $1}')
+			GOT=$(sha256sum "${TEMP_DIR}/${ASSET}" | awk '{print $1}')
 			if [ "${GOT}" = "${EXPECTED}" ]; then
 				CHECKSUM_OK=true
 				ok "Checksum verified"
@@ -184,11 +176,11 @@ if [ -n "${CHECKSUM_RESPONSE}" ]; then
 				err "Checksum mismatch!"
 				err "  expected: ${EXPECTED}"
 				err "  got:      ${GOT}"
-				rm -f "/tmp/${ASSET}"
+				rm -f "${TEMP_DIR}/${ASSET}"
 				exit 1
 			fi
 		elif command -v shasum &>/dev/null; then
-			GOT=$(shasum -a 256 "/tmp/${ASSET}" | awk '{print $1}')
+			GOT=$(shasum -a 256 "${TEMP_DIR}/${ASSET}" | awk '{print $1}')
 			if [ "${GOT}" = "${EXPECTED}" ]; then
 				CHECKSUM_OK=true
 				ok "Checksum verified"
@@ -196,7 +188,7 @@ if [ -n "${CHECKSUM_RESPONSE}" ]; then
 				err "Checksum mismatch!"
 				err "  expected: ${EXPECTED}"
 				err "  got:      ${GOT}"
-				rm -f "/tmp/${ASSET}"
+				rm -f "${TEMP_DIR}/${ASSET}"
 				exit 1
 			fi
 		else
@@ -213,20 +205,23 @@ fi
 
 info "Installing dk to ${BIN_DIR}..."
 mkdir -p "${BIN_DIR}"
-cp "/tmp/${ASSET}" "${BINARY}"
+cp "${TEMP_DIR}/${ASSET}" "${BINARY}"
 chmod +x "${BINARY}"
-rm -f "/tmp/${ASSET}"
+rm -f "${TEMP_DIR}/${ASSET}"
 ok "dk installed to ${BINARY} (${TAG_NAME})"
+fi
 
 # --- Add to PATH ---
 
 SHELL_CONFIG="${HOME}/.profile"
-if [ -f "${HOME}/.bashrc" ]; then
+if [ "${SHELL:-}" = zsh ] || [ "${SHELL:-}" != "${SHELL%/zsh}" ]; then
+	SHELL_CONFIG="${HOME}/.zshrc"
+elif [ -f "${HOME}/.bashrc" ]; then
 	SHELL_CONFIG="${HOME}/.bashrc"
 fi
 
-if ! echo "${PATH}" | tr ':' '\n' | grep -q "${BIN_DIR}"; then
-	if ! grep -q "datakraften" "${SHELL_CONFIG}" 2>/dev/null; then
+if ! printf '%s\n' "${PATH}" | tr ':' '\n' | grep -Fxq "${BIN_DIR}"; then
+	if ! grep -Fq '# >>> datakraften >>>' "${SHELL_CONFIG}" 2>/dev/null; then
 		cat >> "${SHELL_CONFIG}" <<- 'EOF'
 
 # >>> datakraften >>>

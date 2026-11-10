@@ -636,17 +636,20 @@ export const tools: Record<string, ToolDef> = {
       {
         title: 'Set up a team config',
         command: 'dk init --team <url>',
-        details: 'Point your local config to a shared remote YAML that defines the full workstation for your team.',
+        details:
+          'Point your local config to a shared remote YAML that defines the full workstation for your team.',
       },
       {
         title: 'Create a custom config',
         command: 'dk init --custom',
-        details: 'Generate a local config file that you own — edit it freely without overwrite risk.',
+        details:
+          'Generate a local config file that you own — edit it freely without overwrite risk.',
       },
       {
         title: 'Apply your configuration',
         command: 'dk apply',
-        details: 'Install everything defined in your config — system packages, runtimes, shell config, editors, and AI tools.',
+        details:
+          'Install everything defined in your config — system packages, runtimes, shell config, editors, and AI tools.',
       },
     ],
   },

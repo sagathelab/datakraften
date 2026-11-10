@@ -2,11 +2,13 @@ package app
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -27,7 +29,8 @@ type githubAPIError struct {
 }
 
 func newUpgradeCmd() *cobra.Command {
-	return &cobra.Command{
+	var dryRun bool
+	cmd := &cobra.Command{
 		Use:   "upgrade",
 		Short: "Upgrade dk CLI to the latest version",
 		Long:  `Download and install the latest Datakraften CLI binary from GitHub Releases. Verifies SHA256 checksum before replacing the current binary.`,
@@ -121,6 +124,18 @@ func newUpgradeCmd() *cobra.Command {
 				return fmt.Errorf("no binary found for %s/%s", runtime.GOOS, runtime.GOARCH)
 			}
 
+			if checksumURL == "" {
+				return fmt.Errorf("no checksum found for %s", binaryName)
+			}
+			if dryRun {
+				if jsonOutput {
+					printUpdateJSON(version, release.TagName, false, binaryName, 0, nil)
+				} else {
+					fmt.Printf("  Would upgrade to %s (%s).\n", release.TagName, binaryName)
+				}
+				return nil
+			}
+
 			if verbose {
 				fmt.Fprintf(os.Stderr, "  [verbose] binary: %s\n", binaryURL)
 				if checksumURL != "" {
@@ -149,66 +164,9 @@ func newUpgradeCmd() *cobra.Command {
 				return fmt.Errorf("download failed (%s): %s", binResp.Status, message)
 			}
 
-			tmpPath := execPath + ".new"
-			f, err := os.Create(tmpPath)
+			written, err := installUpgrade(client, token, checksumURL, execPath, binResp.Body)
 			if err != nil {
-				return fmt.Errorf("cannot create temp file: %w", err)
-			}
-
-			var checksumErr error
-			hash := sha256.New()
-			written, err := io.Copy(f, io.TeeReader(binResp.Body, hash))
-			if err != nil {
-				f.Close()
-				os.Remove(tmpPath)
-				return fmt.Errorf("download incomplete: %w", err)
-			}
-			f.Close()
-
-			if checksumURL != "" {
-				if verbose {
-					fmt.Fprintf(os.Stderr, "  [verbose] verifying checksum...\n")
-				}
-				chkReq, err := newGitHubRequest(http.MethodGet, checksumURL, token)
-				if err == nil {
-					chkResp, err := client.Do(chkReq)
-					if err == nil {
-						defer chkResp.Body.Close()
-						if chkResp.StatusCode == http.StatusOK {
-							chkBytes, _ := io.ReadAll(chkResp.Body)
-							parts := strings.Fields(string(chkBytes))
-							if len(parts) > 0 {
-								expected := strings.TrimSpace(parts[0])
-								got := fmt.Sprintf("%x", hash.Sum(nil))
-								if got != expected {
-									os.Remove(tmpPath)
-									checksumErr = fmt.Errorf("checksum mismatch: expected %s, got %s", expected, got)
-								} else if verbose {
-									fmt.Fprintf(os.Stderr, "  [verbose] checksum verified ✓\n")
-								}
-							}
-						}
-					}
-				}
-			}
-
-			if checksumErr != nil {
-				return checksumErr
-			}
-
-			if err := os.Rename(tmpPath, execPath); err != nil {
-				if err := os.Remove(execPath); err != nil {
-					os.Remove(tmpPath)
-					return fmt.Errorf("cannot replace binary: %w", err)
-				}
-				if err := os.Rename(tmpPath, execPath); err != nil {
-					os.Remove(tmpPath)
-					return fmt.Errorf("cannot replace binary: %w", err)
-				}
-			}
-
-			if err := os.Chmod(execPath, 0755); err != nil {
-				return fmt.Errorf("cannot set permissions: %w", err)
+				return err
 			}
 
 			if jsonOutput {
@@ -222,6 +180,59 @@ func newUpgradeCmd() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Show what would be upgraded without making changes")
+	return cmd
+}
+
+func installUpgrade(client *http.Client, token, checksumURL, execPath string, binary io.Reader) (int64, error) {
+	req, err := newGitHubRequest(http.MethodGet, checksumURL, token)
+	if err != nil {
+		return 0, fmt.Errorf("cannot create checksum request: %w", err)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("cannot download checksum: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("cannot download checksum: %s", resp.Status)
+	}
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 4097))
+	if err != nil || len(data) > 4096 {
+		return 0, fmt.Errorf("cannot read checksum")
+	}
+	fields := strings.Fields(string(data))
+	if len(fields) == 0 {
+		return 0, fmt.Errorf("empty checksum")
+	}
+	expected, err := hex.DecodeString(fields[0])
+	if err != nil || len(expected) != sha256.Size {
+		return 0, fmt.Errorf("invalid SHA256 checksum")
+	}
+	f, err := os.CreateTemp(filepath.Dir(execPath), ".dk-upgrade-*")
+	if err != nil {
+		return 0, fmt.Errorf("cannot create temp file: %w", err)
+	}
+	defer os.Remove(f.Name())
+	hash := sha256.New()
+	written, copyErr := io.Copy(f, io.TeeReader(binary, hash))
+	if copyErr == nil {
+		copyErr = f.Chmod(0755)
+	}
+	closeErr := f.Close()
+	if copyErr != nil {
+		return 0, fmt.Errorf("cannot write upgrade: %w", copyErr)
+	}
+	if closeErr != nil {
+		return 0, fmt.Errorf("cannot close upgrade: %w", closeErr)
+	}
+	if !strings.EqualFold(fields[0], hex.EncodeToString(hash.Sum(nil))) {
+		return 0, fmt.Errorf("checksum mismatch")
+	}
+	if err := os.Rename(f.Name(), execPath); err != nil {
+		return 0, fmt.Errorf("cannot replace binary: %w", err)
+	}
+	return written, nil
 }
 
 func repoHasReleases(client *http.Client, token string) (bool, error) {
