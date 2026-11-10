@@ -9,6 +9,7 @@ import (
 	"github.com/sagathelab/datakraften/internal/config"
 	"github.com/sagathelab/datakraften/internal/exec"
 	"github.com/sagathelab/datakraften/internal/installers"
+	"github.com/sagathelab/datakraften/internal/npm"
 )
 
 type installStatus int
@@ -149,7 +150,7 @@ func installCLI(tool cliTool) (installStatus, string, error) {
 		fmt.Printf("    Installing %s via npm...\n", tool.name)
 		r := runCommand("npm", "install", "-g", tool.npmPkg)
 		if r.Code != 0 {
-			return installStatusSkipped, "", fmt.Errorf("npm install failed: %s", r.Stderr)
+			return installStatusSkipped, "", npm.CommandError("npm install -g", r.Stderr)
 		}
 		return installStatusInstalled, "", nil
 	default:

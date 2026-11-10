@@ -15,7 +15,7 @@ curl -fsSL https://datakraften.no/install | bash
 dk init
 dk apply
 dk doctor
-dk update          # Periodically update dk itself
+dk update          # Update managed tools
 ```
 
 ## What is Datakraften?
@@ -45,7 +45,14 @@ It is **not** a package manager. It is an orchestration layer with opinionated p
 | `dk status` | Show installed tools overview |
 | `dk profile list` | List available profiles |
 | `dk profile use <name>` | Switch active profile |
-| `dk update` | Self-update dk to latest release |
+| `dk update` | Update managed tools; npm updates only enabled, installed AI tools |
+| `dk upgrade` | Upgrade dk to the latest release |
+| `dk npm setup` | Configure a user-owned npm prefix and shell PATH |
+
+`dk npm setup --dry-run` previews the prefix and shell changes. Running the setup changes
+your npm user prefix; existing global packages are not moved and may need reinstalling.
+A custom prefix may conflict with Node version managers such as fnm or nvm. Use a
+version manager's own writable prefix instead when appropriate.
 
 All commands support `--dry-run` (preview changes) and `--json` (structured output).
 

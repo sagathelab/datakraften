@@ -1,11 +1,14 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/sagathelab/datakraften/internal/config"
 	"github.com/sagathelab/datakraften/internal/exec"
 	"github.com/sagathelab/datakraften/internal/installers"
+	"github.com/sagathelab/datakraften/internal/npm"
 	"github.com/spf13/cobra"
 )
 
@@ -26,9 +29,10 @@ func newUpdateCmd() *cobra.Command {
 	var dryRun bool
 
 	cmd := &cobra.Command{
-		Use:   "update",
-		Short: "Update managed tools to their latest versions",
-		Long:  `Update all managed developer tools (brew packages, runtimes, AI tools) or a specific tool by name.`,
+		Use:          "update",
+		Short:        "Update managed tools to their latest versions",
+		Long:         `Update all managed developer tools (brew packages, runtimes, AI tools) or a specific tool by name.`,
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if list {
 				return listUpdatable()
@@ -55,7 +59,7 @@ func listUpdatable() error {
 	fmt.Println("    brew — all Homebrew packages")
 	fmt.Println("    fnm — Node.js runtime")
 	fmt.Println("    uv — Python runtime")
-	fmt.Println("    npm — global npm packages")
+	fmt.Println("    npm — enabled Datakraften npm tools")
 
 	if exec.CommandExists("code") {
 		fmt.Println("    code — VS Code extensions")
@@ -90,7 +94,6 @@ func updateAll(dryRun bool) error {
 
 	for _, step := range updateSteps {
 		if err := step.run(dryRun); err != nil {
-			fmt.Printf("    ✗ %s: %s\n", step.name, err)
 			failures = append(failures, fmt.Sprintf("%s: %s", step.name, err))
 		}
 	}
@@ -186,15 +189,44 @@ func updateNpm(dryRun bool) error {
 		return nil
 	}
 
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("cannot determine managed npm tools: %w", err)
+	}
+	if cfg.Source == "team" {
+		cfg, err = config.FetchRemote(cfg.URL)
+		if err != nil {
+			return fmt.Errorf("cannot load team configuration: %w", err)
+		}
+	}
+	r := exec.Run("npm", "list", "-g", "--depth=0", "--json")
+	var listed struct {
+		Dependencies map[string]json.RawMessage `json:"dependencies"`
+	}
+	if err := json.Unmarshal([]byte(r.Stdout), &listed); err != nil || r.Code != 0 {
+		return fmt.Errorf("cannot list global npm packages: %s", strings.TrimSpace(r.Stderr))
+	}
+	var packages []string
+	for _, tool := range []struct{ key, pkg string }{{"codex", "@openai/codex"}, {"claude", "@anthropic-ai/claude-code"}, {"gemini", "@google-gemini/gemini-cli"}} {
+		if _, installed := listed.Dependencies[tool.pkg]; cfg.AITools[tool.key].Enabled && installed {
+			packages = append(packages, tool.pkg)
+		}
+	}
+	if len(packages) == 0 {
+		fmt.Println("    – No enabled npm tools installed, skipping")
+		return nil
+	}
 	if dryRun {
-		fmt.Println("    ~ Would run: npm update -g")
+		fmt.Printf("    ~ Would update npm packages: %s\n", strings.Join(packages, ", "))
 		return nil
 	}
 
-	fmt.Print("    Updating global npm packages...")
-	r := exec.Run("npm", "update", "-g")
+	fmt.Printf("    Updating npm packages (%s)...", strings.Join(packages, ", "))
+	args := append([]string{"update", "-g"}, packages...)
+	r = exec.Run("npm", args...)
 	if r.Code != 0 {
-		return fmt.Errorf("npm update -g failed: %s", strings.TrimSpace(r.Stderr))
+		fmt.Println(" failed")
+		return npm.CommandError("npm update -g", r.Stderr)
 	}
 	fmt.Println(" done")
 

@@ -68,7 +68,7 @@ export const tools: Record<string, ToolDef> = {
       {
         title: 'dk update',
         id: 'update',
-        body: 'Update managed developer tools to their latest versions. Supports updating all tools at once or targeting a specific tool.\n\nUpdate all tools — Homebrew packages, Node.js LTS via fnm, Python via uv, and global npm packages:\n$ dk update\n\nUpdate a specific tool:\n$ dk update brew\n\n$ dk update fnm\n\n$ dk update uv\n\n$ dk update npm\n\nList available updatable tools:\n$ dk update --list\n\nPreview updates without applying them:\n$ dk update --dry-run',
+        body: 'Update managed developer tools to their latest versions. Supports updating all tools at once or targeting a specific tool.\n\nUpdate Homebrew packages, Node.js LTS via fnm, Python via uv, and enabled AI tools installed in the active global npm prefix:\n$ dk update\n\nUpdate a specific tool:\n$ dk update brew\n\n$ dk update fnm\n\n$ dk update uv\n\n$ dk update npm\n\nList available updatable tools:\n$ dk update --list\n\nPreview updates without applying them:\n$ dk update --dry-run',
       },
     ],
     website: 'https://github.com/sagathelab/datakraften',
@@ -97,7 +97,7 @@ export const tools: Record<string, ToolDef> = {
       {
         title: 'Refresh managed tools',
         command: 'dk update',
-        details: 'Update Homebrew, fnm, uv, and global npm packages through one command.',
+        details: 'Update Homebrew, fnm, uv, and enabled npm AI tools through one command.',
       },
     ],
     troubleshooting: [
@@ -109,7 +109,7 @@ export const tools: Record<string, ToolDef> = {
       {
         question: 'Why does `dk update` fail on npm permissions?',
         answer:
-          'Global npm packages installed into system-owned paths can fail with EACCES. Reinstall them under your user-owned Node/fnm setup or fix ownership before running `dk update` again.',
+          'System-owned npm paths can cause EACCES. Use a Node version manager or preview `dk npm setup --dry-run` and run `dk npm setup` to configure a user-owned prefix. Existing global packages are not moved and may need reinstalling. Custom prefixes can conflict with Node version managers.',
       },
     ],
     faqs: [

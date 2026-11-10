@@ -2,7 +2,10 @@ package app
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/sagathelab/datakraften/internal/ai"
 	"github.com/sagathelab/datakraften/internal/config"
@@ -459,6 +462,29 @@ func RunDoctorTools(r *doctor.Report) {
 		}
 		r.Add(doctor.Check{ID: t.id, Title: t.name + " installed", Category: "tools",
 			Severity: "warning", Status: boolStatus(t.installed), Fix: fix})
+	}
+
+	if exec.CommandExists("npm") {
+		result := exec.Run("npm", "config", "get", "prefix")
+		prefix := strings.TrimSpace(result.Stdout)
+		status, message, fix := "fail", "Could not determine npm prefix", "Check npm configuration"
+		if result.Code == 0 && filepath.IsAbs(prefix) {
+			path := filepath.Join(prefix, "lib", "node_modules")
+			for {
+				_, err := os.Stat(path)
+				if err == nil || !os.IsNotExist(err) || filepath.Dir(path) == path {
+					break
+				}
+				path = filepath.Dir(path)
+			}
+			if syscall.Access(path, 2) == nil {
+				status, message, fix = "pass", "npm prefix: "+prefix, ""
+			} else {
+				status, message, fix = "fail", "npm prefix may not be writable: "+prefix, "run 'dk npm setup' or use a Node version manager"
+			}
+		}
+		r.Add(doctor.Check{ID: "tool.npm.prefix", Title: "npm global prefix", Category: "tools", Severity: "warning", Status: status, Message: message, Fix: fix})
+		fmt.Printf("    %s\n", message)
 	}
 
 	fmt.Println("  Tools")

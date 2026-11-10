@@ -5,9 +5,68 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestUpdateNpmPermissionFailure(t *testing.T) {
+	dir := t.TempDir()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	configDir := filepath.Join(home, ".config", "datakraften")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("ai_tools:\n  codex:\n    enabled: true\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "npm"), []byte("#!/bin/sh\nif [ \"$1\" = list ]; then echo '{\"dependencies\":{\"@openai/codex\":{}}}'; exit 0; fi\necho 'npm error code EACCES' >&2\nexit 1\n"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
+	captureStdout(t, func() {
+		err := updateNpm(false)
+		if err == nil || !strings.Contains(err.Error(), "user-writable npm prefix") || !strings.Contains(err.Error(), "EACCES") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestUpdateNpmOnlyEnabledInstalledPackages(t *testing.T) {
+	home, bin := t.TempDir(), t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("PATH", bin)
+	configDir := filepath.Join(home, ".config", "datakraften")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("ai_tools:\n  codex:\n    enabled: true\n  gemini:\n    enabled: true\n  claude:\n    enabled: false\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	log := filepath.Join(home, "args")
+	t.Setenv("TEST_NPM_LOG", log)
+	script := "#!/bin/sh\nif [ \"$1\" = list ]; then echo '{\"dependencies\":{\"@openai/codex\":{},\"@anthropic-ai/claude-code\":{},\"unrelated\":{}}}'; else printf '%s\\n' \"$@\" > \"$TEST_NPM_LOG\"; fi\n"
+	if err := os.WriteFile(filepath.Join(bin, "npm"), []byte(script), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := updateNpm(true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(log); !os.IsNotExist(err) {
+		t.Fatal("dry run invoked npm update")
+	}
+	if err := updateNpm(false); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "update\n-g\n@openai/codex\n" {
+		t.Fatalf("unexpected npm arguments: %q", data)
+	}
+}
 
 func TestUpdateAllReturnsErrorWhenAChildUpdateFails(t *testing.T) {
 	originalSteps := updateSteps
@@ -34,9 +93,6 @@ func TestUpdateAllReturnsErrorWhenAChildUpdateFails(t *testing.T) {
 	}
 	if !strings.Contains(output, "✗ Update finished with errors") {
 		t.Fatalf("expected failure summary, got %q", output)
-	}
-	if !strings.Contains(output, "✗ npm: permission denied") {
-		t.Fatalf("expected npm failure output, got %q", output)
 	}
 }
 
