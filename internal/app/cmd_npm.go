@@ -45,7 +45,7 @@ func newNpmCmd() *cobra.Command {
 		fmt.Println("  Note: Existing global packages may need reinstalling; Node version managers may conflict with a custom prefix.")
 		fmt.Println()
 		if dryRun {
-			fmt.Println("  [SKIP] Dry run: no changes made.")
+			displayPrintln("  [SKIP] Dry run: no changes made.")
 			return nil
 		}
 		data, err := os.ReadFile(path)
@@ -81,7 +81,7 @@ func newNpmCmd() *cobra.Command {
 		if r.Code != 0 {
 			return fmt.Errorf("npm config failed: %s", strings.TrimSpace(r.Stderr))
 		}
-		fmt.Println("  [OK] npm prefix and shell PATH configured")
+		displayPrintln("  [OK] npm prefix and shell PATH configured")
 		fmt.Println()
 		fmt.Println("  Next steps")
 		fmt.Println("    Restart your shell to use the new PATH.")

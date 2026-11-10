@@ -47,8 +47,8 @@ func newDoctorCmd() *cobra.Command {
 				if wsl {
 					fmt.Println()
 					fmt.Println("  WSL Details")
-					fmt.Printf("    [OK] WSL%d\n", wslVer)
-					fmt.Printf("    [OK] %s %s\n", distro, distroVer)
+					displayPrintf("    [OK] WSL%d\n", wslVer)
+					displayPrintf("    [OK] %s %s\n", distro, distroVer)
 				}
 				fmt.Println()
 			}
@@ -77,11 +77,11 @@ func newDoctorCmd() *cobra.Command {
 				report.Add(doctor.Check{ID: "shell", Title: "Current shell", Category: "shell",
 					Severity: "info", Status: "pass", Message: system.CurrentShell()})
 				fmt.Println("  Shell")
-				fmt.Printf("    [OK] Current shell: %s\n", system.CurrentShell())
+				displayPrintf("    [OK] Current shell: %s\n", system.CurrentShell())
 				if state.ManagedShell {
-					fmt.Println("    [OK] Managed config active")
+					displayPrintln("    [OK] Managed config active")
 				} else {
-					fmt.Println("    [SKIP] Run 'dk apply' to configure shell")
+					displayPrintln("    [SKIP] Run 'dk apply' to configure shell")
 				}
 				fmt.Println()
 			}
@@ -117,7 +117,7 @@ func runAutoFix(r *doctor.Report, category string) {
 			continue
 		}
 		if c.Fix == "" {
-			fmt.Printf("    [SKIP] %s: no auto-fix available\n", c.Title)
+			displayPrintf("    [SKIP] %s: no auto-fix available\n", c.Title)
 			skipped++
 			continue
 		}
@@ -142,10 +142,10 @@ func runAutoFix(r *doctor.Report, category string) {
 				fmt.Printf("    Attempting: %s\n", c.Fix)
 				r := exec.Run(cmd, args...)
 				if r.Code == 0 {
-					fmt.Printf("    [OK] %s fixed\n", c.Title)
+					displayPrintf("    [OK] %s fixed\n", c.Title)
 					fixed++
 				} else {
-					fmt.Printf("    [ERROR] %s fix failed: %s\n", c.Title, r.Stderr)
+					displayPrintf("    [ERROR] %s fix failed: %s\n", c.Title, r.Stderr)
 					skipped++
 				}
 				continue
@@ -157,7 +157,7 @@ func runAutoFix(r *doctor.Report, category string) {
 	}
 
 	if fixed == 0 && skipped == 0 {
-		fmt.Println("    [OK] No issues to fix")
+		displayPrintln("    [OK] No issues to fix")
 	} else {
 		fmt.Printf("    Fixed: %d, Manual action needed: %d\n", fixed, skipped)
 	}
