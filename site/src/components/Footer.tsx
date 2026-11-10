@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 export default function Footer() {
   return (
-    <footer className="footer border-t border-fuchsia-500/20 px-6 py-8 mt-16">
+    <footer className="footer border-t border-lime-400/20 px-6 py-8 mt-16">
       <div className="max-w-4xl mx-auto flex flex-col items-center gap-4 text-sm text-text-dim">
         <a
           href="https://github.com/sagathelab/datakraften"

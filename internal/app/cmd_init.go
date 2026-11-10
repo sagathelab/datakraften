@@ -215,12 +215,12 @@ func initDefault(configPath, configDir string, existing bool) error {
 
 	fmt.Println("  Environment")
 	if wsl {
-		fmt.Printf("    ✓ WSL%d\n", wslVer)
+		fmt.Printf("    [OK] WSL%d\n", wslVer)
 	} else {
-		fmt.Println("    – Not in WSL")
+		fmt.Println("    [SKIP] Not in WSL")
 	}
 	if distro != "" {
-		fmt.Printf("    ✓ %s %s\n", distro, distroVer)
+		fmt.Printf("    [OK] %s %s\n", distro, distroVer)
 	}
 	fmt.Printf("    Source: default\n")
 	fmt.Println()
@@ -232,7 +232,7 @@ func initDefault(configPath, configDir string, existing bool) error {
 	fmt.Println()
 	fmt.Printf("  Config: %s\n", configPath)
 	fmt.Println()
-	fmt.Println("  ✓ Default config created")
+	fmt.Println("  [OK] Default config created")
 	fmt.Println()
 	fmt.Println("  Next steps")
 	fmt.Println("    1. Run 'dk apply' to install tools")
@@ -301,7 +301,7 @@ func initCustomPrompt(configPath, configDir string, existing bool) error {
 	fmt.Println()
 	fmt.Printf("  Config: %s\n", configPath)
 	fmt.Println()
-	fmt.Printf("  ✓ Custom config created at %s\n", configPath)
+	fmt.Printf("  [OK] Custom config created at %s\n", configPath)
 	fmt.Println()
 	fmt.Println("  Next steps")
 	fmt.Println("    1. Edit the config file to customize your toolset")
@@ -314,19 +314,19 @@ func initCustomPrompt(configPath, configDir string, existing bool) error {
 func initCustomMerge(configPath, configDir string, existing bool, customFile string) error {
 	data, err := os.ReadFile(customFile)
 	if err != nil {
-		fmt.Printf("  ✗ Cannot read file: %s\n", customFile)
+		fmt.Printf("  [ERROR] Cannot read file: %s\n", customFile)
 		return nil
 	}
 
 	if len(strings.TrimSpace(string(data))) == 0 {
-		fmt.Println("  ✗ File is empty.")
+		fmt.Println("  [ERROR] File is empty.")
 		return nil
 	}
 
 	v := viper.New()
 	v.SetConfigType("yaml")
 	if err := v.ReadConfig(strings.NewReader(string(data))); err != nil {
-		fmt.Printf("  ✗ Invalid YAML: %s\n", err)
+		fmt.Printf("  [ERROR] Invalid YAML: %s\n", err)
 		return nil
 	}
 
@@ -375,7 +375,7 @@ func initCustomMerge(configPath, configDir string, existing bool, customFile str
 	fmt.Println()
 	fmt.Printf("  Config: %s\n", configPath)
 	fmt.Println()
-	fmt.Printf("  ✓ Custom config created from %s\n", customFile)
+	fmt.Printf("  [OK] Custom config created from %s\n", customFile)
 	fmt.Println()
 	fmt.Println("  Next steps")
 	fmt.Println("    1. Edit the config file to customize your toolset")
@@ -450,10 +450,10 @@ func initTeam(configPath, configDir string, existing bool, url string) error {
 
 	_, err := config.FetchRemote(url)
 	if err != nil {
-		fmt.Printf("  ✗ %s\n", err)
+		fmt.Printf("  [ERROR] %s\n", err)
 		return fmt.Errorf("failed to load remote config")
 	}
-	fmt.Println("  ✓ Remote config validated")
+	fmt.Println("  [OK] Remote config validated")
 
 	thinCfg := fmt.Sprintf(teamConfigYAML, url)
 
@@ -478,7 +478,7 @@ func initTeam(configPath, configDir string, existing bool, url string) error {
 	fmt.Println()
 	fmt.Printf("  Config: %s\n", configPath)
 	fmt.Println()
-	fmt.Println("  ✓ Team config created")
+	fmt.Println("  [OK] Team config created")
 	fmt.Println()
 	fmt.Println("  Next steps")
 	fmt.Println("    1. Run 'dk apply' to install tools (fetches remote config)")

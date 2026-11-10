@@ -466,7 +466,7 @@ export default function ToolGuide({
           <h1 className="text-3xl font-bold text-magenta font-share-tech mb-2">{title}</h1>
           <p className="text-base text-text-dim mb-8">{subtitle}</p>
 
-          <section className="mb-8 rounded-2xl border border-fuchsia-500/20 bg-bg-card p-5">
+          <section className="mb-8 rounded-2xl border border-lime-400/20 bg-bg-card p-5">
             <h2 className="text-xl font-bold text-text-primary mb-2">Quick summary</h2>
             <p className="text-base text-text-body leading-relaxed">{pageSummary}</p>
           </section>
@@ -478,7 +478,7 @@ export default function ToolGuide({
                 {supportedPlatforms.map((platform) => (
                   <span
                     key={platform}
-                    className="rounded-full border border-fuchsia-500/25 bg-fuchsia-500/8 px-3 py-1 text-sm text-text-primary"
+                    className="rounded-full border border-lime-400/25 bg-lime-400/8 px-3 py-1 text-sm text-text-primary"
                   >
                     {platform}
                   </span>
@@ -494,7 +494,7 @@ export default function ToolGuide({
                 {taskList.map((task) => (
                   <div
                     key={`${task.title}-${task.command ?? task.details ?? 'task'}`}
-                    className="rounded-xl border border-fuchsia-500/18 bg-bg-card p-4"
+                    className="rounded-xl border border-lime-400/18 bg-bg-card p-4"
                   >
                     <h3 className="text-sm font-semibold uppercase tracking-wide text-magenta mb-2">
                       {task.title}
@@ -530,7 +530,7 @@ export default function ToolGuide({
                 {troubleshooting.map((item) => (
                   <div
                     key={item.question}
-                    className="rounded-xl border border-fuchsia-500/18 bg-bg-card p-4"
+                    className="rounded-xl border border-lime-400/18 bg-bg-card p-4"
                   >
                     <h3 className="text-base font-semibold text-text-primary mb-2">
                       {item.question}
@@ -549,7 +549,7 @@ export default function ToolGuide({
                 {faqs.map((faq) => (
                   <div
                     key={faq.question}
-                    className="rounded-xl border border-fuchsia-500/18 bg-bg-card p-4"
+                    className="rounded-xl border border-lime-400/18 bg-bg-card p-4"
                   >
                     <h3 className="text-base font-semibold text-text-primary mb-2">
                       {faq.question}
@@ -562,7 +562,7 @@ export default function ToolGuide({
           )}
 
           {website && (
-            <div className="mt-8 pt-4 border-t border-fuchsia-500/20">
+            <div className="mt-8 pt-4 border-t border-lime-400/20">
               <a
                 href={website}
                 target="_blank"

@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -88,10 +89,10 @@ func TestUpdateAllReturnsErrorWhenAChildUpdateFails(t *testing.T) {
 		}
 	})
 
-	if strings.Contains(output, "✓ Update complete") {
+	if strings.Contains(output, "[OK] Update complete") {
 		t.Fatalf("expected success summary to be omitted, got %q", output)
 	}
-	if !strings.Contains(output, "✗ Update finished with errors") {
+	if !strings.Contains(output, "[ERROR] Update finished with errors") {
 		t.Fatalf("expected failure summary, got %q", output)
 	}
 }
@@ -112,13 +113,13 @@ func TestUpdateAllPrintsSuccessWhenNoFailuresOccur(t *testing.T) {
 		}
 	})
 
-	if !strings.Contains(output, "✓ Update complete") {
+	if !strings.Contains(output, "[OK] Update complete") {
 		t.Fatalf("expected success summary, got %q", output)
 	}
-	if !strings.Contains(output, "[1/2] brew") || !strings.Contains(output, "[2/2] uv") {
+	if !strings.Contains(output, "01 / 02  ·  brew") || !strings.Contains(output, "02 / 02  ·  uv") {
 		t.Fatalf("expected ordered progress, got %q", output)
 	}
-	if strings.Contains(output, "✗ Update finished with errors") {
+	if strings.Contains(output, "[ERROR] Update finished with errors") {
 		t.Fatalf("did not expect failure summary, got %q", output)
 	}
 }
@@ -166,5 +167,48 @@ func TestUpdateAllDryRunIsPreview(t *testing.T) {
 	})
 	if !strings.Contains(output, "Preview complete; no updates made") || strings.Contains(output, "Update complete") {
 		t.Fatalf("misleading preview: %q", output)
+	}
+}
+
+func TestUpdateAllReportsStepsBeforeRunningThem(t *testing.T) {
+	originalSteps := updateSteps
+	updateSteps = []updateStep{
+		{name: "first", run: func(bool) error { fmt.Println("    first work"); return nil }},
+		{name: "second", run: func(bool) error { fmt.Println("    second work"); return nil }},
+	}
+	defer func() { updateSteps = originalSteps }()
+	output := captureStdout(t, func() {
+		if err := updateAll(false); err != nil {
+			t.Fatal(err)
+		}
+	})
+	last := -1
+	for _, part := range []string{"01 / 02", "first work", "02 / 02", "second work", "[OK] Update complete"} {
+		next := strings.Index(output, part)
+		if next <= last {
+			t.Fatalf("progress out of order at %q: %q", part, output)
+		}
+		last = next
+	}
+}
+
+func TestListUpdatableOnlyShowsSupportedTargets(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("PATH", dir)
+	if err := os.WriteFile(filepath.Join(dir, "code"), []byte("#!/bin/sh\n"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	output := captureStdout(t, func() {
+		if err := listUpdatable(); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if strings.Contains(output, "code —") {
+		t.Fatalf("unsupported target listed: %q", output)
+	}
+	for _, target := range []string{"brew", "fnm", "uv", "npm"} {
+		if !strings.Contains(output, target+" —") {
+			t.Fatalf("missing %s: %q", target, output)
+		}
 	}
 }

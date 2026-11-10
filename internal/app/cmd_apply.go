@@ -99,7 +99,7 @@ func newApplyCmd() *cobra.Command {
 				fmt.Println()
 				fmt.Println("  Errors:")
 				for _, e := range report.Errors {
-					fmt.Printf("    ✗ %s\n", e)
+					fmt.Printf("    [ERROR] %s\n", e)
 				}
 			}
 

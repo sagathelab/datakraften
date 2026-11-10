@@ -104,9 +104,9 @@ func newUpgradeCmd() *cobra.Command {
 					printUpdateJSON(version, release.TagName, false, "", 0, nil)
 				} else {
 					if version == "dev" && version != release.TagName {
-						fmt.Println("  – Development build; upgrade skipped.")
+						fmt.Println("  [SKIP] Development build; upgrade skipped.")
 					} else {
-						fmt.Println("  ✓ Already up to date.")
+						fmt.Println("  [OK] Already up to date.")
 					}
 				}
 				return nil
@@ -136,7 +136,7 @@ func newUpgradeCmd() *cobra.Command {
 				if jsonOutput {
 					printUpdateJSON(version, release.TagName, false, binaryName, 0, nil)
 				} else {
-					fmt.Printf("  – Dry run: would upgrade to %s (%s).\n", release.TagName, binaryName)
+					fmt.Printf("  [SKIP] Dry run: would upgrade to %s (%s).\n", release.TagName, binaryName)
 				}
 				return nil
 			}
@@ -177,7 +177,7 @@ func newUpgradeCmd() *cobra.Command {
 			if jsonOutput {
 				printUpdateJSON(version, release.TagName, true, binaryName, written, nil)
 			} else {
-				fmt.Printf("  ✓ Updated to %s (%d bytes)\n", release.TagName, written)
+				fmt.Printf("  [OK] Updated to %s (%d bytes)\n", release.TagName, written)
 				fmt.Println()
 				fmt.Println("  Next steps")
 				fmt.Println("    Run 'dk doctor' to verify your setup.")

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import Layout from '../components/Layout'
 import DocCard from '../components/DocCard'
 import { categories, tools } from '../data/tools'
@@ -43,16 +44,24 @@ export default function DocsHub() {
           development environment.
         </p>
 
+        <nav aria-label="Start here" className="flex flex-wrap gap-4 mb-8 text-magenta">
+          <Link to="/docs/install">Get started</Link>
+          <Link to="/docs/dk#apply">Preview changes</Link>
+          <Link to="/docs/config">Customize your setup</Link>
+          <Link to="/docs/teams">Share with your team</Link>
+        </nav>
+
         <div className="relative mb-8">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim text-sm pointer-events-none">
             ~
           </span>
           <input
             type="text"
+            aria-label="Search documentation"
             placeholder="Search documentation..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full bg-bg-card border border-fuchsia-500/20 rounded-lg py-2.5 pl-8 pr-4 text-sm text-text-primary placeholder:text-text-dim/50 focus:outline-none focus:border-magenta transition-colors font-jetbrains"
+            className="w-full bg-bg-card border border-lime-400/20 rounded-lg py-2.5 pl-8 pr-4 text-sm text-text-primary placeholder:text-text-dim/50 focus:outline-none focus:border-magenta transition-colors font-jetbrains"
           />
         </div>
 
@@ -80,7 +89,7 @@ export default function DocsHub() {
           <p className="text-text-dim text-sm text-center py-8">No results for "{query}"</p>
         )}
 
-        <div className="disclaimer mt-12 pt-6 border-t border-fuchsia-500/20">
+        <div className="disclaimer mt-12 pt-6 border-t border-lime-400/20">
           <p className="text-sm text-text-dim">
             Datakraften orchestrates existing tools -- it does not replace them. Each tool retains
             its own license, documentation, and update mechanism. See the respective official sites

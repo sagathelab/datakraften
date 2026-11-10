@@ -11,7 +11,7 @@ export default function FeatureCard({ title, packages, tagline, to }: FeatureCar
   return (
     <Link
       to={to}
-      className="block bg-bg-card border border-fuchsia-500/20 rounded-lg p-4 hover:border-magenta hover:bg-fuchsia-500/5 transition-all"
+      className="block bg-bg-card border border-lime-400/20 rounded-lg p-4 hover:border-magenta hover:bg-lime-400/5 transition-all"
     >
       <h3 className="font-jetbrains text-base text-magenta mb-2">{title}</h3>
       <p className="text-sm text-text-primary leading-relaxed mb-1">{packages}</p>

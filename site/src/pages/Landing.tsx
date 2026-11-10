@@ -1,191 +1,130 @@
-import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import Layout from '../components/Layout'
 import Terminal from '../components/Terminal'
-import FeatureCard from '../components/FeatureCard'
-import LogoSvg from '../components/LogoSvg'
-import { Link } from 'react-router-dom'
 
 export default function Landing() {
   return (
     <Layout variant="landing">
-      <section className="hero text-center pt-9 pb-10">
-        <LogoSvg />
-        <h1 className="font-share-tech text-xl sm:text-2xl text-text-dim/45 mt-6">
-          Developer workstation bootstrap for WSL, Linux, and macOS
-        </h1>
-        <p className="font-share-tech font-bold text-text-primary/80 uppercase tracking-[0.1em] text-base sm:text-lg mt-4">
-          MAKE YOUR MACHINE SHIP-READY FOR CODING AND COLLABORATION
-        </p>
-        <p className="font-share-tech text-magenta uppercase tracking-[0.15em] text-sm sm:text-base mt-1 animate-tagline-glow">
-          A BOOTSTRAP TOOL — FROM ONE DEVELOPER TO ANOTHER
-        </p>
-      </section>
-
-      <section className="pb-14">
-        <div className="grid grid-cols-1 lg:grid-cols-3 border-y border-fuchsia-500/20 divide-y lg:divide-y-0 lg:divide-x divide-fuchsia-500/15">
-          <ValuePoint
-            icon={<BoltIcon />}
-            title="FAST SETUP"
-            body="Bootstrap runtimes, shell, editors, and AI tools without stitching together setup guides by hand."
-          />
-          <ValuePoint
-            icon={<LayersIcon />}
-            title="CONSISTENT ENVIRONMENTS"
-            body="Share one YAML config and give every developer the same workstation, tools, and defaults."
-          />
-          <ValuePoint
-            icon={<RefreshIcon />}
-            title="KEEP UP TO DATE"
-            body="Stay current and move faster with a development environment that is easy to refresh as your tools evolve."
-          />
-        </div>
-      </section>
-
-      <section className="install-section pt-2 pb-14">
-        <h2 className="font-share-tech text-magenta text-center mb-6 text-2xl">Install</h2>
-        <Terminal />
-      </section>
-
-      <section className="features pb-12">
-        <h2 className="font-share-tech text-magenta text-center mb-6 text-2xl">Features</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <FeatureCard
-            title="~ BUILD FAST"
-            packages="Node.js (fnm), Python (uv), Go, .NET SDK"
-            tagline="Modern runtimes ready for real development work"
-            to="/docs#runtimes"
-          />
-          <FeatureCard
-            title="~ UPGRADE YOUR SHELL"
-            packages="Fish shell, Starship, Atuin, fzf, broot, fd, btm"
-            tagline="A better terminal experience out of the box"
-            to="/docs#shell-cli"
-          />
-          <FeatureCard
-            title="~ WORK CLOUD-READY"
-            packages="GitHub CLI, Azure CLI, Docker, Homebrew"
-            tagline="Core tooling for modern cloud-native workflows"
-            to="/docs#cloud-dev"
-          />
-          <FeatureCard
-            title="~ CODE WITH AI"
-            packages="VS Code, Zed, Cursor, Codex CLI, OpenCode, GitHub Copilot"
-            tagline="Editors and AI tools ready from day one"
-            to="/docs#editors-tools"
-          />
-        </div>
-      </section>
-
-      <section className="what-you-get pb-16 max-w-2xl mx-auto px-4">
-        <h2 className="font-share-tech text-magenta text-center mb-8 text-2xl">What you get</h2>
-        <div className="space-y-6 text-text-body text-sm sm:text-base leading-relaxed">
+      <div className="product-page">
+        <section className="product-hero">
+          <div>
+            <p className="product-eyebrow">OPEN SOURCE · LINUX · MACOS · WSL</p>
+            <h1>A better starting point for your development machine.</h1>
+            <p className="product-lead">
+              Datakraften brings your runtimes, shell, editors and AI tools together in a
+              configuration you can understand and share.
+            </p>
+            <div className="product-actions">
+              <a className="product-primary" href="#get-started">
+                Get started <span aria-hidden="true">↗</span>
+              </a>
+              <a className="product-secondary" href="https://github.com/sagathelab/datakraften">
+                View on GitHub ↗
+              </a>
+            </div>
+            <p className="product-caption">
+              Built on the tools you already use. Apache 2.0 licensed.
+            </p>
+          </div>
+          <div className="product-demo" aria-label="Example Datakraften workflow">
+            <div className="product-demo-header">
+              <span>WORKSTATION / PREVIEW</span>
+              <span>dk</span>
+            </div>
+            <pre>
+              <code>
+                <span>$ dk init</span>
+                {'\n'} Configure your workstation{'\n\n'}
+                <span>$ dk apply --dry-run</span>
+                {'\n'} 01 / 08 · System packages{'\n'} 02 / 08 · Developer tools{'\n'} 03 / 08 ·
+                Runtimes{'\n'} …{'\n'} Preview complete; no changes made{'\n\n'}
+                <span>$ dk doctor</span>
+                {'\n'} Environment diagnostics
+              </code>
+            </pre>
+            <p>Illustrative output. Results depend on your machine and configuration.</p>
+          </div>
+        </section>
+        <section className="product-section product-intro">
+          <p className="product-eyebrow">LESS SETUP. MORE MAKING.</p>
+          <h2>One place for the tools that make your machine yours.</h2>
           <p>
-            <span className="text-magenta font-bold">~</span> A complete, AI-ready development
-            environment — from shell to editor to cloud tools — installed and configured with a
-            single command. No more hour-long setup guides or scattered READMEs.
+            Stop piecing together a workstation from scattered instructions. Describe the tools you
+            need, preview the plan, and let dk coordinate the setup.
           </p>
+        </section>
+        <section className="product-grid" aria-label="How it works">
+          <article>
+            <span>01 / CONFIGURE</span>
+            <h3>Start with your setup.</h3>
+            <p>
+              Generate a default configuration or create your own. Choose the tools that fit your
+              work.
+            </p>
+          </article>
+          <article>
+            <span>02 / PREVIEW</span>
+            <h3>See before you change.</h3>
+            <p>
+              Run a dry run to review intended actions. Some checks depend on your local
+              environment.
+            </p>
+          </article>
+          <article>
+            <span>03 / VERIFY</span>
+            <h3>Know where you stand.</h3>
+            <p>
+              Apply your configuration, then use doctor to inspect your workstation and identify
+              missing tools.
+            </p>
+          </article>
+        </section>
+        <section className="product-section product-split">
+          <div>
+            <p className="product-eyebrow">BUILT FOR PEOPLE AND TEAMS</p>
+            <h2>A shared starting point. Room to make it yours.</h2>
+            <p>
+              Use a local configuration for your own machine, or point a team at a shared YAML file.
+              Platform support and installed tools can still vary between machines.
+            </p>
+            <Link to="/docs/teams">Explore team configuration →</Link>
+          </div>
+          <pre>
+            <code>
+              {
+                '# Local config\nsource: team\nurl: https://example.com/team.yaml\n\n# Remote team.yaml\nai_tools:\n  codex:\n    enabled: true\n    manager: npm'
+              }
+            </code>
+          </pre>
+        </section>
+        <section className="product-section product-trust">
+          <p className="product-eyebrow">UNDERSTAND THE TRADEOFFS</p>
+          <h2>Your machine. Your choices.</h2>
           <p>
-            <span className="text-magenta font-bold">~</span> Consistency across your team. Share a
-            YAML config and every developer gets the same toolchain, runtimes, and shell config.
-            Onboarding goes from days to minutes.
+            Datakraften orchestrates existing tools including your system package manager, Homebrew,
+            fnm and uv. Some system operations require sudo. Review the configuration and preview
+            actions before applying them; availability and behavior vary across Linux, macOS and
+            WSL.
           </p>
+          <div className="product-actions">
+            <Link to="/docs/dk">Read the CLI guide →</Link>
+            <Link to="/docs/config">Explore configuration →</Link>
+            <a href="https://github.com/sagathelab/datakraften">Inspect the source →</a>
+          </div>
+        </section>
+        <section id="get-started" className="product-section product-start">
+          <p className="product-eyebrow">READY WHEN YOU ARE</p>
+          <h2>Start with the CLI.</h2>
           <p>
-            <span className="text-magenta font-bold">~</span> Idempotent and transparent. Run it as
-            many times as you want — it only installs what's missing. Everything is orchestrated
-            through battle-tested tools you already know.
+            This installs dk. Run <code>dk init</code> and preview with{' '}
+            <code>dk apply --dry-run</code> before applying your configuration.
           </p>
-        </div>
-      </section>
-
-      <section className="how-to pb-16">
-        <h2 className="font-share-tech text-magenta text-center mb-8 text-2xl">Get started</h2>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-3 font-jetbrains">
-          <Step num="01" text="Install" desc="Get the CLI" to="/docs/dk" />
-          <Arrow />
-          <Step num="02" text="Configure" desc="Run dk init" to="/docs/dk#init" />
-          <Arrow />
-          <Step num="03" text="Apply" desc="Build your environment" to="/docs/dk#apply" />
-        </div>
-        <p className="mt-6 text-sm sm:text-base text-text-dim text-center leading-relaxed">
-          Then verify with{' '}
-          <Link to="/docs/dk#doctor" className="text-magenta hover:underline">
-            dk doctor
-          </Link>{' '}
-          and keep it fresh with{' '}
-          <Link to="/docs/dk#update" className="text-magenta hover:underline">
-            dk update
-          </Link>
-          .
-        </p>
-      </section>
+          <Terminal />
+          <p>
+            <Link to="/docs/install">Installation details and requirements →</Link>
+          </p>
+        </section>
+      </div>
     </Layout>
-  )
-}
-
-function Step({ num, text, desc, to }: { num: string; text: string; desc: string; to: string }) {
-  return (
-    <Link
-      to={to}
-      className="flex flex-col items-center gap-1.5 p-4 border border-fuchsia-500/20 rounded-lg min-w-[180px] bg-bg-card hover:border-magenta hover:bg-fuchsia-500/5 transition-all"
-    >
-      <span className="text-2xl font-bold text-magenta leading-none">{num}</span>
-      <span className="text-base text-text-primary">{text}</span>
-      <span className="text-sm text-text-dim text-center">{desc}</span>
-    </Link>
-  )
-}
-
-function ValuePoint({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
-  return (
-    <div className="flex items-start gap-4 px-2 py-6 lg:px-6">
-      <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/8 text-magenta">
-        {icon}
-      </div>
-      <div>
-        <h3 className="font-share-tech text-base text-magenta mb-1">{title}</h3>
-        <p className="text-sm sm:text-base text-text-body leading-relaxed">{body}</p>
-      </div>
-    </div>
-  )
-}
-
-function Arrow() {
-  return (
-    <svg
-      className="w-6 h-6 text-text-dim hidden sm:block flex-shrink-0"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M5 12h14M13 5l7 7-7 7" />
-    </svg>
-  )
-}
-
-function BoltIcon() {
-  return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />
-    </svg>
-  )
-}
-
-function LayersIcon() {
-  return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m12 3 9 5-9 5-9-5 9-5Z" />
-      <path d="m3 12 9 5 9-5" />
-      <path d="m3 16 9 5 9-5" />
-    </svg>
-  )
-}
-
-function RefreshIcon() {
-  return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-      <path d="M21 3v6h-6" />
-    </svg>
   )
 }

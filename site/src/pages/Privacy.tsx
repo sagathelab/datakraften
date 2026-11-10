@@ -3,14 +3,14 @@ import Layout from '../components/Layout'
 export default function Privacy() {
   return (
     <Layout variant="docs" title="Privacy Policy">
-      <div className="py-8 text-base text-text-primary leading-relaxed space-y-4">
+      <div className="legal-page py-8 text-base text-text-primary leading-relaxed space-y-4">
         <h1 className="text-3xl font-bold text-magenta font-share-tech mb-4">Privacy Policy</h1>
         <p>Last updated: 2026</p>
 
         <h2 className="text-xl font-bold text-text-primary mt-8 mb-2">Information We Collect</h2>
         <p>
-          Datakraften CLI does not collect or transmit any personal data. It operates entirely on
-          your local machine, installing and configuring tools you choose.
+          Datakraften CLI installs and configures tools you choose. It may connect to external
+          services to download software, check for updates, or retrieve a team configuration.
         </p>
         <p>
           The website (datakraften.no) is a static site hosted on GitHub Pages and does not use
@@ -34,8 +34,8 @@ export default function Privacy() {
         <h2 className="text-xl font-bold text-text-primary mt-8 mb-2">Data Storage</h2>
         <p>
           Datakraften stores only local configuration files in ~/.config/datakraften/ and state in
-          ~/.local/state/datakraften/. No data is sent to external servers by the Datakraften CLI
-          itself.
+          ~/.local/state/datakraften/. Network requests to external services may disclose connection
+          information such as your IP address to those services.
         </p>
 
         <h2 className="text-xl font-bold text-text-primary mt-8 mb-2">Contact</h2>

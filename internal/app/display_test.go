@@ -16,3 +16,11 @@ func TestDisplayTitle(t *testing.T) {
 		t.Fatal("unexpected terminal escape codes")
 	}
 }
+
+func TestDisplayStep(t *testing.T) {
+	var out bytes.Buffer
+	displayStep(&out, 1, 8, "System packages")
+	if out.String() != "  01 / 08  ·  System packages\n" {
+		t.Fatalf("unexpected step: %q", out.String())
+	}
+}

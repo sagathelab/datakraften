@@ -11,9 +11,15 @@ interface LayoutProps {
 export default function Layout({ children, variant = 'landing', title }: LayoutProps) {
   return (
     <div className="min-h-screen text-text-primary font-jetbrains">
+      <a href="#main-content" className="skip-link">
+        Skip to content
+      </a>
       <div className="scanlines" />
       <Navbar variant={variant} title={title} />
-      <main className={`mx-auto px-4 ${variant === 'docs' ? 'max-w-6xl' : 'max-w-4xl'}`}>
+      <main
+        id="main-content"
+        className={`mx-auto px-4 ${variant === 'docs' ? 'max-w-6xl' : 'max-w-4xl'}`}
+      >
         {children}
       </main>
       <Footer />

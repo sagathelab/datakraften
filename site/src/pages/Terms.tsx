@@ -3,7 +3,7 @@ import Layout from '../components/Layout'
 export default function Terms() {
   return (
     <Layout variant="docs" title="Terms of Use">
-      <div className="py-8 text-base text-text-primary leading-relaxed space-y-4">
+      <div className="legal-page py-8 text-base text-text-primary leading-relaxed space-y-4">
         <h1 className="text-3xl font-bold text-magenta font-share-tech mb-4">Terms of Use</h1>
         <p>Last updated: 2026</p>
 

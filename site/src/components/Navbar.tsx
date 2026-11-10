@@ -8,18 +8,32 @@ interface NavbarProps {
 export default function Navbar({ variant, title }: NavbarProps) {
   if (variant === 'landing') {
     return (
-      <nav className="flex justify-center gap-8 pt-6 pb-4 font-jetbrains text-base">
-        <span className="text-magenta">Home</span>
+      <nav
+        aria-label="Main navigation"
+        className="site-nav flex flex-wrap items-center justify-center gap-6 px-4 pt-6 pb-4 font-jetbrains text-base"
+      >
+        <Link to="/" className="site-wordmark">
+          datakraften<span>.</span>
+        </Link>
         <Link to="/docs" className="text-text-dim hover:text-magenta transition-colors">
           Docs
         </Link>
+        <a
+          href="https://github.com/sagathelab/datakraften"
+          className="text-text-dim hover:text-magenta"
+        >
+          GitHub
+        </a>
       </nav>
     )
   }
 
   return (
-    <nav className="doc-nav flex items-center justify-between px-6 py-3 font-jetbrains text-base border-b border-fuchsia-500/20">
-      <div className="flex items-center gap-4">
+    <nav
+      aria-label="Main navigation"
+      className="doc-nav flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 font-jetbrains text-base border-b border-lime-400/20"
+    >
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <Link
           to="/"
           className="text-text-dim hover:text-magenta transition-colors inline-flex items-center gap-1"
@@ -41,7 +55,9 @@ export default function Navbar({ variant, title }: NavbarProps) {
           Documentation
         </Link>
       </div>
-      {title && title !== 'Documentation' && <span className="text-text-dim text-sm">{title}</span>}
+      {title && title !== 'Documentation' && (
+        <span className="text-text-dim text-sm break-words">{title}</span>
+      )}
     </nav>
   )
 }

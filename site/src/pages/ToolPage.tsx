@@ -1,6 +1,7 @@
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import ToolGuide from '../components/ToolGuide'
+import Layout from '../components/Layout'
 import { tools } from '../data/tools'
 
 export default function ToolPage() {
@@ -20,13 +21,16 @@ export default function ToolPage() {
 
   if (!tool) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-text-dim font-jetbrains">
-        <h1 className="text-magenta text-xl mb-4">404</h1>
-        <p className="mb-4">Tool not found</p>
-        <Link to="/docs" className="text-magenta hover:underline text-base">
-          ← Back to Documentation
-        </Link>
-      </div>
+      <Layout variant="docs" title="Not found">
+        <div className="legal-page py-16 text-text-dim">
+          <p className="product-eyebrow">404 / NOT FOUND</p>
+          <h1 className="text-magenta text-3xl font-share-tech my-4">Tool not found</h1>
+          <p className="mb-6">There is no documentation for this tool.</p>
+          <Link to="/docs" className="text-magenta underline underline-offset-4">
+            ← Back to documentation
+          </Link>
+        </div>
+      </Layout>
     )
   }
 

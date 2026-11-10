@@ -97,57 +97,57 @@ func newStatusCmd() *cobra.Command {
 
 			fmt.Println("  System")
 			if wsl {
-				fmt.Printf("    ✓ WSL%d detected\n", wslVer)
+				fmt.Printf("    [OK] WSL%d detected\n", wslVer)
 			} else {
-				fmt.Println("    – Not running in WSL")
+				fmt.Println("    [SKIP] Not running in WSL")
 			}
 			if distro != "" {
-				fmt.Printf("    ✓ %s %s\n", distro, distroVer)
+				fmt.Printf("    [OK] %s %s\n", distro, distroVer)
 			}
 			if system.HasSystemd() {
-				fmt.Println("    ✓ systemd available")
+				fmt.Println("    [OK] systemd available")
 			}
 			fmt.Println()
 
 			fmt.Println("  Tools")
 			for _, name := range []string{"git", "gh", "az", "docker", "fnm", "uv"} {
 				if exec.CommandExists(name) {
-					fmt.Printf("    ✓ %s\n", name)
+					fmt.Printf("    [OK] %s\n", name)
 				} else {
-					fmt.Printf("    – %s not found\n", name)
+					fmt.Printf("    [SKIP] %s not found\n", name)
 				}
 			}
 			fmt.Println()
 
 			fmt.Println("  Runtimes")
 			if v := runtimes.NodeVersion(); v != "" {
-				fmt.Printf("    ✓ Node.js %s\n", v)
+				fmt.Printf("    [OK] Node.js %s\n", v)
 			} else {
-				fmt.Println("    – Node.js not installed")
+				fmt.Println("    [SKIP] Node.js not installed")
 			}
 			if v := runtimes.PythonVersion(); v != "" {
-				fmt.Printf("    ✓ Python %s\n", v)
+				fmt.Printf("    [OK] Python %s\n", v)
 			} else {
-				fmt.Println("    – Python not installed")
+				fmt.Println("    [SKIP] Python not installed")
 			}
 			if v := runtimes.GoVersion(); v != "" {
-				fmt.Printf("    ✓ Go %s\n", v)
+				fmt.Printf("    [OK] Go %s\n", v)
 			} else {
-				fmt.Println("    – Go not installed")
+				fmt.Println("    [SKIP] Go not installed")
 			}
 			if v := runtimes.DotnetVersion(); v != "" {
-				fmt.Printf("    ✓ .NET SDK %s\n", v)
+				fmt.Printf("    [OK] .NET SDK %s\n", v)
 			} else {
-				fmt.Println("    – .NET SDK not installed")
+				fmt.Println("    [SKIP] .NET SDK not installed")
 			}
 			fmt.Println()
 
 			fmt.Println("  Editors")
 			for _, ed := range editors.DetectAll() {
 				if ed.Installed {
-					fmt.Printf("    ✓ %s\n", ed.Name)
+					fmt.Printf("    [OK] %s\n", ed.Name)
 				} else {
-					fmt.Printf("    – %s not found\n", ed.Name)
+					fmt.Printf("    [SKIP] %s not found\n", ed.Name)
 				}
 			}
 			fmt.Println()
@@ -155,11 +155,11 @@ func newStatusCmd() *cobra.Command {
 			fmt.Println("  Docker")
 			dockerStatus := docker.Detect()
 			if dockerStatus.DaemonRunning {
-				fmt.Println("    ✓ Docker running")
+				fmt.Println("    [OK] Docker running")
 			} else if dockerStatus.CliInstalled {
-				fmt.Println("    – Docker daemon not running")
+				fmt.Println("    [SKIP] Docker daemon not running")
 			} else {
-				fmt.Println("    – Docker CLI not found")
+				fmt.Println("    [SKIP] Docker CLI not found")
 			}
 			fmt.Println()
 

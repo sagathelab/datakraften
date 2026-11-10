@@ -36,12 +36,18 @@ func newUpdateCmd() *cobra.Command {
 		Short:        "Update managed tools to their latest versions",
 		Long:         `Update all managed developer tools (brew packages, runtimes, AI tools) or a specific tool by name.`,
 		SilenceUsage: true,
+		Args:         cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if list {
 				return listUpdatable()
 			}
 
 			if len(args) > 0 {
+				subtitle := "Updating a managed tool"
+				if dryRun {
+					subtitle = "Preview only; no updates will be made"
+				}
+				displayTitle(os.Stdout, "update / "+args[0], subtitle)
 				return updateTool(args[0], dryRun)
 			}
 
@@ -62,10 +68,6 @@ func listUpdatable() error {
 	fmt.Println("    fnm — Node.js runtime")
 	fmt.Println("    uv — Python runtime")
 	fmt.Println("    npm — enabled Datakraften npm tools")
-
-	if exec.CommandExists("code") {
-		fmt.Println("    code — VS Code extensions")
-	}
 
 	fmt.Println()
 	fmt.Println("  Run 'dk update <tool>' to update a specific tool.")
@@ -98,35 +100,36 @@ func updateAll(dryRun bool) error {
 	var failures []string
 
 	for i, step := range updateSteps {
-		fmt.Printf("\n  [%d/%d] %s\n", i+1, len(updateSteps), step.name)
+		fmt.Println()
+		displayStep(os.Stdout, i+1, len(updateSteps), step.name)
 		if err := step.run(dryRun); err != nil {
 			failures = append(failures, fmt.Sprintf("%s: %s", step.name, err))
-			fmt.Printf("    ✗ %s failed; details below\n", step.name)
+			fmt.Printf("    [ERROR] %s failed; details below\n", step.name)
 		}
 	}
 
 	fmt.Println()
 	if len(failures) > 0 {
-		fmt.Println("  ✗ Update finished with errors")
+		fmt.Println("  [ERROR] Update finished with errors")
 		return fmt.Errorf("update failed: %s", strings.Join(failures, "; "))
 	}
 
 	if dryRun {
 		fmt.Println("  Preview complete; no updates made")
 	} else {
-		fmt.Println("  ✓ Update complete")
+		fmt.Println("  [OK] Update complete")
 	}
 	return nil
 }
 
 func updateBrew(dryRun bool) error {
 	if !installers.BrewInstalled() {
-		fmt.Println("    – Homebrew not installed, skipping")
+		fmt.Println("    [SKIP] Homebrew not installed, skipping")
 		return nil
 	}
 
 	if dryRun {
-		fmt.Println("    ~ Would run: brew update && brew upgrade")
+		fmt.Println("    [PLAN] Would run: brew update && brew upgrade")
 		return nil
 	}
 
@@ -135,26 +138,26 @@ func updateBrew(dryRun bool) error {
 	if r.Code != 0 {
 		return fmt.Errorf("brew update failed: %s", strings.TrimSpace(r.Stderr))
 	}
-	fmt.Println("    ✓ Command completed")
+	fmt.Println("    [OK] Command completed")
 
 	fmt.Println("    Upgrading packages...")
 	r = exec.Run("brew", "upgrade")
 	if r.Code != 0 {
 		return fmt.Errorf("brew upgrade failed: %s", strings.TrimSpace(r.Stderr))
 	}
-	fmt.Println("    ✓ Command completed")
+	fmt.Println("    [OK] Command completed")
 
 	return nil
 }
 
 func updateFnm(dryRun bool) error {
 	if !exec.CommandExists("fnm") {
-		fmt.Println("    – fnm not installed, skipping")
+		fmt.Println("    [SKIP] fnm not installed, skipping")
 		return nil
 	}
 
 	if dryRun {
-		fmt.Println("    ~ Would run: fnm install --lts")
+		fmt.Println("    [PLAN] Would run: fnm install --lts")
 		return nil
 	}
 
@@ -163,7 +166,7 @@ func updateFnm(dryRun bool) error {
 	if r.Code != 0 {
 		return fmt.Errorf("fnm install lts failed: %s", strings.TrimSpace(r.Stderr))
 	}
-	fmt.Println("    ✓ Command completed")
+	fmt.Println("    [OK] Command completed")
 
 	fmt.Println("    Setting fnm default to latest LTS...")
 	r = exec.Run("fnm", "default", "lts-latest")
@@ -176,12 +179,12 @@ func updateFnm(dryRun bool) error {
 
 func updateUv(dryRun bool) error {
 	if !exec.CommandExists("uv") {
-		fmt.Println("    – uv not installed, skipping")
+		fmt.Println("    [SKIP] uv not installed, skipping")
 		return nil
 	}
 
 	if dryRun {
-		fmt.Println("    ~ Would run: uv self update")
+		fmt.Println("    [PLAN] Would run: uv self update")
 		return nil
 	}
 
@@ -190,14 +193,14 @@ func updateUv(dryRun bool) error {
 	if r.Code != 0 {
 		return fmt.Errorf("uv self update failed: %s", strings.TrimSpace(r.Stderr))
 	}
-	fmt.Println("    ✓ Command completed")
+	fmt.Println("    [OK] Command completed")
 
 	return nil
 }
 
 func updateNpm(dryRun bool) error {
 	if !exec.CommandExists("npm") {
-		fmt.Println("    – npm not installed, skipping")
+		fmt.Println("    [SKIP] npm not installed, skipping")
 		return nil
 	}
 
@@ -225,11 +228,11 @@ func updateNpm(dryRun bool) error {
 		}
 	}
 	if len(packages) == 0 {
-		fmt.Println("    – No enabled npm tools installed, skipping")
+		fmt.Println("    [SKIP] No enabled npm tools installed, skipping")
 		return nil
 	}
 	if dryRun {
-		fmt.Printf("    ~ Would update npm packages: %s\n", strings.Join(packages, ", "))
+		fmt.Printf("    [PLAN] Would update npm packages: %s\n", strings.Join(packages, ", "))
 		return nil
 	}
 
@@ -237,13 +240,13 @@ func updateNpm(dryRun bool) error {
 	args := append([]string{"update", "-g"}, packages...)
 	r = exec.Run("npm", args...)
 	if r.Code != 0 {
-		fmt.Println("    ✗ npm update failed")
+		fmt.Println("    [ERROR] npm update failed")
 		if strings.Contains(r.Stderr, "EACCES") || strings.Contains(r.Stderr, "EPERM") {
 			return retryNpmWithSudo(packages, r.Stderr)
 		}
 		return npm.CommandError("npm update -g", r.Stderr)
 	}
-	fmt.Println("    ✓ Command completed")
+	fmt.Println("    [OK] Command completed")
 
 	return nil
 }
@@ -274,6 +277,6 @@ func retryNpmWithSudo(packages []string, originalError string) error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("sudo npm update failed: %w", err)
 	}
-	fmt.Println("    ✓ npm packages updated with sudo")
+	fmt.Println("    [OK] npm packages updated with sudo")
 	return nil
 }
