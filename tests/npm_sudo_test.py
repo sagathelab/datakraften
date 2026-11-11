@@ -118,8 +118,8 @@ esac
                 output += chunk
             _, status = os.waitpid(pid, 0)
             self.assertEqual(os.waitstatus_to_exitcode(status), 0)
-            self.assertIn(b'\x1b[2K', output.split(b'[y/N]')[0])
-            self.assertIn(b'\x1b[32m\xe2\x97\x8f\x1b[0m Updating npm', output)
+            self.assertIn(b'\x1b[37m\xe2\x97\x8f\x1b[0m Updating npm', output.split(b'[y/N]')[0])
+            self.assertNotIn(b'Updating npm', output.split(b'[y/N]')[1])
             self.assertEqual(log.read_text().splitlines(), [str(npm), 'update', '-g', '--prefix', '/protected/prefix', '@openai/codex'])
             os.close(fd)
 

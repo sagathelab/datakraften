@@ -352,7 +352,7 @@ func TestAnchorDoneAndFallback(t *testing.T) {
 	})
 }
 
-func TestHandoffReplacesRunningHeadingWithFinalResult(t *testing.T) {
+func TestHandoffKeepsRunningHeadingVisible(t *testing.T) {
 	for _, failed := range []bool{false, true} {
 		s := model(60, 12, 0)
 		r := anchored(s)
@@ -360,8 +360,8 @@ func TestHandoffReplacesRunningHeadingWithFinalResult(t *testing.T) {
 		_ = r.Running("Updating npm")
 		_, _ = r.Write([]byte("    Updating packages...\n"))
 		if err := r.Handoff(func() error {
-			if got := s.row(0); got != "" {
-				t.Fatalf("old heading remains during handoff: %q", got)
+			if got := s.row(0); got != "● Updating npm" {
+				t.Fatalf("heading changed during handoff: %q", got)
 			}
 			_, err := s.Write([]byte("  sudo? yes\r\n"))
 			return err
@@ -375,15 +375,11 @@ func TestHandoffReplacesRunningHeadingWithFinalResult(t *testing.T) {
 		}
 		count := 0
 		for i := range s.rows {
-			if strings.Contains(s.row(i), "Updating npm") {
+			if s.row(i) == "● Updating npm" {
 				count++
 			}
 		}
-		color := "32"
-		if failed {
-			color = "31"
-		}
-		if count != 1 || !strings.Contains(s.raw.String(), "\x1b["+color+"m●\x1b[0m Updating npm") {
+		if count != 1 || !strings.Contains(s.raw.String(), "\x1b[37m●\x1b[0m Updating npm") || (failed && !strings.Contains(s.raw.String(), "[FAIL] Updating npm")) {
 			t.Fatalf("failed=%v headings=%d output=%q", failed, count, s.raw.String())
 		}
 	}

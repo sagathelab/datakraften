@@ -19,6 +19,8 @@ type Renderer struct {
 	out                          io.Writer
 	color, partial               bool
 	terminalHeadings             bool
+	handoffHeading               bool
+	message                      string
 	err                          error
 	size                         func() (int, int, error)
 	known, active                bool
@@ -128,6 +130,20 @@ func (r *Renderer) event(status, color, message string, running bool) error {
 	defer r.mu.Unlock()
 	if r.err != nil {
 		return r.err
+	}
+	if running {
+		r.message = clean(message)
+		r.handoffHeading = false
+	} else if r.handoffHeading {
+		r.handoffHeading = false
+		if status == "OK" {
+			return nil
+		}
+		if err := r.endPartial(); err != nil {
+			return err
+		}
+		_, err := r.write([]byte(fmt.Sprintf("[FAIL] %s\n", clean(message))))
+		return err
 	}
 	line := fmt.Sprintf("[%s] %s", status, clean(message))
 	if r.valid() {
@@ -270,6 +286,18 @@ func (r *Renderer) writeLog(p []byte, format func([]byte) []byte) (int, error) {
 	}
 	if n > 0 {
 		r.partial = p[n-1] != '\n'
+		if r.handoffHeading && !r.partial && utf8.Valid(p) {
+			lineStart := true
+			for _, c := range string(p) {
+				if c != '\n' && (c < 32 || c == 127) {
+					lineStart = false
+					break
+				}
+			}
+			if lineStart {
+				r.known = true
+			}
+		}
 	}
 	return n, err
 }
@@ -282,13 +310,14 @@ func (r *Renderer) Handoff(fn func() error) error {
 		return r.err
 	}
 	if r.terminalHeadings && r.valid() && !r.wrap {
-		seq := fmt.Sprintf("\r\x1b[%dA\r\x1b[2K\r\x1b[%dB\r", r.distance, r.distance)
+		seq := fmt.Sprintf("\r\x1b[%dA\r\x1b[2K%s\r\x1b[%dB\r", r.distance, r.formatAnchor(r.message, "37", r.width), r.distance)
 		if r.col > 0 {
 			seq += fmt.Sprintf("\x1b[%dC", r.col)
 		}
 		if _, err := r.write([]byte(seq)); err != nil {
 			return err
 		}
+		r.handoffHeading = true
 	}
 	r.active = false
 	r.known = false
