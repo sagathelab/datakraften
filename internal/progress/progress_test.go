@@ -515,7 +515,13 @@ func TestTerminalWriterTracksNpmSpinner(t *testing.T) {
 }
 
 func TestTerminalWriterTracksFragmentedOSC(t *testing.T) {
-	for _, sequence := range []string{"\x1b]0;npm update\a", "\x1b]9;4;1;50\x1b\\", "\x1b]8;;https://example.test\x1b\\"} {
+	for _, sequence := range []string{
+		"\x1b]0;npm update\a",
+		"\x1b]9;4;1;50\x1b\\",
+		"\x1b]8;;https://example.test\x1b\\",
+		"\x1b]3008;start=1234567890abcdef;type=elevate;user=root;comm=sudo\x1b\\",
+		"\x1b]3008;end=1234567890abcdef;exit=success;status=0\x1b\\",
+	} {
 		var out bytes.Buffer
 		r := &Renderer{out: &out, color: true, terminalHeadings: true, known: true, size: func() (int, int, error) { return 212, 47, nil }}
 		_ = r.Running("Updating npm")

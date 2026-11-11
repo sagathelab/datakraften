@@ -286,7 +286,7 @@ func terminalOSC(p []byte, start int) (int, bool, bool) {
 			}
 			command, _, hasParams := strings.Cut(string(p[start:i]), ";")
 			switch command {
-			case "0", "1", "2", "4", "7", "8", "9", "10", "11", "12", "17", "19", "52", "104", "110", "111", "112", "133", "134":
+			case "0", "1", "2", "4", "7", "8", "9", "10", "11", "12", "17", "19", "52", "104", "110", "111", "112", "133", "134", "3008":
 				return end, valid && hasParams, true
 			default:
 				return end, false, true

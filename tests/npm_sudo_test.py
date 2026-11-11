@@ -211,7 +211,7 @@ esac
         binary = os.environ.get('DK_TEST_BINARY')
         if not binary:
             self.skipTest('set DK_TEST_BINARY to the built dk executable')
-        cases = ((0, 32, 'normal'), (0, 32, 'npm_spinner'), (0, 32, 'osc'), (42, 31, 'normal'), (0, None, 'scroll'), (0, None, 'resize'), (130, None, 'interrupt'), (0, None, 'suspend'))
+        cases = ((0, 32, 'normal'), (0, 32, 'npm_spinner'), (0, 32, 'osc'), (0, 32, 'systemd'), (42, 31, 'normal'), (0, None, 'scroll'), (0, None, 'resize'), (130, None, 'interrupt'), (0, None, 'suspend'))
         for exit_code, expected_color, mode in cases:
             with self.subTest(exit_code=exit_code, mode=mode), tempfile.TemporaryDirectory() as tmp:
                 root = pathlib.Path(tmp)
@@ -220,10 +220,12 @@ esac
                 config.mkdir(parents=True)
                 bin_dir.mkdir()
                 (config / 'config.yaml').write_text('ai_tools:\n  codex:\n    enabled: true\n')
+                if mode == 'systemd':
+                    (config / 'config.yaml').write_text('ai_tools:\n  codex:\n    enabled: true\n  claude:\n    enabled: true\n')
                 npm = bin_dir / 'npm'
                 npm.write_text('''#!/bin/sh
 case "$1" in
-  list) echo '{"dependencies":{"@openai/codex":{}}}';;
+  list) echo '{"dependencies":{"@openai/codex":{},"@anthropic-ai/claude-code":{}}}';;
   config) echo /protected/prefix;;
   update) echo 'npm error code EACCES' >&2; exit 1;;
 esac
@@ -233,6 +235,9 @@ esac
 import fcntl, struct, sys, termios, time
 if not sys.stdin.isatty() or not sys.stdout.isatty():
     sys.exit(90)
+if {mode!r} == "systemd":
+    sys.stdout.write("\\x1b]3008;start=0123456789abcdef0123456789abcdef;type=elevate;user=root;hostname=fedora;machineid=0123456789abcdef0123456789abcdef;bootid=0123456789abcdef0123456789abcdef;pid=12345;pidfdid=67890;comm=sudo;cwd=/tmp\\x1b\\\\")
+    sys.stdout.flush()
 original = termios.tcgetattr(0)
 no_echo = termios.tcgetattr(0)
 no_echo[3] &= ~termios.ECHO
@@ -254,6 +259,8 @@ if {mode!r} == "osc":
         sys.stdout.buffer.flush()
         time.sleep(0.03)
 sys.stdout.write("\\nchanged packages\\n")
+if {mode!r} == "systemd":
+    sys.stdout.write("\\x1b]3008;end=1234567890abcdef;exit=success;status=0\\x1b\\\\")
 if {mode!r} == "resize":
     time.sleep(0.15)
     size = fcntl.ioctl(0, termios.TIOCGWINSZ, b"\\0" * 8)
@@ -271,8 +278,9 @@ sys.exit({exit_code} if password == "secret-test-password\\n" else 91)
                 env.pop('NO_COLOR', None)
                 pid, fd = pty.fork()
                 if pid == 0:
-                    fcntl.ioctl(1, termios.TIOCSWINSZ, struct.pack('HHHH', 50, 120, 0, 0))
-                    os.execve(binary, [binary, 'update', 'npm'], env)
+                    rows, cols = (47, 212) if mode == 'systemd' else (50, 120)
+                    fcntl.ioctl(1, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, 0, 0))
+                    os.execve(binary, [binary, 'update'] if mode == 'systemd' else [binary, 'update', 'npm'], env)
                 output = b''
                 sent_confirm = sent_password = False
                 reaped = False
@@ -290,12 +298,12 @@ sys.exit({exit_code} if password == "secret-test-password\\n" else 91)
                             break
                         output += chunk
                         if not sent_confirm and b'[y/N]' in output:
-                            screen = terminal_screen(output)
+                            screen = terminal_screen(output, width=212, height=47) if mode == 'systemd' else terminal_screen(output)
                             self.assertTrue(any('Updating npm' in ''.join(c for c, _ in row) for row in screen))
                             os.write(fd, b'y\n')
                             sent_confirm = True
                         if not sent_password and b'[sudo] Password:' in output:
-                            screen = terminal_screen(output)
+                            screen = terminal_screen(output, width=212, height=47) if mode == 'systemd' else terminal_screen(output)
                             self.assertTrue(any('Updating npm' in ''.join(c for c, _ in row) for row in screen))
                             if mode == 'resize':
                                 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 40, 80, 0, 0))
@@ -343,7 +351,7 @@ sys.exit({exit_code} if password == "secret-test-password\\n" else 91)
                     self.assertIn(b'size 40x80', output)
                 if expected_color is None:
                     continue
-                screen = terminal_screen(output)
+                screen = terminal_screen(output, width=212, height=47) if mode == 'systemd' else terminal_screen(output)
                 headings = [row for row in screen if ''.join(c for c, _ in row).strip() == '● Updating npm']
                 self.assertEqual(len(headings), 1, output.decode(errors='replace'))
                 dot = next(color for c, color in headings[0] if c == '●')
