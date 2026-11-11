@@ -35,17 +35,25 @@ func formatStatus(text string, color bool) string {
 
 func displayPrintf(format string, args ...interface{}) {
 	w := progressWriter()
-	fmt.Fprint(w, colorStatus(w, fmt.Sprintf(format, args...)))
+	displayText(w, fmt.Sprintf(format, args...))
 }
 func displayPrintln(args ...interface{}) {
 	w := progressWriter()
-	fmt.Fprint(w, colorStatus(w, fmt.Sprintln(args...)))
+	displayText(w, fmt.Sprintln(args...))
 }
 func displayFprintf(w io.Writer, format string, args ...interface{}) {
-	fmt.Fprint(w, colorStatus(w, fmt.Sprintf(format, args...)))
+	displayText(w, fmt.Sprintf(format, args...))
 }
 func displayFprintln(w io.Writer, args ...interface{}) {
-	fmt.Fprint(w, colorStatus(w, fmt.Sprintln(args...)))
+	displayText(w, fmt.Sprintln(args...))
+}
+
+func displayText(w io.Writer, text string) {
+	if p, ok := w.(*progressOutput); ok {
+		p.writeStatus(text)
+		return
+	}
+	fmt.Fprint(w, colorStatus(w, text))
 }
 
 func displayTitle(w io.Writer, title, subtitle string) {

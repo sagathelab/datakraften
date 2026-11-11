@@ -17,6 +17,7 @@ type Renderer struct {
 	mu                           sync.Mutex
 	out                          io.Writer
 	color, partial               bool
+	terminalHeadings             bool
 	err                          error
 	size                         func() (int, int, error)
 	known, active                bool
@@ -45,6 +46,7 @@ func NewAtLineStart(out io.Writer) *Renderer {
 	if f, ok := out.(interface{ Fd() uintptr }); ok && !noColor && term.IsTerminal(int(f.Fd())) && os.Getenv("TERM") != "dumb" {
 		r.size = func() (int, int, error) { return term.GetSize(int(f.Fd())) }
 		r.known = true
+		r.terminalHeadings = true
 	}
 	return r
 }
@@ -147,6 +149,15 @@ func (r *Renderer) event(status, color, message string, running bool) error {
 	if err := r.endPartial(); err != nil {
 		return err
 	}
+	if r.terminalHeadings && !r.known {
+		if running {
+			_, err := r.write([]byte(r.formatAnchor(clean(message), color, 10000) + "\n"))
+			return err
+		}
+		if status == "OK" {
+			return nil
+		}
+	}
 	if running && r.known {
 		w, h, ok := r.dimensions()
 		if ok {
@@ -167,6 +178,16 @@ func (r *Renderer) event(status, color, message string, running bool) error {
 // Write serializes logs with progress. Anchored ASCII newlines are emitted as
 // CRLF so cursor tracking does not depend on the terminal's output mode.
 func (r *Renderer) Write(p []byte) (int, error) {
+	return r.writeLog(p, nil)
+}
+
+func (r *Renderer) WriteFormatted(p []byte, format func([]byte) []byte) (int, error) {
+	return r.writeLog(p, format)
+}
+
+func (r *Renderer) ColorEnabled() bool { return r.color }
+
+func (r *Renderer) writeLog(p []byte, format func([]byte) []byte) (int, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.err != nil {
@@ -211,11 +232,20 @@ func (r *Renderer) Write(p []byte) (int, error) {
 		r.known = false
 	}
 	output := p
+	if format != nil {
+		output = format(p)
+	}
 	if anchored {
-		output = bytes.ReplaceAll(p, []byte("\n"), []byte("\r\n"))
+		output = bytes.ReplaceAll(output, []byte("\n"), []byte("\r\n"))
 	}
 	n, err := r.write(output)
-	if anchored {
+	if format != nil {
+		if err == nil {
+			n = len(p)
+		} else {
+			n = 0
+		}
+	} else if anchored {
 		written, consumed := 0, 0
 		for consumed < len(p) {
 			size := 1

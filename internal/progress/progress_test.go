@@ -352,6 +352,36 @@ func TestAnchorDoneAndFallback(t *testing.T) {
 	})
 }
 
+func TestTerminalHeadingsSurviveUntrackableOutput(t *testing.T) {
+	s := model(80, 20, 0)
+	r := anchored(s)
+	r.terminalHeadings = true
+	_ = r.Running("AI apps")
+	_, _ = r.Write([]byte("    – skipped\n"))
+	_ = r.Done("AI apps")
+	_ = r.Running("Docker")
+	_ = r.Done("Docker")
+	got := s.raw.String()
+	if strings.Contains(got, "[OK] AI apps") || strings.Contains(got, "[...] Docker") || !strings.Contains(got, "●\x1b[0m Docker") {
+		t.Fatalf("inconsistent headings: %q", got)
+	}
+}
+
+func TestFormattedLogPreservesAnchor(t *testing.T) {
+	s := model(80, 20, 0)
+	r := anchored(s)
+	_ = r.Running("work")
+	input := []byte("    [OK] done\n")
+	n, err := r.WriteFormatted(input, func([]byte) []byte { return []byte("    \x1b[32m[OK]\x1b[0m done\n") })
+	if err != nil || n != len(input) || !r.active {
+		t.Fatalf("formatted write: n=%d err=%v active=%v", n, err, r.active)
+	}
+	_ = r.Done("work")
+	if !strings.Contains(s.raw.String(), "\x1b[32m[OK]\x1b[0m") {
+		t.Fatal("missing formatted status")
+	}
+}
+
 type failAfter struct {
 	out          bytes.Buffer
 	calls, limit int
