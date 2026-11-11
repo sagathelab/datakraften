@@ -509,13 +509,19 @@ func RunDoctorSystem(r *doctor.Report) {
 	shell_ := system.CurrentShell()
 
 	r.Add(doctor.Check{ID: "wsl", Title: "WSL detected", Category: "system", Severity: "info",
-		Status: boolStatus(wsl && wslVer > 0), Message: fmt.Sprintf("WSL%d: %s %s", wslVer, distro, distroVer),
+		Status: skipStatus(wsl), Message: fmt.Sprintf("WSL%d: %s %s", wslVer, distro, distroVer),
 		Fix: "If WSL is not detected, ensure you are running inside WSL: 'wsl --install' from PowerShell"})
+	if distro != "" {
+		r.Add(doctor.Check{ID: "system.distro", Title: "Distribution", Category: "system", Severity: "info",
+			Status: "pass", Message: strings.TrimSpace(distro + " " + distroVer)})
+	}
 	r.Add(doctor.Check{ID: "systemd", Title: "systemd available", Category: "system", Severity: "info",
-		Status: boolStatus(systemd),
+		Status: skipStatus(systemd),
 		Fix:    "Enable systemd in /etc/wsl.conf: add [boot]\nsystemd=true, then 'wsl --terminate' from PowerShell"})
-	r.Add(doctor.Check{ID: "shell", Title: "Current shell", Category: "system", Severity: "info",
-		Status: "pass", Message: shell_})
+	if shell_ != "" {
+		r.Add(doctor.Check{ID: "system.shell", Title: "Current shell", Category: "system", Severity: "info",
+			Status: "pass", Message: shell_})
+	}
 
 	displayHeading(doctorOutput(), "System")
 	if wsl {
@@ -528,6 +534,8 @@ func RunDoctorSystem(r *doctor.Report) {
 	}
 	if systemd {
 		displayFprintln(doctorOutput(), "    [OK] systemd available")
+	} else {
+		displayFprintln(doctorOutput(), "    [SKIP] systemd not available")
 	}
 	if shell_ != "" {
 		displayFprintf(doctorOutput(), "    [OK] Shell: %s\n", shell_)
@@ -556,17 +564,19 @@ func RunDoctorTools(r *doctor.Report) {
 	for _, t := range tools {
 		fix := ""
 		message := ""
+		status := skipStatus(t.installed)
 		if !t.installed {
 			fix = "run 'dk apply' to install missing tools"
 			if t.name == "brew" {
 				if brewPath != "" {
+					status = "fail"
 					message = "Homebrew found at " + brewPath + " but not in PATH"
 					fix = "Add Homebrew to your shell PATH: " + doctorBrewPathCommand(brewPath)
 				}
 			}
 		}
 		r.Add(doctor.Check{ID: t.id, Title: t.name + " installed", Category: "tools",
-			Severity: "warning", Status: boolStatus(t.installed), Message: message, Fix: fix})
+			Severity: "warning", Status: status, Message: message, Fix: fix})
 	}
 
 	displayHeading(doctorOutput(), "Tools")
@@ -590,7 +600,11 @@ func RunDoctorTools(r *doctor.Report) {
 			}
 		}
 		r.Add(doctor.Check{ID: "tool.npm.prefix", Title: "npm global prefix", Category: "tools", Severity: "warning", Status: status, Message: message, Fix: fix})
-		fmt.Fprintf(doctorOutput(), "    %s\n", message)
+		if status == "pass" {
+			displayFprintf(doctorOutput(), "    [OK] %s\n", message)
+		} else {
+			displayFprintf(doctorOutput(), "    [WARN] %s\n", message)
+		}
 	}
 
 	for _, t := range tools {
@@ -622,18 +636,20 @@ func RunDoctorRuntimes(r *doctor.Report) {
 		return "run 'dk apply' to install missing runtime"
 	}
 	r.Add(doctor.Check{ID: "runtime.node", Title: "Node.js", Category: "runtimes",
-		Severity: "warning", Status: boolStatus(nv != ""), Message: nv, Fix: fixRuntime(nv)})
+		Severity: "warning", Status: skipStatus(nv != ""), Message: nv, Fix: fixRuntime(nv)})
 	r.Add(doctor.Check{ID: "runtime.python", Title: "Python", Category: "runtimes",
-		Severity: "warning", Status: boolStatus(pv != ""), Message: pv, Fix: fixRuntime(pv)})
+		Severity: "warning", Status: skipStatus(pv != ""), Message: pv, Fix: fixRuntime(pv)})
 	goMessage, goFix := gv, fixRuntime(gv)
+	goStatus := skipStatus(gv != "")
 	if goPath != "" {
+		goStatus = "fail"
 		goMessage = "Go found at " + goPath + " but not in PATH"
 		goFix = "Add Go to your shell PATH: " + doctorGoPathCommand(goPath)
 	}
 	r.Add(doctor.Check{ID: "runtime.go", Title: "Go", Category: "runtimes",
-		Severity: "warning", Status: boolStatus(gv != ""), Message: goMessage, Fix: goFix})
+		Severity: "warning", Status: goStatus, Message: goMessage, Fix: goFix})
 	r.Add(doctor.Check{ID: "runtime.dotnet", Title: ".NET SDK", Category: "runtimes",
-		Severity: "warning", Status: boolStatus(dv != ""), Message: dv, Fix: fixRuntime(dv)})
+		Severity: "warning", Status: skipStatus(dv != ""), Message: dv, Fix: fixRuntime(dv)})
 
 	displayHeading(doctorOutput(), "Runtimes")
 	if nv != "" {
@@ -672,7 +688,7 @@ func RunDoctorEditors(r *doctor.Report) {
 			status = "fail"
 			msg = "Windows-side path"
 		} else {
-			status = "fail"
+			status = "skip"
 			msg = "not found"
 		}
 		fix := ""
@@ -682,7 +698,7 @@ func RunDoctorEditors(r *doctor.Report) {
 			fix = fmt.Sprintf("Install the Linux version of %s inside WSL: 'brew install --cask %s' if available, or download from the official site", ed.Name, strings.ToLower(ed.Name))
 		}
 		r.Add(doctor.Check{ID: "editor." + ed.Name, Title: ed.Name + " CLI", Category: "editors",
-			Severity: "info", Status: status, Message: msg, Fix: fix})
+			Severity: "warning", Status: status, Message: msg, Fix: fix})
 
 		if ed.Installed && !ed.WindowsSide {
 			displayFprintf(doctorOutput(), "    [OK] %s\n", ed.Name)
@@ -720,11 +736,11 @@ func RunDoctorDocker(r *doctor.Report) {
 	}
 }
 
-func boolStatus(ok bool) string {
+func skipStatus(ok bool) string {
 	if ok {
 		return "pass"
 	}
-	return "fail"
+	return "skip"
 }
 
 func doctorOutput() io.Writer {

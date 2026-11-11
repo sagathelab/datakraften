@@ -38,18 +38,8 @@ func newDoctorCmd() *cobra.Command {
 				fmt.Println()
 			}
 
-			wsl, wslVer := system.DetectWSL()
-			distro, distroVer := system.Distro()
-
 			if category == "" || category == "system" {
 				RunDoctorSystem(report)
-
-				if wsl {
-					fmt.Println()
-					displayHeading(os.Stdout, "WSL Details")
-					displayPrintf("    [OK] WSL%d\n", wslVer)
-					displayPrintf("    [OK] %s %s\n", distro, distroVer)
-				}
 				fmt.Println()
 			}
 
@@ -74,15 +64,7 @@ func newDoctorCmd() *cobra.Command {
 			}
 
 			if category == "" || category == "shell" {
-				report.Add(doctor.Check{ID: "shell", Title: "Current shell", Category: "shell",
-					Severity: "info", Status: "pass", Message: system.CurrentShell()})
-				displayHeading(os.Stdout, "Shell")
-				displayPrintf("    [OK] Current shell: %s\n", system.CurrentShell())
-				if state.ManagedShell {
-					displayPrintln("    [OK] Managed Fish config saved")
-				} else {
-					displayPrintln("    [SKIP] Run 'dk apply' to configure shell")
-				}
+				RunDoctorShell(report, state)
 				fmt.Println()
 			}
 
@@ -182,7 +164,25 @@ func buildDoctorReport(r *doctor.Report, category string) {
 		RunDoctorDocker(r)
 	}
 	if category == "" || category == "shell" {
-		r.Add(doctor.Check{ID: "shell", Title: "Current shell", Category: "shell",
-			Severity: "info", Status: "pass", Message: system.CurrentShell()})
+		RunDoctorShell(r, LoadState())
+	}
+}
+
+func RunDoctorShell(r *doctor.Report, state *State) {
+	current := system.CurrentShell()
+	r.Add(doctor.Check{ID: "shell", Title: "Current shell", Category: "shell",
+		Severity: "info", Status: skipStatus(current != ""), Message: current})
+	r.Add(doctor.Check{ID: "shell.managed", Title: "Managed Fish config", Category: "shell",
+		Severity: "info", Status: skipStatus(state.ManagedShell), Fix: "run 'dk apply' to configure shell"})
+	displayHeading(doctorOutput(), "Shell")
+	if current != "" {
+		displayFprintf(doctorOutput(), "    [OK] Current shell: %s\n", current)
+	} else {
+		displayFprintln(doctorOutput(), "    [SKIP] Current shell unknown")
+	}
+	if state.ManagedShell {
+		displayFprintln(doctorOutput(), "    [OK] Managed Fish config saved")
+	} else {
+		displayFprintln(doctorOutput(), "    [SKIP] Run 'dk apply' to configure shell")
 	}
 }

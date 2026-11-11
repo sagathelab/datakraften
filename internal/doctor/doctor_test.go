@@ -13,6 +13,7 @@ func TestPrintSummarySeparatesSeverity(t *testing.T) {
 		{Status: "fail", Severity: "critical"},
 		{Status: "fail", Severity: "warning"},
 		{Status: "fail", Severity: "info"},
+		{Status: "skip", Severity: "warning"},
 	}}
 	read, write, err := os.Pipe()
 	if err != nil {
@@ -32,7 +33,7 @@ func TestPrintSummarySeparatesSeverity(t *testing.T) {
 	if err := read.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(out), "1 passed  ·  1 critical  ·  1 warnings  ·  1 informational") {
+	if !strings.Contains(string(out), "1 passed  ·  1 critical  ·  1 warnings  ·  1 informational  ·  1 skipped") {
 		t.Fatalf("unexpected summary: %q", out)
 	}
 }

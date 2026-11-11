@@ -30,11 +30,13 @@ func (r *Report) Print() {
 }
 
 func (r *Report) Summary() string {
-	critical, warnings, info, passed := 0, 0, 0, 0
+	critical, warnings, info, passed, skipped := 0, 0, 0, 0, 0
 
 	for _, c := range r.Checks {
 		if c.Status == "pass" {
 			passed++
+		} else if c.Status == "skip" {
+			skipped++
 		} else if c.Status == "fail" {
 			switch c.Severity {
 			case "critical":
@@ -46,7 +48,7 @@ func (r *Report) Summary() string {
 			}
 		}
 	}
-	return fmt.Sprintf("%d passed  ·  %d critical  ·  %d warnings  ·  %d informational", passed, critical, warnings, info)
+	return fmt.Sprintf("%d passed  ·  %d critical  ·  %d warnings  ·  %d informational  ·  %d skipped", passed, critical, warnings, info, skipped)
 }
 
 func (r *Report) PrintJSON() {
