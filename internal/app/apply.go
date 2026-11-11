@@ -106,6 +106,17 @@ func installReportSummary(report ai.InstallReport) string {
 	return strings.Join(parts, "; ")
 }
 
+func installSummaryWithoutDetails(report ai.InstallReport) string {
+	for i, message := range report.Errors {
+		name, _, _ := strings.Cut(message, ":")
+		if i == 0 {
+			report.Errors = append([]string(nil), report.Errors...)
+		}
+		report.Errors[i] = name
+	}
+	return installReportSummary(report)
+}
+
 func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	return RunApplyWithProgress(cfg, dryRun, nil)
 }
@@ -124,8 +135,10 @@ func RunApplyWithProgress(cfg *config.Config, dryRun bool, hook ProgressHook) *A
 	}
 	fail := func(message string) {
 		report.Errors = append(report.Errors, message)
-		failed = true
-		emitProgress(hook, ProgressEvent{Step: step, Status: ProgressFailed, Err: fmt.Errorf("%s", message)})
+		if !failed {
+			failed = true
+			emitProgress(hook, ProgressEvent{Step: step, Status: ProgressFailed, Err: fmt.Errorf("%s", message)})
+		}
 	}
 	defer func() {
 		if started && !failed {
@@ -418,7 +431,15 @@ func RunApplyWithProgress(cfg *config.Config, dryRun bool, hook ProgressHook) *A
 
 	if !dryRun {
 		fmt.Fprintln(progressWriter(), "    Checking AI tools...")
-		report.AITools = ai.EnsureAIToolsWithOptions(cfg, ai.InstallOptions{OnError: func(message string) { fail("AI tools: " + message) }})
+		report.AITools = ai.EnsureAIToolsWithOptions(cfg, ai.InstallOptions{
+			OnError: func(message string) { fail("AI tools: " + message) },
+			OnNPMError: func(stderr string) {
+				verbosePrintf("npm install output: %s\n", strings.TrimSpace(stderr))
+			},
+			RetryNPM: func(pkg, stderr string) error {
+				return retryNpmOperationWithSudo("install", []string{pkg}, stderr)
+			},
+		})
 		if report.AITools.HasFailures() {
 			displayPrintf("    [ERROR] AI tools: %s\n", installReportSummary(report.AITools))
 		} else if report.AITools.Enabled == 0 {

@@ -16,9 +16,10 @@ func newApplyCmd() *cobra.Command {
 	var yes bool
 
 	cmd := &cobra.Command{
-		Use:   "apply",
-		Short: "Apply Datakraften configuration",
-		Long:  `Install missing tools, configure shell, runtimes, editors, and AI tooling based on your configuration.`,
+		Use:          "apply",
+		Short:        "Apply Datakraften configuration",
+		Long:         `Install missing tools, configure shell, runtimes, editors, and AI tooling based on your configuration.`,
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) (runErr error) {
 			state := LoadState()
 
@@ -55,6 +56,7 @@ func newApplyCmd() *cobra.Command {
 			if dryRun {
 				if len(report.Errors) > 0 {
 					fmt.Fprintln(progressWriter(), "  Preview stopped due to errors; no changes made")
+					cmd.SilenceErrors = true
 					return fmt.Errorf("preview failed: %s", strings.Join(report.Errors, "; "))
 				} else {
 					fmt.Fprintln(progressWriter(), "  Preview complete; no changes made")
@@ -105,19 +107,11 @@ func newApplyCmd() *cobra.Command {
 				row(".NET SDK", fmt.Sprintf("%s (%s)", report.DotnetVer, report.Dotnet))
 			}
 			if report.Started {
-				row("AI tools", installReportSummary(report.AITools))
-				row("AI apps", installReportSummary(report.AIApps))
+				row("AI tools", installSummaryWithoutDetails(report.AITools))
+				row("AI apps", installSummaryWithoutDetails(report.AIApps))
 			} else {
 				fmt.Fprintln(progressWriter(), "    AI tools and apps: not checked")
 			}
-			if len(report.Errors) > 0 {
-				fmt.Fprintln(progressWriter())
-				fmt.Fprintln(progressWriter(), "  Errors:")
-				for _, e := range report.Errors {
-					displayPrintf("    [ERROR] %s\n", e)
-				}
-			}
-
 			fmt.Fprintln(progressWriter())
 			displayNextSteps(progressWriter())
 			if report.Shell {
@@ -127,6 +121,7 @@ func newApplyCmd() *cobra.Command {
 			fmt.Fprintln(progressWriter())
 
 			if len(report.Errors) > 0 {
+				cmd.SilenceErrors = true
 				return fmt.Errorf("apply failed: %s", strings.Join(report.Errors, "; "))
 			}
 			return nil

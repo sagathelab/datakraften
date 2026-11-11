@@ -37,6 +37,14 @@ func TestInstallReportSummaryDoesNotAssumeUnreportedResults(t *testing.T) {
 	}
 }
 
+func TestInstallSummaryOmitsFailureDetails(t *testing.T) {
+	report := ai.InstallReport{Enabled: 1, Errors: []string{"Claude Code: npm failed: EACCES"}}
+	got := installSummaryWithoutDetails(report)
+	if got != "failed: Claude Code" || report.Errors[0] != "Claude Code: npm failed: EACCES" {
+		t.Fatalf("summary %q report %+v", got, report)
+	}
+}
+
 func TestApplyProgressConfigurationFailure(t *testing.T) {
 	var events []ProgressEvent
 	report := RunApplyWithProgress(&config.Config{Source: "team"}, false, func(event ProgressEvent) {

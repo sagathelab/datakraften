@@ -73,6 +73,13 @@ func displayFprintln(w io.Writer, args ...interface{}) {
 }
 
 func displayText(w io.Writer, text string) {
+	if strings.HasPrefix(strings.TrimLeft(text, " "), "[ERROR]") {
+		trimmed := strings.TrimSuffix(text, "\n")
+		if first, rest, ok := strings.Cut(trimmed, "\n"); ok {
+			verbosePrintf("error details: %s\n", rest)
+			text = first + " (run with --verbose for details)\n"
+		}
+	}
 	if p, ok := w.(*progressOutput); ok {
 		p.writeStatus(text)
 		return

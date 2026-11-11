@@ -176,6 +176,22 @@ func TestInstallErrorCallbackBeforeNextTool(t *testing.T) {
 	}
 }
 
+func TestNpmInstallRetriesPermissionFailure(t *testing.T) {
+	oldExists, oldRun := commandExists, runCommand
+	t.Cleanup(func() { commandExists, runCommand = oldExists, oldRun })
+	commandExists = func(name string) bool { return name == "npm" }
+	runCommand = func(name string, args ...string) execpkg.Result {
+		return execpkg.Result{Code: 1, Stderr: "npm error code EACCES\nlong error details"}
+	}
+	var pkg, detail string
+	report := EnsureAIToolsWithOptions(&config.Config{AITools: map[string]config.RuntimeConfig{
+		"claude": {Enabled: true},
+	}}, InstallOptions{RetryNPM: func(p, stderr string) error { pkg, detail = p, stderr; return nil }})
+	if pkg != "@anthropic-ai/claude-code" || !strings.Contains(detail, "EACCES") || len(report.Installed) != 1 || report.HasFailures() {
+		t.Fatalf("retry %q %q, report %+v", pkg, detail, report)
+	}
+}
+
 func TestAppInstallErrorCallback(t *testing.T) {
 	oldExists, oldRun := commandExists, runCommand
 	t.Cleanup(func() { commandExists, runCommand = oldExists, oldRun })

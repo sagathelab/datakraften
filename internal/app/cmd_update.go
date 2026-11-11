@@ -13,6 +13,7 @@ import (
 	"github.com/sagathelab/datakraften/internal/installers"
 	"github.com/sagathelab/datakraften/internal/npm"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 type updateStep struct {
@@ -287,7 +288,7 @@ func updateNpm(dryRun bool) error {
 	r = exec.Run("npm", args...)
 	if r.Code != 0 {
 		displayPrintln("    [ERROR] npm update failed")
-		if strings.Contains(r.Stderr, "EACCES") || strings.Contains(r.Stderr, "EPERM") {
+		if npm.IsPermissionError(r.Stderr) {
 			return retryNpmWithSudo(packages, r.Stderr)
 		}
 		return npm.CommandError("npm update -g", r.Stderr)
@@ -298,37 +299,48 @@ func updateNpm(dryRun bool) error {
 }
 
 func retryNpmWithSudo(packages []string, originalError string) error {
+	return retryNpmOperationWithSudo("update", packages, originalError)
+}
+
+func retryNpmOperationWithSudo(operation string, packages []string, originalError string) error {
+	command := "npm " + operation + " -g"
+	if operation != "install" {
+		verbosePrintf("%s output: %s\n", command, strings.TrimSpace(originalError))
+	}
 	if !exec.CommandExists("sudo") {
-		return npm.CommandError("npm update -g", originalError)
+		return npm.CommandError(command, originalError)
+	}
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return fmt.Errorf("npm needs administrator access but no interactive terminal is available: %w", npm.CommandError(command, originalError))
 	}
 	prefixResult := exec.Run("npm", "config", "get", "prefix")
 	prefix := strings.TrimSpace(prefixResult.Stdout)
 	if prefixResult.Code != 0 || !strings.HasPrefix(prefix, "/") || strings.ContainsAny(prefix, "\r\n") {
-		return fmt.Errorf("cannot determine npm prefix for sudo retry; original error: %s", strings.TrimSpace(originalError))
+		return fmt.Errorf("cannot determine npm prefix for sudo retry: %w", npm.CommandError(command, originalError))
 	}
 	tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
 	if err != nil {
-		return fmt.Errorf("npm needs administrator access but no interactive terminal is available: %w", npm.CommandError("npm update -g", originalError))
+		return fmt.Errorf("npm needs administrator access but no interactive terminal is available: %w", npm.CommandError(command, originalError))
 	}
 	defer tty.Close()
 	err = progressHandoff(func() error {
-		fmt.Fprintf(tty, "  npm cannot write to %s. Update %s with sudo? [y/N] ", prefix, strings.Join(packages, ", "))
+		fmt.Fprintf(tty, "  npm cannot write to %s. %s %s with sudo? [y/N] ", prefix, strings.ToUpper(operation[:1])+operation[1:], strings.Join(packages, ", "))
 		answer, err := bufio.NewReader(tty).ReadString('\n')
 		if err != nil || (strings.TrimSpace(strings.ToLower(answer)) != "y" && strings.TrimSpace(strings.ToLower(answer)) != "yes") {
-			return fmt.Errorf("sudo retry declined: %w", npm.CommandError("npm update -g", originalError))
+			return fmt.Errorf("sudo retry declined: %w", npm.CommandError(command, originalError))
 		}
 		npmPath := exec.CommandPath("npm")
-		args := append([]string{npmPath, "update", "-g", "--prefix", prefix}, packages...)
+		args := append([]string{npmPath, operation, "-g", "--prefix", prefix}, packages...)
 		cmd := osexec.Command("sudo", args...)
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = tty, tty, tty
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("sudo npm update failed: %w", err)
+			return fmt.Errorf("sudo npm %s failed: %w", operation, err)
 		}
 		return nil
 	})
 	if err != nil {
 		return err
 	}
-	displayPrintln("    [OK] npm packages updated with sudo")
+	displayPrintf("    [OK] npm %s completed with sudo\n", operation)
 	return nil
 }

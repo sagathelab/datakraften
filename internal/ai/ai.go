@@ -28,7 +28,9 @@ type InstallReport struct {
 }
 
 type InstallOptions struct {
-	OnError func(string)
+	OnError    func(string)
+	RetryNPM   func(string, string) error
+	OnNPMError func(string)
 }
 
 func (r *InstallReport) addError(message string, opts InstallOptions) {
@@ -103,7 +105,7 @@ func EnsureAIToolsWithOptions(cfg *config.Config, opts InstallOptions) InstallRe
 			continue
 		}
 
-		status, detail, err := installCLI(tool)
+		status, detail, err := installCLI(tool, opts)
 		switch {
 		case err != nil:
 			report.addError(fmt.Sprintf("%s: %s", tool.name, err), opts)
@@ -145,7 +147,7 @@ func ghExtensionInstalled(repo string) bool {
 	return strings.Contains(r.Stdout, repo) || strings.Contains(r.Stdout, name)
 }
 
-func installCLI(tool cliTool) (installStatus, string, error) {
+func installCLI(tool cliTool, opts InstallOptions) (installStatus, string, error) {
 	switch {
 	case tool.ghExtension != "":
 		if !commandExists("gh") {
@@ -168,6 +170,15 @@ func installCLI(tool cliTool) (installStatus, string, error) {
 		outputPrintf("    Installing %s via npm...\n", tool.name)
 		r := runCommand("npm", "install", "-g", tool.npmPkg)
 		if r.Code != 0 {
+			if opts.OnNPMError != nil {
+				opts.OnNPMError(r.Stderr)
+			}
+			if npm.IsPermissionError(r.Stderr) && opts.RetryNPM != nil {
+				if err := opts.RetryNPM(tool.npmPkg, r.Stderr); err != nil {
+					return installStatusSkipped, "", err
+				}
+				return installStatusInstalled, "", nil
+			}
 			return installStatusSkipped, "", npm.CommandError("npm install -g", r.Stderr)
 		}
 		return installStatusInstalled, "", nil

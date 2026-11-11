@@ -5,10 +5,24 @@ import (
 	"strings"
 )
 
+func IsPermissionError(stderr string) bool {
+	return strings.Contains(stderr, "EACCES") || strings.Contains(stderr, "EPERM")
+}
+
 func CommandError(operation, stderr string) error {
 	detail := strings.TrimSpace(stderr)
-	if strings.Contains(detail, "EACCES") || strings.Contains(detail, "EPERM") {
-		return fmt.Errorf("%s failed due to insufficient permissions; use a Node version manager or run 'dk npm setup' to configure a user-writable npm prefix (https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally). Existing global packages may need to be reinstalled in the new location. Details: %s", operation, detail)
+	if IsPermissionError(detail) {
+		code := "EACCES"
+		if !strings.Contains(detail, code) {
+			code = "EPERM"
+		}
+		return fmt.Errorf("%s failed (%s): npm prefix is not writable; run 'dk npm setup' for a user-writable npm prefix or use a Node version manager", operation, code)
 	}
-	return fmt.Errorf("%s failed: %s", operation, detail)
+	for _, line := range strings.Split(detail, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			return fmt.Errorf("%s failed: %s", operation, line)
+		}
+	}
+	return fmt.Errorf("%s failed", operation)
 }

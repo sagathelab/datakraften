@@ -60,7 +60,9 @@ class ProgressTTYTest(unittest.TestCase):
         self.assertIn(b'\x1b[90m', output)
         self.assertIn(b'\x1b[31m', output)
         self.assertIn(b'\x1b[2K', output)
-        self.assertIn(b'team source requires a URL', output)
+        self.assertIn(b'Team source is active but no url is set', output)
+        self.assertNotIn(b'Usage:', output)
+        self.assertNotIn(b'Error: preview failed:', output)
 
     def test_no_color_uses_plain_text(self):
         status, output = self.run_preview('source: default\n', no_color=True)
