@@ -535,6 +535,10 @@ func RunDoctorSystem(r *doctor.Report) {
 }
 
 func RunDoctorTools(r *doctor.Report) {
+	brewPath := ""
+	if !exec.CommandExists("brew") {
+		brewPath = doctorBrewOutsidePath()
+	}
 	tools := []struct {
 		name      string
 		id        string
@@ -551,11 +555,18 @@ func RunDoctorTools(r *doctor.Report) {
 
 	for _, t := range tools {
 		fix := ""
+		message := ""
 		if !t.installed {
 			fix = "run 'dk apply' to install missing tools"
+			if t.name == "brew" {
+				if brewPath != "" {
+					message = "Homebrew found at " + brewPath + " but not in PATH"
+					fix = "Add Homebrew to your shell PATH: " + doctorBrewPathCommand(brewPath)
+				}
+			}
 		}
 		r.Add(doctor.Check{ID: t.id, Title: t.name + " installed", Category: "tools",
-			Severity: "warning", Status: boolStatus(t.installed), Fix: fix})
+			Severity: "warning", Status: boolStatus(t.installed), Message: message, Fix: fix})
 	}
 
 	displayHeading(doctorOutput(), "Tools")
@@ -585,6 +596,9 @@ func RunDoctorTools(r *doctor.Report) {
 	for _, t := range tools {
 		if t.installed {
 			displayFprintf(doctorOutput(), "    [OK] %s\n", t.name)
+		} else if t.name == "brew" && brewPath != "" {
+			displayFprintf(doctorOutput(), "    [WARN] brew found at %s but not in PATH\n", brewPath)
+			displayFprintf(doctorOutput(), "           Run: %s\n", doctorBrewPathCommand(brewPath))
 		} else {
 			displayFprintf(doctorOutput(), "    [SKIP] %s not installed\n", t.name)
 		}
@@ -596,6 +610,10 @@ func RunDoctorRuntimes(r *doctor.Report) {
 	pv := runtimes.PythonVersion()
 	gv := runtimes.GoVersion()
 	dv := runtimes.DotnetVersion()
+	goPath := ""
+	if gv == "" && !exec.CommandExists("go") {
+		goPath = doctorGoOutsidePath()
+	}
 
 	fixRuntime := func(missing string) string {
 		if missing != "" {
@@ -607,8 +625,13 @@ func RunDoctorRuntimes(r *doctor.Report) {
 		Severity: "warning", Status: boolStatus(nv != ""), Message: nv, Fix: fixRuntime(nv)})
 	r.Add(doctor.Check{ID: "runtime.python", Title: "Python", Category: "runtimes",
 		Severity: "warning", Status: boolStatus(pv != ""), Message: pv, Fix: fixRuntime(pv)})
+	goMessage, goFix := gv, fixRuntime(gv)
+	if goPath != "" {
+		goMessage = "Go found at " + goPath + " but not in PATH"
+		goFix = "Add Go to your shell PATH: " + doctorGoPathCommand(goPath)
+	}
 	r.Add(doctor.Check{ID: "runtime.go", Title: "Go", Category: "runtimes",
-		Severity: "warning", Status: boolStatus(gv != ""), Message: gv, Fix: fixRuntime(gv)})
+		Severity: "warning", Status: boolStatus(gv != ""), Message: goMessage, Fix: goFix})
 	r.Add(doctor.Check{ID: "runtime.dotnet", Title: ".NET SDK", Category: "runtimes",
 		Severity: "warning", Status: boolStatus(dv != ""), Message: dv, Fix: fixRuntime(dv)})
 
@@ -625,6 +648,9 @@ func RunDoctorRuntimes(r *doctor.Report) {
 	}
 	if gv != "" {
 		displayFprintf(doctorOutput(), "    [OK] Go %s\n", gv)
+	} else if goPath != "" {
+		displayFprintf(doctorOutput(), "    [WARN] Go found at %s but not in PATH\n", goPath)
+		displayFprintf(doctorOutput(), "           Run: %s\n", doctorGoPathCommand(goPath))
 	} else {
 		displayFprintln(doctorOutput(), "    [SKIP] Go not installed")
 	}

@@ -79,7 +79,7 @@ func newDoctorCmd() *cobra.Command {
 				displayHeading(os.Stdout, "Shell")
 				displayPrintf("    [OK] Current shell: %s\n", system.CurrentShell())
 				if state.ManagedShell {
-					displayPrintln("    [OK] Managed config active")
+					displayPrintln("    [OK] Managed Fish config saved")
 				} else {
 					displayPrintln("    [SKIP] Run 'dk apply' to configure shell")
 				}
