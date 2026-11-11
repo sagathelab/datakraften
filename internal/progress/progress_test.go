@@ -214,8 +214,16 @@ func (s *terminalModel) Write(p []byte) (int, error) {
 				s.y += v
 			case 'C':
 				s.x += v
+			case 'G':
+				s.x = v - 1
 			case 'K':
-				s.rows[s.y] = []rune(strings.Repeat(" ", s.w))
+				if string(p[start:i-1]) == "2" {
+					s.rows[s.y] = []rune(strings.Repeat(" ", s.w))
+				} else {
+					for x := s.x; x < s.w; x++ {
+						s.rows[s.y][x] = ' '
+					}
+				}
 			}
 			if cmd != 'm' {
 				s.wrap = false
@@ -463,7 +471,7 @@ func TestTerminalWriterPlainOutput(t *testing.T) {
 	}
 }
 
-func TestTerminalWriterFragmentedSequencesFallBackSafely(t *testing.T) {
+func TestTerminalWriterTracksFragmentedSequences(t *testing.T) {
 	for _, tc := range []struct{ first, second string }{
 		{"\x1b[", "32mtext\x1b[0m\r\n"},
 		{"\xc3", "\xa6\r\n"},
@@ -473,14 +481,47 @@ func TestTerminalWriterFragmentedSequencesFallBackSafely(t *testing.T) {
 		_ = r.Running("work")
 		w := r.TerminalWriter()
 		_, _ = w.Write([]byte(tc.first))
-		if r.active || !r.handoffHeading {
-			t.Fatalf("fragment retained anchor: %q", tc.first)
+		if !r.active {
+			t.Fatalf("fragment lost anchor: %q", tc.first)
 		}
 		_, _ = w.Write([]byte(tc.second))
+		if !r.active {
+			t.Fatalf("completed fragment lost anchor: %q", tc.first)
+		}
 		_ = r.Done("work")
 		if !strings.Contains(out.String(), tc.first+tc.second) {
 			t.Fatalf("fragmented bytes changed: %q", out.String())
 		}
+	}
+}
+
+func TestTerminalWriterTracksNpmSpinner(t *testing.T) {
+	s := model(80, 20, 0)
+	r := anchored(s)
+	_ = r.Running("Updating npm")
+	w := r.TerminalWriter()
+	for _, part := range []string{"\x1b[", "1G\x1b[0K\xe2", "\xa0\x99", "\x1b[1G\x1b[0K", "changed 2 packages\r\n"} {
+		if _, err := w.Write([]byte(part)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !r.active {
+		t.Fatal("npm spinner lost the progress anchor")
+	}
+	_ = r.Done("Updating npm")
+	if s.row(0) != "● Updating npm" || s.row(1) != "changed 2 packages" || !strings.Contains(s.raw.String(), "\x1b[32m●\x1b[0m Updating npm") {
+		t.Fatalf("unexpected screen: %q %q; %q", s.row(0), s.row(1), s.raw.String())
+	}
+}
+
+func TestTerminalWriterFlushesIncompleteSequences(t *testing.T) {
+	var out bytes.Buffer
+	r := &Renderer{out: &out, color: true, terminalHeadings: true, known: true, size: func() (int, int, error) { return 80, 20, nil }}
+	_ = r.Running("work")
+	w := r.TerminalWriter().(*terminalWriter)
+	_, _ = w.Write([]byte("\x1b["))
+	if err := w.Flush(); err != nil || r.active || !strings.HasSuffix(out.String(), "\x1b[") {
+		t.Fatalf("incomplete output: active=%v err=%v output=%q", r.active, err, out.String())
 	}
 }
 

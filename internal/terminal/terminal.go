@@ -78,6 +78,9 @@ func Run(cmd *exec.Cmd, tty *os.File, out io.Writer) (runErr error) {
 		if errors.Is(err, syscall.EIO) {
 			err = nil
 		}
+		if f, ok := out.(interface{ Flush() error }); ok {
+			err = errors.Join(err, f.Flush())
+		}
 		outputDone <- err
 	}()
 	waitDone := make(chan error, 1)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"unicode"
@@ -206,11 +207,68 @@ func (r *Renderer) WriteFormatted(p []byte, format func([]byte) []byte) (int, er
 
 func (r *Renderer) ColorEnabled() bool { return r.color }
 
-type terminalWriter struct{ renderer *Renderer }
+type terminalWriter struct {
+	renderer *Renderer
+	pending  []byte
+}
 
-func (w terminalWriter) Write(p []byte) (int, error) { return w.renderer.writeTerminal(p) }
+func (w *terminalWriter) Write(p []byte) (int, error) {
+	w.pending = append(w.pending, p...)
+	end := completeTerminalPrefix(w.pending)
+	if end > 0 {
+		if _, err := w.renderer.writeTerminal(w.pending[:end]); err != nil {
+			return 0, err
+		}
+		w.pending = append(w.pending[:0], w.pending[end:]...)
+	}
+	if len(w.pending) > 4096 {
+		if err := w.Flush(); err != nil {
+			return 0, err
+		}
+	}
+	return len(p), nil
+}
 
-func (r *Renderer) TerminalWriter() io.Writer { return terminalWriter{renderer: r} }
+func (w *terminalWriter) Flush() error {
+	if len(w.pending) == 0 {
+		return nil
+	}
+	_, err := w.renderer.writeTerminal(w.pending)
+	w.pending = nil
+	return err
+}
+
+func completeTerminalPrefix(p []byte) int {
+	for i := 0; i < len(p); {
+		start := i
+		if p[i] == '\x1b' {
+			if i+1 == len(p) {
+				return start
+			}
+			if p[i+1] == '[' {
+				i += 2
+				for i < len(p) && (p[i] < 0x40 || p[i] > 0x7e) {
+					i++
+				}
+				if i == len(p) {
+					return start
+				}
+				i++
+				continue
+			}
+			i += 2
+			continue
+		}
+		if !utf8.FullRune(p[i:]) {
+			return start
+		}
+		_, size := utf8.DecodeRune(p[i:])
+		i += size
+	}
+	return len(p)
+}
+
+func (r *Renderer) TerminalWriter() io.Writer { return &terminalWriter{renderer: r} }
 
 func (r *Renderer) writeTerminal(p []byte) (int, error) {
 	r.mu.Lock()
@@ -267,13 +325,39 @@ func (r *Renderer) trackTerminal(p []byte) (int, int, bool, bool) {
 				return 0, 0, false, false
 			}
 			i++
-			for i < len(p) && ((p[i] >= '0' && p[i] <= '9') || p[i] == ';' || p[i] == ':') {
+			start := i
+			for i < len(p) && (p[i] < 0x40 || p[i] > 0x7e) {
 				i++
 			}
-			if i >= len(p) || p[i] != 'm' {
+			if i >= len(p) {
 				return 0, 0, false, false
 			}
+			params, action := string(p[start:i]), p[i]
 			i++
+			switch action {
+			case 'm':
+				for _, c := range params {
+					if (c < '0' || c > '9') && c != ';' && c != ':' {
+						return 0, 0, false, false
+					}
+				}
+			case 'G':
+				column := 1
+				if params != "" {
+					var err error
+					column, err = strconv.Atoi(params)
+					if err != nil || column < 1 || column > r.width {
+						return 0, 0, false, false
+					}
+				}
+				col, wrap = column-1, false
+			case 'K':
+				if params != "" && params != "0" && params != "1" && params != "2" {
+					return 0, 0, false, false
+				}
+			default:
+				return 0, 0, false, false
+			}
 		case c == '\r':
 			col, wrap = 0, false
 		case c == '\n':
@@ -287,7 +371,7 @@ func (r *Renderer) trackTerminal(p []byte) (int, int, bool, bool) {
 				col--
 			}
 			wrap = false
-		case (c >= 32 && c <= 126) || (unicode.Is(unicode.Latin, c) && unicode.IsLetter(c)) || c == '–' || c == '—':
+		case (c >= 32 && c <= 126) || (unicode.Is(unicode.Latin, c) && unicode.IsLetter(c)) || (c >= 0x2800 && c <= 0x28ff) || c == '–' || c == '—':
 			if wrap {
 				distance++
 				col, wrap = 0, false

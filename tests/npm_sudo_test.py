@@ -49,8 +49,14 @@ def terminal_screen(data, width=120, height=50):
             elif action == 'C':
                 x = min(width - 1, x + n)
                 wrap = False
+            elif action == 'G':
+                x = min(width - 1, n - 1)
+                wrap = False
             elif action == 'K':
-                rows[y] = [(' ', None) for _ in range(width)]
+                if sequence == '2':
+                    rows[y] = [(' ', None) for _ in range(width)]
+                else:
+                    rows[y][x:] = [(' ', None) for _ in range(width - x)]
                 wrap = False
             continue
         if c == '\r':
@@ -194,7 +200,7 @@ esac
         binary = os.environ.get('DK_TEST_BINARY')
         if not binary:
             self.skipTest('set DK_TEST_BINARY to the built dk executable')
-        cases = ((0, 32, 'normal'), (42, 31, 'normal'), (0, None, 'scroll'), (0, None, 'resize'), (130, None, 'interrupt'), (0, None, 'suspend'))
+        cases = ((0, 32, 'normal'), (0, 32, 'npm_spinner'), (42, 31, 'normal'), (0, None, 'scroll'), (0, None, 'resize'), (130, None, 'interrupt'), (0, None, 'suspend'))
         for exit_code, expected_color, mode in cases:
             with self.subTest(exit_code=exit_code, mode=mode), tempfile.TemporaryDirectory() as tmp:
                 root = pathlib.Path(tmp)
@@ -226,6 +232,11 @@ try:
     password = sys.stdin.readline()
 finally:
     termios.tcsetattr(0, termios.TCSANOW, original)
+if {mode!r} == "npm_spinner":
+    for part in (b"\\x1b[", b"1G\\x1b[0K\\xe2", b"\\xa0\\x99", b"\\x1b[1G\\x1b[0K"):
+        sys.stdout.buffer.write(part)
+        sys.stdout.buffer.flush()
+        time.sleep(0.03)
 sys.stdout.write("\\nchanged packages\\n")
 if {mode!r} == "resize":
     time.sleep(0.15)
