@@ -496,7 +496,7 @@ func RunDoctorSystem(r *doctor.Report) {
 	r.Add(doctor.Check{ID: "shell", Title: "Current shell", Category: "system", Severity: "info",
 		Status: "pass", Message: shell_})
 
-	fmt.Fprintln(doctorOutput(), "  System")
+	displayHeading(doctorOutput(), "System")
 	if wsl {
 		displayFprintf(doctorOutput(), "    [OK] WSL%d detected\n", wslVer)
 	} else {
@@ -537,7 +537,7 @@ func RunDoctorTools(r *doctor.Report) {
 			Severity: "warning", Status: boolStatus(t.installed), Fix: fix})
 	}
 
-	fmt.Fprintln(doctorOutput(), "  Tools")
+	displayHeading(doctorOutput(), "Tools")
 	if exec.CommandExists("npm") {
 		result := exec.Run("npm", "config", "get", "prefix")
 		prefix := strings.TrimSpace(result.Stdout)
@@ -591,7 +591,7 @@ func RunDoctorRuntimes(r *doctor.Report) {
 	r.Add(doctor.Check{ID: "runtime.dotnet", Title: ".NET SDK", Category: "runtimes",
 		Severity: "warning", Status: boolStatus(dv != ""), Message: dv, Fix: fixRuntime(dv)})
 
-	fmt.Fprintln(doctorOutput(), "  Runtimes")
+	displayHeading(doctorOutput(), "Runtimes")
 	if nv != "" {
 		displayFprintf(doctorOutput(), "    [OK] Node.js %s\n", nv)
 	} else {
@@ -615,7 +615,7 @@ func RunDoctorRuntimes(r *doctor.Report) {
 }
 
 func RunDoctorEditors(r *doctor.Report) {
-	fmt.Fprintln(doctorOutput(), "  Editors")
+	displayHeading(doctorOutput(), "Editors")
 	for _, ed := range editors.DetectAll() {
 		status := "pass"
 		msg := ""
@@ -665,7 +665,7 @@ func RunDoctorDocker(r *doctor.Report) {
 	r.Add(doctor.Check{ID: "docker", Title: "Docker", Category: "docker",
 		Severity: "warning", Status: status, Message: msg, Fix: fix})
 
-	fmt.Fprintln(doctorOutput(), "  Docker")
+	displayHeading(doctorOutput(), "Docker")
 	if dockerStatus.CliInstalled && dockerStatus.DaemonRunning {
 		displayFprintln(doctorOutput(), "    [OK] Docker running")
 	} else {

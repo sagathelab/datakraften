@@ -213,7 +213,7 @@ func initDefault(configPath, configDir string, existing bool) error {
 	wsl, wslVer := system.DetectWSL()
 	distro, distroVer := system.Distro()
 
-	fmt.Println("  Environment")
+	displayHeading(os.Stdout, "Environment")
 	if wsl {
 		displayPrintf("    [OK] WSL%d\n", wslVer)
 	} else {
@@ -225,18 +225,19 @@ func initDefault(configPath, configDir string, existing bool) error {
 	fmt.Printf("    Source: default\n")
 	fmt.Println()
 
-	fmt.Println("  Config preview")
+	displayHeading(os.Stdout, "Config preview")
 	for _, line := range strings.Split(cfg, "\n") {
 		fmt.Printf("    %s\n", line)
 	}
 	fmt.Println()
 	fmt.Printf("  Config: %s\n", configPath)
 	fmt.Println()
-	displayPrintln("  [OK] Default config created")
+	displayComplete(os.Stdout, "Default config created")
 	fmt.Println()
-	fmt.Println("  Next steps")
+	displayNextSteps(os.Stdout)
 	fmt.Println("    1. Run 'dk apply' to install tools")
 	fmt.Println("    2. Run 'dk doctor' to verify")
+	fmt.Println()
 
 	return nil
 }
@@ -294,19 +295,20 @@ func initCustomPrompt(configPath, configDir string, existing bool) error {
 	state.Save()
 
 	fmt.Println()
-	fmt.Println("  Config preview")
+	displayHeading(os.Stdout, "Config preview")
 	for _, line := range strings.Split(cfg, "\n") {
 		fmt.Printf("    %s\n", line)
 	}
 	fmt.Println()
 	fmt.Printf("  Config: %s\n", configPath)
 	fmt.Println()
-	displayPrintf("  [OK] Custom config created at %s\n", configPath)
+	displayComplete(os.Stdout, fmt.Sprintf("Custom config created at %s", configPath))
 	fmt.Println()
-	fmt.Println("  Next steps")
+	displayNextSteps(os.Stdout)
 	fmt.Println("    1. Edit the config file to customize your toolset")
 	fmt.Println("    2. Run 'dk apply' to install tools")
 	fmt.Println("    3. Run 'dk doctor' to verify")
+	fmt.Println()
 
 	return nil
 }
@@ -368,19 +370,20 @@ func initCustomMerge(configPath, configDir string, existing bool, customFile str
 	state.Save()
 
 	fmt.Println()
-	fmt.Println("  Config preview")
+	displayHeading(os.Stdout, "Config preview")
 	for _, line := range strings.Split(finalCfg, "\n") {
 		fmt.Printf("    %s\n", line)
 	}
 	fmt.Println()
 	fmt.Printf("  Config: %s\n", configPath)
 	fmt.Println()
-	displayPrintf("  [OK] Custom config created from %s\n", customFile)
+	displayComplete(os.Stdout, fmt.Sprintf("Custom config created from %s", customFile))
 	fmt.Println()
-	fmt.Println("  Next steps")
+	displayNextSteps(os.Stdout)
 	fmt.Println("    1. Edit the config file to customize your toolset")
 	fmt.Println("    2. Run 'dk apply' to install tools")
 	fmt.Println("    3. Run 'dk doctor' to verify")
+	fmt.Println()
 
 	return nil
 }
@@ -469,7 +472,7 @@ func initTeam(configPath, configDir string, existing bool, url string) error {
 	state.Save()
 
 	fmt.Println()
-	fmt.Println("  Config preview")
+	displayHeading(os.Stdout, "Config preview")
 	for _, line := range strings.Split(thinCfg, "\n") {
 		if strings.TrimSpace(line) != "" {
 			fmt.Printf("    %s\n", line)
@@ -478,11 +481,12 @@ func initTeam(configPath, configDir string, existing bool, url string) error {
 	fmt.Println()
 	fmt.Printf("  Config: %s\n", configPath)
 	fmt.Println()
-	displayPrintln("  [OK] Team config created")
+	displayComplete(os.Stdout, "Team config created")
 	fmt.Println()
-	fmt.Println("  Next steps")
+	displayNextSteps(os.Stdout)
 	fmt.Println("    1. Run 'dk apply' to install tools (fetches remote config)")
 	fmt.Println("    2. Run 'dk doctor' to verify")
+	fmt.Println()
 
 	return nil
 }

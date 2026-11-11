@@ -89,7 +89,7 @@ func TestUpdateAllReturnsErrorWhenAChildUpdateFails(t *testing.T) {
 		}
 	})
 
-	if strings.Contains(output, "[OK] Update complete") {
+	if strings.Contains(output, "✓ Update complete") {
 		t.Fatalf("expected success summary to be omitted, got %q", output)
 	}
 	if !strings.Contains(output, "[ERROR] Update finished with errors") {
@@ -113,7 +113,7 @@ func TestUpdateAllPrintsSuccessWhenNoFailuresOccur(t *testing.T) {
 		}
 	})
 
-	if !strings.Contains(output, "[OK] Update complete") {
+	if !strings.Contains(output, "✓ Update complete") {
 		t.Fatalf("expected success summary, got %q", output)
 	}
 	if !strings.Contains(output, "01 / 02  ·  brew") || !strings.Contains(output, "02 / 02  ·  uv") {
@@ -183,7 +183,7 @@ func TestUpdateAllReportsStepsBeforeRunningThem(t *testing.T) {
 		}
 	})
 	last := -1
-	for _, part := range []string{"01 / 02", "first work", "02 / 02", "second work", "[OK] Update complete"} {
+	for _, part := range []string{"01 / 02", "first work", "02 / 02", "second work", "✓ Update complete"} {
 		next := strings.Index(output, part)
 		if next <= last {
 			t.Fatalf("progress out of order at %q: %q", part, output)

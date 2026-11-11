@@ -95,7 +95,7 @@ func newStatusCmd() *cobra.Command {
 
 			displayTitle(os.Stdout, "status", "Environment overview")
 
-			fmt.Println("  System")
+			displayHeading(os.Stdout, "System")
 			if wsl {
 				displayPrintf("    [OK] WSL%d detected\n", wslVer)
 			} else {
@@ -109,7 +109,7 @@ func newStatusCmd() *cobra.Command {
 			}
 			fmt.Println()
 
-			fmt.Println("  Tools")
+			displayHeading(os.Stdout, "Tools")
 			for _, name := range []string{"git", "gh", "az", "docker", "fnm", "uv"} {
 				if exec.CommandExists(name) {
 					displayPrintf("    [OK] %s\n", name)
@@ -119,7 +119,7 @@ func newStatusCmd() *cobra.Command {
 			}
 			fmt.Println()
 
-			fmt.Println("  Runtimes")
+			displayHeading(os.Stdout, "Runtimes")
 			if v := runtimes.NodeVersion(); v != "" {
 				displayPrintf("    [OK] Node.js %s\n", v)
 			} else {
@@ -142,7 +142,7 @@ func newStatusCmd() *cobra.Command {
 			}
 			fmt.Println()
 
-			fmt.Println("  Editors")
+			displayHeading(os.Stdout, "Editors")
 			for _, ed := range editors.DetectAll() {
 				if ed.Installed {
 					displayPrintf("    [OK] %s\n", ed.Name)
@@ -152,7 +152,7 @@ func newStatusCmd() *cobra.Command {
 			}
 			fmt.Println()
 
-			fmt.Println("  Docker")
+			displayHeading(os.Stdout, "Docker")
 			dockerStatus := docker.Detect()
 			if dockerStatus.DaemonRunning {
 				displayPrintln("    [OK] Docker running")
@@ -164,7 +164,7 @@ func newStatusCmd() *cobra.Command {
 			fmt.Println()
 
 			if state.LastApply != "" {
-				fmt.Println("  Configuration")
+				displayHeading(os.Stdout, "Configuration")
 				fmt.Printf("    Last apply  %s\n", state.LastApply)
 				fmt.Printf("    Source      %s\n", state.ActiveSource)
 				fmt.Println()

@@ -51,6 +51,15 @@ func newUpdateCmd() *cobra.Command {
 				output := newLineStartProgressOutput(os.Stdout)
 				defer output.activate()()
 				err := UpdateToolWithProgress(args[0], dryRun, output.event)
+				if err == nil {
+					fmt.Fprintln(progressWriter())
+					if dryRun {
+						fmt.Fprintln(progressWriter(), "  Preview complete; no updates made")
+					} else {
+						displayComplete(progressWriter(), "Update complete")
+					}
+					fmt.Fprintln(progressWriter())
+				}
 				return finishProgress(output, err)
 			}
 
@@ -153,8 +162,9 @@ func updateAllWithProgress(dryRun bool, hook ProgressHook, showTitle bool) error
 	if dryRun {
 		fmt.Fprintln(progressWriter(), "  Preview complete; no updates made")
 	} else {
-		displayPrintln("  [OK] Update complete")
+		displayComplete(progressWriter(), "Update complete")
 	}
+	fmt.Fprintln(progressWriter())
 	return nil
 }
 

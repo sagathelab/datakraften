@@ -93,7 +93,7 @@ func newUpgradeCmd() *cobra.Command {
 			}
 
 			if !jsonOutput {
-				fmt.Println("  Release")
+				displayHeading(os.Stdout, "Release")
 				fmt.Printf("    Current: %s\n", version)
 				fmt.Printf("    Latest:  %s\n", release.TagName)
 				fmt.Println()
@@ -177,10 +177,11 @@ func newUpgradeCmd() *cobra.Command {
 			if jsonOutput {
 				printUpdateJSON(version, release.TagName, true, binaryName, written, nil)
 			} else {
-				displayPrintf("  [OK] Updated to %s (%d bytes)\n", release.TagName, written)
+				displayComplete(os.Stdout, fmt.Sprintf("Updated to %s (%d bytes)", release.TagName, written))
 				fmt.Println()
-				fmt.Println("  Next steps")
+				displayNextSteps(os.Stdout)
 				fmt.Println("    Run 'dk doctor' to verify your setup.")
+				fmt.Println()
 			}
 
 			return nil

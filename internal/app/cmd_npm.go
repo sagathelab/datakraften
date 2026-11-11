@@ -38,7 +38,7 @@ func newNpmCmd() *cobra.Command {
 		default:
 			return fmt.Errorf("unsupported shell %q; configure npm and PATH manually", shellName)
 		}
-		fmt.Println("  Configuration")
+		displayHeading(os.Stdout, "Configuration")
 		fmt.Printf("    npm prefix: %s\n", prefix)
 		fmt.Printf("    Shell config: %s\n", path)
 		fmt.Println()
@@ -81,10 +81,11 @@ func newNpmCmd() *cobra.Command {
 		if r.Code != 0 {
 			return fmt.Errorf("npm config failed: %s", strings.TrimSpace(r.Stderr))
 		}
-		displayPrintln("  [OK] npm prefix and shell PATH configured")
+		displayComplete(os.Stdout, "npm prefix and shell PATH configured")
 		fmt.Println()
-		fmt.Println("  Next steps")
+		displayNextSteps(os.Stdout)
 		fmt.Println("    Restart your shell to use the new PATH.")
+		fmt.Println()
 		return nil
 	}}
 	setup.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Show changes without applying them")

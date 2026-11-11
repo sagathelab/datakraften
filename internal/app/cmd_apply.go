@@ -70,10 +70,10 @@ func newApplyCmd() *cobra.Command {
 			if len(report.Errors) > 0 {
 				displayEmphasis(progressWriter(), fmt.Sprintf("  ! Apply finished with %d error(s)", len(report.Errors)), "1;31")
 			} else {
-				displayEmphasis(progressWriter(), "  ✓ Apply complete", "1;32")
+				displayComplete(progressWriter(), "Apply complete")
 			}
 			fmt.Fprintln(progressWriter())
-			displayEmphasis(progressWriter(), "  Summary", "1")
+			displayHeading(progressWriter(), "Summary")
 			fmt.Fprintln(progressWriter(), "  -------")
 			row := func(label, value string) {
 				fmt.Fprintf(progressWriter(), "    %-16s %s\n", label, value)
@@ -119,8 +119,7 @@ func newApplyCmd() *cobra.Command {
 			}
 
 			fmt.Fprintln(progressWriter())
-			displayEmphasis(progressWriter(), "  Next steps", "1")
-			fmt.Fprintln(progressWriter())
+			displayNextSteps(progressWriter())
 			if report.Shell {
 				fmt.Fprintln(progressWriter(), "    Restart your shell or run: exec fish")
 			}

@@ -46,7 +46,7 @@ func newDoctorCmd() *cobra.Command {
 
 				if wsl {
 					fmt.Println()
-					fmt.Println("  WSL Details")
+					displayHeading(os.Stdout, "WSL Details")
 					displayPrintf("    [OK] WSL%d\n", wslVer)
 					displayPrintf("    [OK] %s %s\n", distro, distroVer)
 				}
@@ -76,7 +76,7 @@ func newDoctorCmd() *cobra.Command {
 			if category == "" || category == "shell" {
 				report.Add(doctor.Check{ID: "shell", Title: "Current shell", Category: "shell",
 					Severity: "info", Status: "pass", Message: system.CurrentShell()})
-				fmt.Println("  Shell")
+				displayHeading(os.Stdout, "Shell")
 				displayPrintf("    [OK] Current shell: %s\n", system.CurrentShell())
 				if state.ManagedShell {
 					displayPrintln("    [OK] Managed config active")
@@ -86,11 +86,13 @@ func newDoctorCmd() *cobra.Command {
 				fmt.Println()
 			}
 
-			report.Print()
+			displayHeading(os.Stdout, "Summary")
+			fmt.Println("  -------")
+			fmt.Println("    " + report.Summary())
 			fmt.Println()
 
 			if fix {
-				fmt.Println("  Auto-fix")
+				displayHeading(os.Stdout, "Auto-fix")
 				runAutoFix(report, category)
 				fmt.Println()
 			}
@@ -123,13 +125,13 @@ func runAutoFix(r *doctor.Report, category string) {
 		}
 
 		if strings.HasPrefix(c.Fix, "run '") {
-			fmt.Printf("    [ACTION] %s: %s\n", c.Title, c.Fix)
+			displayPrintf("    [ACTION] %s: %s\n", c.Title, c.Fix)
 			skipped++
 			continue
 		}
 
 		if strings.HasPrefix(c.Fix, "Install") || strings.HasPrefix(c.Fix, "Start") || strings.HasPrefix(c.Fix, "Enable") || strings.HasPrefix(c.Fix, "If") {
-			fmt.Printf("    [ACTION] %s: %s\n", c.Title, c.Fix)
+			displayPrintf("    [ACTION] %s: %s\n", c.Title, c.Fix)
 			skipped++
 			continue
 		}
@@ -152,7 +154,7 @@ func runAutoFix(r *doctor.Report, category string) {
 			}
 		}
 
-		fmt.Printf("    [ACTION] %s: %s\n", c.Title, c.Fix)
+		displayPrintf("    [ACTION] %s: %s\n", c.Title, c.Fix)
 		skipped++
 	}
 

@@ -25,6 +25,11 @@ func (r *Report) Add(c Check) {
 }
 
 func (r *Report) Print() {
+	fmt.Println("  Summary")
+	fmt.Println("    " + r.Summary())
+}
+
+func (r *Report) Summary() string {
 	critical, warnings, info, passed := 0, 0, 0, 0
 
 	for _, c := range r.Checks {
@@ -41,8 +46,7 @@ func (r *Report) Print() {
 			}
 		}
 	}
-	fmt.Println("  Summary")
-	fmt.Printf("    %d passed  ·  %d critical  ·  %d warnings  ·  %d informational\n", passed, critical, warnings, info)
+	return fmt.Sprintf("%d passed  ·  %d critical  ·  %d warnings  ·  %d informational", passed, critical, warnings, info)
 }
 
 func (r *Report) PrintJSON() {

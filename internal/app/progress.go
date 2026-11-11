@@ -137,7 +137,7 @@ func (p *progressOutput) Write(b []byte) (int, error) {
 
 func (p *progressOutput) writeStatus(text string) {
 	_, err := p.renderer.WriteFormatted([]byte(text), func(b []byte) []byte {
-		return []byte(strings.Replace(formatStatus(string(b), p.renderer.ColorEnabled()), "m● [", "m[", 1))
+		return []byte(formatStatus(string(b), p.renderer.ColorEnabled()))
 	})
 	if err != nil {
 		p.mu.Lock()

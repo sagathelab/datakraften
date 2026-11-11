@@ -26,6 +26,19 @@ func displayEmphasis(w io.Writer, text, color string) {
 	}
 }
 
+func displayHeading(w io.Writer, title string) {
+	displayEmphasis(w, "  "+title, "1")
+}
+
+func displayNextSteps(w io.Writer) {
+	displayHeading(w, "Next steps")
+	fmt.Fprintln(w)
+}
+
+func displayComplete(w io.Writer, message string) {
+	displayEmphasis(w, "  ✓ "+message, "1;32")
+}
+
 func colorStatus(w io.Writer, text string) string {
 	return formatStatus(text, displayColorEnabled(w))
 }
@@ -34,11 +47,11 @@ func formatStatus(text string, color bool) string {
 	if !color {
 		return text
 	}
-	for _, item := range []struct{ label, color string }{{"[OK]", "32"}, {"[PLAN]", "36"}, {"[SKIP]", "90"}, {"[WARN]", "33"}, {"[ERROR]", "31"}} {
+	for _, item := range []struct{ label, color string }{{"[OK]", "32"}, {"[PLAN]", "36"}, {"[SKIP]", "90"}, {"[WARN]", "33"}, {"[ACTION]", "33"}, {"[ERROR]", "31"}} {
 		trimmed := strings.TrimLeft(text, " ")
 		if strings.HasPrefix(trimmed, item.label) {
 			indent := text[:len(text)-len(trimmed)]
-			return indent + "\x1b[" + item.color + "m● " + item.label + "\x1b[0m" + strings.TrimPrefix(trimmed, item.label)
+			return indent + "\x1b[" + item.color + "m" + item.label + "\x1b[0m" + strings.TrimPrefix(trimmed, item.label)
 		}
 	}
 	return text
