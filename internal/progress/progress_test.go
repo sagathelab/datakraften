@@ -385,6 +385,129 @@ func TestHandoffKeepsRunningHeadingVisible(t *testing.T) {
 	}
 }
 
+func TestTerminalWriterTracksInteractiveOutput(t *testing.T) {
+	s := model(50, 12, 0)
+	r := anchored(s)
+	r.terminalHeadings = true
+	_ = r.Running("Updating npm")
+	w := r.TerminalWriter()
+	for _, part := range []string{"  Continue? ", "y\r\n", "[sudo] password: ", "\r\n", "\x1b[32mchanged\x1b[0m 2 packages\r\n"} {
+		if _, err := w.Write([]byte(part)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !r.active {
+		t.Fatal("lost anchor while tracking prompt")
+	}
+	_ = r.Done("Updating npm")
+	if s.row(0) != "● Updating npm" || !strings.Contains(s.raw.String(), "\x1b[32m●\x1b[0m Updating npm") {
+		t.Fatalf("missing green heading: %q", s.raw.String())
+	}
+	if s.row(1) != "  Continue? y" || s.row(2) != "[sudo] password:" || s.row(3) != "changed 2 packages" {
+		t.Fatalf("damaged terminal output: %q, %q, %q", s.row(1), s.row(2), s.row(3))
+	}
+}
+
+func TestTerminalWriterFallsBackBeforeUnsafeOutput(t *testing.T) {
+	s := model(50, 12, 0)
+	r := anchored(s)
+	r.terminalHeadings = true
+	_ = r.Running("Updating npm")
+	_, _ = r.TerminalWriter().Write([]byte("unsupported: 😀\r\n"))
+	if r.active || !r.handoffHeading {
+		t.Fatal("unsafe text retained anchor")
+	}
+	_ = r.Done("Updating npm")
+	count := 0
+	for i := range s.rows {
+		if s.row(i) == "● Updating npm" {
+			count++
+		}
+	}
+	if count != 1 || !strings.Contains(s.raw.String(), "\x1b[37m●\x1b[0m Updating npm") {
+		t.Fatalf("unsafe fallback: count=%d output=%q", count, s.raw.String())
+	}
+}
+
+func TestTerminalWriterTracksWrapAndScroll(t *testing.T) {
+	s := model(12, 4, 0)
+	r := anchored(s)
+	r.terminalHeadings = true
+	_ = r.Running("work")
+	_, _ = r.TerminalWriter().Write([]byte(strings.Repeat("x", 13) + "\r\n"))
+	if !r.active || r.distance != 3 {
+		t.Fatalf("wrap tracking: active=%v distance=%d", r.active, r.distance)
+	}
+	_, _ = r.TerminalWriter().Write([]byte("more\r\n"))
+	if r.active || !r.handoffHeading {
+		t.Fatal("expected conservative fallback before scroll")
+	}
+}
+
+func TestTerminalWriterTracksBackspace(t *testing.T) {
+	s := model(20, 10, 0)
+	r := anchored(s)
+	_ = r.Running("work")
+	_, _ = r.TerminalWriter().Write([]byte("typo\b\bOK\r\n"))
+	if !r.active || r.distance != 2 || r.col != 0 {
+		t.Fatalf("backspace tracking: active=%v distance=%d col=%d", r.active, r.distance, r.col)
+	}
+}
+
+func TestTerminalWriterPlainOutput(t *testing.T) {
+	var out bytes.Buffer
+	r := New(&out)
+	input := []byte("password: \r\n\x1b[31merror\x1b[0m\r\n")
+	if n, err := r.TerminalWriter().Write(input); err != nil || n != len(input) || !bytes.Equal(out.Bytes(), input) {
+		t.Fatalf("terminal output n=%d err=%v got=%q", n, err, out.Bytes())
+	}
+}
+
+func TestTerminalWriterFragmentedSequencesFallBackSafely(t *testing.T) {
+	for _, tc := range []struct{ first, second string }{
+		{"\x1b[", "32mtext\x1b[0m\r\n"},
+		{"\xc3", "\xa6\r\n"},
+	} {
+		var out bytes.Buffer
+		r := &Renderer{out: &out, color: true, terminalHeadings: true, known: true, size: func() (int, int, error) { return 80, 20, nil }}
+		_ = r.Running("work")
+		w := r.TerminalWriter()
+		_, _ = w.Write([]byte(tc.first))
+		if r.active || !r.handoffHeading {
+			t.Fatalf("fragment retained anchor: %q", tc.first)
+		}
+		_, _ = w.Write([]byte(tc.second))
+		_ = r.Done("work")
+		if !strings.Contains(out.String(), tc.first+tc.second) {
+			t.Fatalf("fragmented bytes changed: %q", out.String())
+		}
+	}
+}
+
+func TestTerminalWriterCanStartNextStep(t *testing.T) {
+	for _, unsupported := range []bool{false, true} {
+		s := model(60, 20, 0)
+		r := anchored(s)
+		r.terminalHeadings = true
+		_ = r.Running("first")
+		output := "done\r\n"
+		if unsupported {
+			output = "done 😀\r\n"
+		}
+		_, _ = r.TerminalWriter().Write([]byte(output))
+		_, _ = r.Write([]byte("    [OK] Command completed\n"))
+		_ = r.Done("first")
+		_ = r.Running("second")
+		if !r.active {
+			t.Fatalf("could not anchor next step after fallback=%v", unsupported)
+		}
+		_ = r.Done("second")
+		if !strings.Contains(s.raw.String(), "\x1b[32m●\x1b[0m second") {
+			t.Fatalf("next step not completed after fallback=%v: %q", unsupported, s.raw.String())
+		}
+	}
+}
+
 func TestTerminalHeadingsSurviveUntrackableOutput(t *testing.T) {
 	s := model(80, 20, 0)
 	r := anchored(s)

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
+	osexec "os/exec"
 	"sync"
 
 	"github.com/sagathelab/datakraften/internal/exec"
@@ -16,6 +16,7 @@ import (
 	"github.com/sagathelab/datakraften/internal/progress"
 	"github.com/sagathelab/datakraften/internal/runtimes"
 	"github.com/sagathelab/datakraften/internal/shell"
+	"github.com/sagathelab/datakraften/internal/terminal"
 )
 
 type progressOutput struct {
@@ -87,30 +88,33 @@ func (p *progressOutput) runSudo(args ...string) exec.Result {
 	if !term.IsTerminal(int(os.Stdin.Fd())) || !term.IsTerminal(int(os.Stdout.Fd())) || !term.IsTerminal(int(os.Stderr.Fd())) {
 		return exec.Run("sudo", append([]string{"-n"}, args...)...)
 	}
-	var result exec.Result
-	ran := false
-	err := p.renderer.Handoff(func() error {
-		ran = true
-		result = exec.RunWithOptions(exec.Options{
-			Stdin:  os.Stdin,
-			Stdout: os.Stdout,
-			Stderr: os.Stderr,
-		}, "sudo", args...)
-		if result.Code != 0 && result.Stderr == "" {
-			result.Stderr = fmt.Sprintf("sudo exited with status %d (see terminal output)", result.Code)
-		}
-		return nil
-	})
+	tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
 	if err != nil {
-		if !ran {
-			return exec.Result{Code: -1, Stderr: fmt.Sprintf("terminal handoff failed: %s", err)}
-		}
-		result.Stderr = strings.TrimSpace(result.Stderr + "\nterminal handoff failed: " + err.Error())
-		if result.Code == 0 {
-			result.Code = -1
-		}
+		return exec.Result{Code: -1, Stderr: fmt.Sprintf("cannot open terminal: %s", err)}
 	}
-	return result
+	defer tty.Close()
+	cmd := osexec.Command("sudo", args...)
+	if err := terminal.Run(cmd, tty, p.renderer.TerminalWriter()); err != nil {
+		code := -1
+		if cmd.ProcessState != nil && cmd.ProcessState.ExitCode() != 0 {
+			code = cmd.ProcessState.ExitCode()
+		}
+		if code != -1 {
+			return exec.Result{Code: code, Stderr: fmt.Sprintf("sudo exited with status %d (see terminal output)", code)}
+		}
+		return exec.Result{Code: code, Stderr: fmt.Sprintf("sudo failed: %s (see terminal output)", err)}
+	}
+	return exec.Result{}
+}
+
+func progressTerminalWriter() io.Writer {
+	activeProgress.RLock()
+	p := activeProgress.output
+	activeProgress.RUnlock()
+	if p != nil {
+		return p.renderer.TerminalWriter()
+	}
+	return os.Stdout
 }
 
 func progressHandoff(fn func() error) error {

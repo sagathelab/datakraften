@@ -206,6 +206,107 @@ func (r *Renderer) WriteFormatted(p []byte, format func([]byte) []byte) (int, er
 
 func (r *Renderer) ColorEnabled() bool { return r.color }
 
+type terminalWriter struct{ renderer *Renderer }
+
+func (w terminalWriter) Write(p []byte) (int, error) { return w.renderer.writeTerminal(p) }
+
+func (r *Renderer) TerminalWriter() io.Writer { return terminalWriter{renderer: r} }
+
+func (r *Renderer) writeTerminal(p []byte) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.err != nil {
+		return 0, r.err
+	}
+	if len(p) == 0 {
+		return 0, nil
+	}
+	wasActive := r.active
+	if r.valid() {
+		distance, col, wrap, ok := r.trackTerminal(p)
+		if ok {
+			r.distance, r.col, r.wrap = distance, col, wrap
+		} else {
+			if r.terminalHeadings && !r.wrap {
+				seq := fmt.Sprintf("\r\x1b[%dA\r\x1b[2K%s\r\x1b[%dB\r", r.distance, r.formatAnchor(r.message, "37", r.width), r.distance)
+				if r.col > 0 {
+					seq += fmt.Sprintf("\x1b[%dC", r.col)
+				}
+				if _, err := r.write([]byte(seq)); err != nil {
+					return 0, err
+				}
+				r.handoffHeading = true
+			}
+			r.active = false
+			r.known = false
+		}
+	} else {
+		if wasActive && r.terminalHeadings {
+			r.handoffHeading = true
+		}
+		r.known = false
+	}
+	n, err := r.write(p)
+	if n > 0 {
+		r.partial = p[n-1] != '\n'
+	}
+	return n, err
+}
+
+func (r *Renderer) trackTerminal(p []byte) (int, int, bool, bool) {
+	distance, col, wrap := r.distance, r.col, r.wrap
+	for i := 0; i < len(p); {
+		c, size := utf8.DecodeRune(p[i:])
+		if c == utf8.RuneError && size == 1 {
+			return 0, 0, false, false
+		}
+		i += size
+		switch {
+		case c == '\x1b':
+			if i >= len(p) || p[i] != '[' {
+				return 0, 0, false, false
+			}
+			i++
+			for i < len(p) && ((p[i] >= '0' && p[i] <= '9') || p[i] == ';' || p[i] == ':') {
+				i++
+			}
+			if i >= len(p) || p[i] != 'm' {
+				return 0, 0, false, false
+			}
+			i++
+		case c == '\r':
+			col, wrap = 0, false
+		case c == '\n':
+			if col != 0 {
+				return 0, 0, false, false
+			}
+			distance++
+			wrap = false
+		case c == '\b':
+			if col > 0 {
+				col--
+			}
+			wrap = false
+		case (c >= 32 && c <= 126) || (unicode.Is(unicode.Latin, c) && unicode.IsLetter(c)) || c == '–' || c == '—':
+			if wrap {
+				distance++
+				col, wrap = 0, false
+			}
+			if col == r.width-1 {
+				wrap = true
+			} else {
+				col++
+			}
+		default:
+			return 0, 0, false, false
+		}
+		if distance >= r.height {
+			return 0, 0, false, false
+		}
+	}
+	return distance, col, wrap, true
+}
+
 func (r *Renderer) writeLog(p []byte, format func([]byte) []byte) (int, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

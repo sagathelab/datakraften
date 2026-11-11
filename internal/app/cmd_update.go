@@ -1,7 +1,6 @@
 package app
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"github.com/sagathelab/datakraften/internal/exec"
 	"github.com/sagathelab/datakraften/internal/installers"
 	"github.com/sagathelab/datakraften/internal/npm"
+	"github.com/sagathelab/datakraften/internal/terminal"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -287,10 +287,11 @@ func updateNpm(dryRun bool) error {
 	args := append([]string{"update", "-g"}, packages...)
 	r = exec.Run("npm", args...)
 	if r.Code != 0 {
-		displayPrintln("    [ERROR] npm update failed")
 		if npm.IsPermissionError(r.Stderr) {
+			displayPrintln("    [WARN] npm update needs administrator access")
 			return retryNpmWithSudo(packages, r.Stderr)
 		}
+		displayPrintln("    [ERROR] npm update failed")
 		return npm.CommandError("npm update -g", r.Stderr)
 	}
 	displayPrintln("    [OK] Command completed")
@@ -323,23 +324,20 @@ func retryNpmOperationWithSudo(operation string, packages []string, originalErro
 		return fmt.Errorf("npm needs administrator access but no interactive terminal is available: %w", npm.CommandError(command, originalError))
 	}
 	defer tty.Close()
-	err = progressHandoff(func() error {
-		fmt.Fprintf(tty, "  npm cannot write to %s. %s %s with sudo? [y/N] ", prefix, strings.ToUpper(operation[:1])+operation[1:], strings.Join(packages, ", "))
-		answer, err := bufio.NewReader(tty).ReadString('\n')
-		if err != nil || (strings.TrimSpace(strings.ToLower(answer)) != "y" && strings.TrimSpace(strings.ToLower(answer)) != "yes") {
-			return fmt.Errorf("sudo retry declined: %w", npm.CommandError(command, originalError))
-		}
-		npmPath := exec.CommandPath("npm")
-		args := append([]string{npmPath, operation, "-g", "--prefix", prefix}, packages...)
-		cmd := osexec.Command("sudo", args...)
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = tty, tty, tty
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("sudo npm %s failed: %w", operation, err)
-		}
-		return nil
-	})
-	if err != nil {
-		return err
+	fmt.Fprintf(progressWriter(), "  npm cannot write to %s. %s %s with sudo? [y/N] ", prefix, strings.ToUpper(operation[:1])+operation[1:], strings.Join(packages, ", "))
+	answer, err := term.ReadPassword(int(tty.Fd()))
+	confirmed := strings.EqualFold(strings.TrimSpace(string(answer)), "y") || strings.EqualFold(strings.TrimSpace(string(answer)), "yes")
+	if confirmed && err == nil {
+		fmt.Fprintln(progressWriter(), "y")
+	} else {
+		fmt.Fprintln(progressWriter(), "n")
+		return fmt.Errorf("sudo retry declined: %w", npm.CommandError(command, originalError))
+	}
+	npmPath := exec.CommandPath("npm")
+	args := append([]string{npmPath, operation, "-g", "--prefix", prefix}, packages...)
+	cmd := osexec.Command("sudo", args...)
+	if err := terminal.Run(cmd, tty, progressTerminalWriter()); err != nil {
+		return fmt.Errorf("sudo npm %s failed: %w", operation, err)
 	}
 	displayPrintf("    [OK] npm %s completed with sudo\n", operation)
 	return nil

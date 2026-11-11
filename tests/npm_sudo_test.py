@@ -3,11 +3,80 @@ import fcntl
 import pathlib
 import pty
 import select
+import signal
 import subprocess
 import struct
+import sys
 import tempfile
 import termios
+import time
 import unittest
+
+
+def terminal_screen(data, width=120, height=50):
+    rows = [[(' ', None) for _ in range(width)] for _ in range(height)]
+    x = y = 0
+    color = None
+    wrap = False
+    text = data.decode('utf-8', errors='replace')
+    i = 0
+    while i < len(text):
+        c = text[i]
+        i += 1
+        if c == '\x1b' and i < len(text) and text[i] == '[':
+            i += 1
+            start = i
+            while i < len(text) and not ('@' <= text[i] <= '~'):
+                i += 1
+            if i >= len(text):
+                break
+            sequence, action = text[start:i], text[i]
+            i += 1
+            values = [int(v) if v.isdigit() else 0 for v in sequence.split(';')]
+            n = values[0] or 1
+            if action == 'm':
+                for value in values:
+                    if value == 0:
+                        color = None
+                    elif value in (31, 32, 37, 90):
+                        color = value
+            elif action == 'A':
+                y = max(0, y - n)
+                wrap = False
+            elif action == 'B':
+                y = min(height - 1, y + n)
+                wrap = False
+            elif action == 'C':
+                x = min(width - 1, x + n)
+                wrap = False
+            elif action == 'K':
+                rows[y] = [(' ', None) for _ in range(width)]
+                wrap = False
+            continue
+        if c == '\r':
+            x, wrap = 0, False
+        elif c == '\n':
+            if y == height - 1:
+                rows.pop(0)
+                rows.append([(' ', None) for _ in range(width)])
+            else:
+                y += 1
+            wrap = False
+        elif c >= ' ':
+            if wrap:
+                x = 0
+                if y == height - 1:
+                    rows.pop(0)
+                    rows.append([(' ', None) for _ in range(width)])
+                else:
+                    y += 1
+                wrap = False
+            rows[y][x] = (c, color)
+            if x == width - 1:
+                wrap = True
+            else:
+                x += 1
+    return rows
 
 
 class NpmSudoTest(unittest.TestCase):
@@ -118,10 +187,216 @@ esac
                 output += chunk
             _, status = os.waitpid(pid, 0)
             self.assertEqual(os.waitstatus_to_exitcode(status), 0)
-            self.assertIn(b'\x1b[37m\xe2\x97\x8f\x1b[0m Updating npm', output.split(b'[y/N]')[0])
-            self.assertNotIn(b'Updating npm', output.split(b'[y/N]')[1])
             self.assertEqual(log.read_text().splitlines(), [str(npm), 'update', '-g', '--prefix', '/protected/prefix', '@openai/codex'])
             os.close(fd)
+
+    def test_interactive_password_keeps_original_heading_and_updates_color(self):
+        binary = os.environ.get('DK_TEST_BINARY')
+        if not binary:
+            self.skipTest('set DK_TEST_BINARY to the built dk executable')
+        cases = ((0, 32, 'normal'), (42, 31, 'normal'), (0, None, 'scroll'), (0, None, 'resize'), (130, None, 'interrupt'), (0, None, 'suspend'))
+        for exit_code, expected_color, mode in cases:
+            with self.subTest(exit_code=exit_code, mode=mode), tempfile.TemporaryDirectory() as tmp:
+                root = pathlib.Path(tmp)
+                home, bin_dir = root / 'home', root / 'bin'
+                config = home / '.config' / 'datakraften'
+                config.mkdir(parents=True)
+                bin_dir.mkdir()
+                (config / 'config.yaml').write_text('ai_tools:\n  codex:\n    enabled: true\n')
+                npm = bin_dir / 'npm'
+                npm.write_text('''#!/bin/sh
+case "$1" in
+  list) echo '{"dependencies":{"@openai/codex":{}}}';;
+  config) echo /protected/prefix;;
+  update) echo 'npm error code EACCES' >&2; exit 1;;
+esac
+''')
+                sudo = bin_dir / 'sudo'
+                sudo.write_text(f'''#!{sys.executable}
+import fcntl, struct, sys, termios, time
+if not sys.stdin.isatty() or not sys.stdout.isatty():
+    sys.exit(90)
+original = termios.tcgetattr(0)
+no_echo = termios.tcgetattr(0)
+no_echo[3] &= ~termios.ECHO
+termios.tcsetattr(0, termios.TCSANOW, no_echo)
+try:
+    sys.stdout.write("[sudo] Password: ")
+    sys.stdout.flush()
+    password = sys.stdin.readline()
+finally:
+    termios.tcsetattr(0, termios.TCSANOW, original)
+sys.stdout.write("\\nchanged packages\\n")
+if {mode!r} == "resize":
+    time.sleep(0.15)
+    size = fcntl.ioctl(0, termios.TIOCGWINSZ, b"\\0" * 8)
+    rows, cols, _, _ = struct.unpack('HHHH', size)
+    sys.stdout.write("size %dx%d\\n" % (rows, cols))
+if {mode!r} == "scroll":
+    for i in range(70):
+        sys.stdout.write("sudo line %d\\n" % i)
+sys.stdout.flush()
+sys.exit({exit_code} if password == "secret-test-password\\n" else 91)
+''')
+                npm.chmod(0o755)
+                sudo.chmod(0o755)
+                env = dict(os.environ, HOME=str(home), PATH=str(bin_dir), TERM='xterm')
+                env.pop('NO_COLOR', None)
+                pid, fd = pty.fork()
+                if pid == 0:
+                    fcntl.ioctl(1, termios.TIOCSWINSZ, struct.pack('HHHH', 50, 120, 0, 0))
+                    os.execve(binary, [binary, 'update', 'npm'], env)
+                output = b''
+                sent_confirm = sent_password = False
+                reaped = False
+                try:
+                    while True:
+                        ready, _, _ = select.select([fd], [], [], 15)
+                        if not ready:
+                            os.kill(pid, 9)
+                            self.fail('interactive sudo timed out: ' + output.decode(errors='replace'))
+                        try:
+                            chunk = os.read(fd, 65536)
+                        except OSError:
+                            break
+                        if not chunk:
+                            break
+                        output += chunk
+                        if not sent_confirm and b'[y/N]' in output:
+                            screen = terminal_screen(output)
+                            self.assertTrue(any('Updating npm' in ''.join(c for c, _ in row) for row in screen))
+                            os.write(fd, b'y\n')
+                            sent_confirm = True
+                        if not sent_password and b'[sudo] Password:' in output:
+                            screen = terminal_screen(output)
+                            self.assertTrue(any('Updating npm' in ''.join(c for c, _ in row) for row in screen))
+                            if mode == 'resize':
+                                fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 40, 80, 0, 0))
+                            if mode == 'suspend':
+                                os.write(fd, b'\x1a')
+                                deadline = time.monotonic() + 10
+                                while True:
+                                    stopped_pid, stopped_status = os.waitpid(pid, os.WUNTRACED | os.WNOHANG)
+                                    if stopped_pid and os.WIFSTOPPED(stopped_status):
+                                        break
+                                    if stopped_pid or time.monotonic() >= deadline:
+                                        os.kill(pid, signal.SIGKILL)
+                                        self.fail('process did not suspend at Ctrl-Z')
+                                    time.sleep(0.01)
+                                flags = termios.tcgetattr(fd)[3]
+                                self.assertTrue(flags & termios.ECHO, f'terminal echo not restored during suspend: flags={flags:#x}, stop={os.WSTOPSIG(stopped_status)}, output={output!r}')
+                                self.assertTrue(flags & termios.ICANON, f'terminal mode not restored during suspend: flags={flags:#x}, stop={os.WSTOPSIG(stopped_status)}')
+                                os.kill(pid, signal.SIGCONT)
+                                time.sleep(0.1)
+                            os.write(fd, b'\x03' if mode == 'interrupt' else b'secret-test-password\n')
+                            sent_password = True
+                    _, status = os.waitpid(pid, 0)
+                    reaped = True
+                    if mode == 'interrupt':
+                        flags = termios.tcgetattr(fd)[3]
+                        self.assertTrue(flags & termios.ECHO, 'terminal echo was not restored')
+                        self.assertTrue(flags & termios.ICANON, 'terminal canonical mode was not restored')
+                finally:
+                    if not reaped:
+                        try:
+                            os.kill(pid, signal.SIGKILL)
+                            os.waitpid(pid, 0)
+                        except (ProcessLookupError, ChildProcessError):
+                            pass
+                    os.close(fd)
+                self.assertTrue(sent_confirm and sent_password, output.decode(errors='replace'))
+                self.assertEqual(os.waitstatus_to_exitcode(status) == 0, exit_code == 0, output.decode(errors='replace'))
+                self.assertNotIn(b'secret-test-password', output)
+                if mode == 'interrupt':
+                    continue
+                self.assertIn(b'changed packages', output)
+                if mode == 'scroll':
+                    self.assertIn(b'sudo line 69', output)
+                if mode == 'resize':
+                    self.assertIn(b'size 40x80', output)
+                if expected_color is None:
+                    continue
+                screen = terminal_screen(output)
+                headings = [row for row in screen if ''.join(c for c, _ in row).strip() == '● Updating npm']
+                self.assertEqual(len(headings), 1, output.decode(errors='replace'))
+                dot = next(color for c, color in headings[0] if c == '●')
+                self.assertEqual(dot, expected_color, output.decode(errors='replace'))
+
+    def test_apply_system_sudo_preserves_progress_heading(self):
+        binary = os.environ.get('DK_TEST_BINARY')
+        if not binary:
+            self.skipTest('set DK_TEST_BINARY to the built dk executable')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            home, bin_dir = root / 'home', root / 'bin'
+            config = home / '.config' / 'datakraften'
+            config.mkdir(parents=True)
+            bin_dir.mkdir()
+            (config / 'config.yaml').write_text('source: default\n')
+            scripts = {
+                'apt-get': '#!/bin/sh\nexit 0\n',
+                'dpkg': '#!/bin/sh\n[ "$2" = curl ] && exit 1\nprintf "ii %s installed\\n" "$2"\n',
+                'brew': '#!/bin/sh\n[ "$1" = --prefix ] && echo /mock/brew\nexit 0\n',
+                'fish': '#!/bin/sh\nexit 0\n',
+                'sudo': f'''#!{sys.executable}
+import sys, termios
+if not sys.stdin.isatty() or not sys.stdout.isatty():
+    sys.exit(90)
+original = termios.tcgetattr(0)
+no_echo = termios.tcgetattr(0)
+no_echo[3] &= ~termios.ECHO
+termios.tcsetattr(0, termios.TCSANOW, no_echo)
+try:
+    sys.stdout.write("[sudo] Password: ")
+    sys.stdout.flush()
+    password = sys.stdin.readline()
+finally:
+    termios.tcsetattr(0, termios.TCSANOW, original)
+sys.stdout.write("\\nsystem command complete\\n")
+sys.stdout.flush()
+sys.exit(0 if password == "secret-test-password\\n" else 91)
+''',
+            }
+            for name, script in scripts.items():
+                executable = bin_dir / name
+                executable.write_text(script)
+                executable.chmod(0o755)
+            env = dict(os.environ, HOME=str(home), PATH=str(bin_dir), TERM='xterm')
+            env.pop('NO_COLOR', None)
+            pid, fd = pty.fork()
+            if pid == 0:
+                fcntl.ioctl(1, termios.TIOCSWINSZ, struct.pack('HHHH', 80, 120, 0, 0))
+                os.execve(binary, [binary, 'apply', '--yes'], env)
+            output = b''
+            prompts_answered = 0
+            try:
+                while True:
+                    ready, _, _ = select.select([fd], [], [], 15)
+                    if not ready:
+                        os.kill(pid, 9)
+                        self.fail('system sudo timed out: ' + output.decode(errors='replace'))
+                    try:
+                        chunk = os.read(fd, 65536)
+                    except OSError:
+                        break
+                    if not chunk:
+                        break
+                    output += chunk
+                    count = output.count(b'[sudo] Password:')
+                    if count > prompts_answered:
+                        os.write(fd, b'secret-test-password\n')
+                        prompts_answered = count
+                _, status = os.waitpid(pid, 0)
+            finally:
+                os.close(fd)
+            self.assertEqual(os.waitstatus_to_exitcode(status), 0, output.decode(errors='replace'))
+            self.assertEqual(prompts_answered, 2, output.decode(errors='replace'))
+            self.assertNotIn(b'secret-test-password', output)
+            screen = terminal_screen(output, height=80)
+            headings = [row for row in screen if ''.join(c for c, _ in row).strip() == '● Checking system packages']
+            self.assertEqual(len(headings), 1, output.decode(errors='replace'))
+            dot = next(color for c, color in headings[0] if c == '●')
+            self.assertEqual(dot, 32, output.decode(errors='replace'))
 
 
 if __name__ == '__main__':
