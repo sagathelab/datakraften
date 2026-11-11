@@ -145,8 +145,8 @@ func NativeBasePackages() []string {
 func NativeUpdate() error {
 	pm := DetectPackageManager()
 	exe, args := pm.UpdateCommand()
-	fmt.Printf("    Updating %s cache...\n", pm)
-	r := exec.Run(exe, args...)
+	outputPrintf("    Updating %s cache...\n", pm)
+	r := runInstallerCommand(exe, args...)
 	if r.Code != 0 {
 		return fmt.Errorf("%s update failed: %s", pm, r.Stderr)
 	}
@@ -158,9 +158,9 @@ func NativeInstall(pkg string) error {
 	if pm.CheckInstalled(pkg) {
 		return nil
 	}
-	fmt.Printf("    Installing %s via %s...\n", pkg, pm)
+	outputPrintf("    Installing %s via %s...\n", pkg, pm)
 	exe, args := pm.InstallCommand([]string{pkg})
-	r := exec.Run(exe, args...)
+	r := runInstallerCommand(exe, args...)
 	if r.Code != 0 {
 		return fmt.Errorf("%s install %s failed: %s", pm, pkg, r.Stderr)
 	}

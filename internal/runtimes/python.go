@@ -36,7 +36,7 @@ func EnsurePython() (bool, error) {
 		return false, fmt.Errorf("uv is required but not installed")
 	}
 
-	fmt.Println("    Installing Python via uv...")
+	outputPrintf("    Installing Python via uv...\n")
 	r := exec.Run("uv", "python", "install")
 	if r.Code != 0 {
 		return false, fmt.Errorf("uv python install failed: %s", r.Stderr)

@@ -58,7 +58,7 @@ func BrewEnsureInstalled() (bool, error) {
 		return false, nil
 	}
 
-	fmt.Println("    Installing Homebrew...")
+	outputPrintf("    Installing Homebrew...\n")
 	home := system.HomeDir()
 
 	r := exec.RunWithInput("\n\n",
@@ -101,7 +101,7 @@ func BrewInstall(pkg string) error {
 	if BrewPackageInstalled(pkg) {
 		return nil
 	}
-	fmt.Printf("    Installing %s via Homebrew...\n", pkg)
+	outputPrintf("    Installing %s via Homebrew...\n", pkg)
 	r := exec.Run("brew", "install", pkg)
 	if r.Code != 0 {
 		return fmt.Errorf("brew install %s failed: %s", pkg, r.Stderr)

@@ -34,10 +34,12 @@ func formatStatus(text string, color bool) string {
 }
 
 func displayPrintf(format string, args ...interface{}) {
-	fmt.Fprint(os.Stdout, colorStatus(os.Stdout, fmt.Sprintf(format, args...)))
+	w := progressWriter()
+	fmt.Fprint(w, colorStatus(w, fmt.Sprintf(format, args...)))
 }
 func displayPrintln(args ...interface{}) {
-	fmt.Fprint(os.Stdout, colorStatus(os.Stdout, fmt.Sprintln(args...)))
+	w := progressWriter()
+	fmt.Fprint(w, colorStatus(w, fmt.Sprintln(args...)))
 }
 func displayFprintf(w io.Writer, format string, args ...interface{}) {
 	fmt.Fprint(w, colorStatus(w, fmt.Sprintf(format, args...)))

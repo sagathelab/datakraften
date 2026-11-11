@@ -48,10 +48,17 @@ func newUpdateCmd() *cobra.Command {
 					subtitle = "Preview only; no updates will be made"
 				}
 				displayTitle(os.Stdout, "update / "+args[0], subtitle)
-				return updateTool(args[0], dryRun)
+				output := newLineStartProgressOutput(os.Stdout)
+				defer output.activate()()
+				err := UpdateToolWithProgress(args[0], dryRun, output.event)
+				return finishProgress(output, err)
 			}
 
-			return updateAll(dryRun)
+			updateTitle(dryRun)
+			output := newLineStartProgressOutput(os.Stdout)
+			defer output.activate()()
+			err := updateAllWithProgress(dryRun, output.event, false)
+			return finishProgress(output, err)
 		},
 	}
 
@@ -76,46 +83,79 @@ func listUpdatable() error {
 }
 
 func updateTool(name string, dryRun bool) error {
-	switch strings.ToLower(name) {
+	return UpdateToolWithProgress(name, dryRun, nil)
+}
+
+func UpdateToolWithProgress(name string, dryRun bool, hook ProgressHook) error {
+	name = strings.ToLower(name)
+	var step updateStep
+	switch name {
 	case "brew":
-		return updateBrew(dryRun)
+		step = updateStep{name: "brew", run: updateBrew}
 	case "fnm", "node":
-		return updateFnm(dryRun)
+		step = updateStep{name: "fnm", run: updateFnm}
 	case "uv", "python":
-		return updateUv(dryRun)
+		step = updateStep{name: "uv", run: updateUv}
 	case "npm":
-		return updateNpm(dryRun)
+		step = updateStep{name: "npm", run: updateNpm}
 	default:
 		return fmt.Errorf("unknown tool: %s — run 'dk update --list' to see available tools", name)
 	}
+	return runUpdateStep(step, dryRun, hook)
+}
+
+func runUpdateStep(step updateStep, dryRun bool, hook ProgressHook) error {
+	emitProgress(hook, ProgressEvent{Step: step.name, Message: "Updating " + step.name, Status: ProgressStarted})
+	err := step.run(dryRun)
+	if err != nil {
+		emitProgress(hook, ProgressEvent{Step: step.name, Status: ProgressFailed, Err: err})
+	} else {
+		emitProgress(hook, ProgressEvent{Step: step.name, Status: ProgressCompleted})
+	}
+	return err
 }
 
 func updateAll(dryRun bool) error {
+	return UpdateAllWithProgress(dryRun, nil)
+}
+
+func updateTitle(dryRun bool) {
 	subtitle := "Updating managed tools"
 	if dryRun {
 		subtitle = "Preview only; no updates will be made"
 	}
-	displayTitle(os.Stdout, "update", subtitle)
+	displayTitle(progressWriter(), "update", subtitle)
+}
 
+func UpdateAllWithProgress(dryRun bool, hook ProgressHook) error {
+	return updateAllWithProgress(dryRun, hook, true)
+}
+
+func updateAllWithProgress(dryRun bool, hook ProgressHook, showTitle bool) error {
+	if showTitle {
+		updateTitle(dryRun)
+	}
 	var failures []string
 
 	for i, step := range updateSteps {
-		fmt.Println()
-		displayStep(os.Stdout, i+1, len(updateSteps), step.name)
-		if err := step.run(dryRun); err != nil {
+		if hook == nil {
+			fmt.Fprintln(progressWriter())
+			displayStep(progressWriter(), i+1, len(updateSteps), step.name)
+		}
+		if err := runUpdateStep(step, dryRun, hook); err != nil {
 			failures = append(failures, fmt.Sprintf("%s: %s", step.name, err))
 			displayPrintf("    [ERROR] %s failed; details below\n", step.name)
 		}
 	}
 
-	fmt.Println()
+	fmt.Fprintln(progressWriter())
 	if len(failures) > 0 {
 		displayPrintln("  [ERROR] Update finished with errors")
 		return fmt.Errorf("update failed: %s", strings.Join(failures, "; "))
 	}
 
 	if dryRun {
-		fmt.Println("  Preview complete; no updates made")
+		fmt.Fprintln(progressWriter(), "  Preview complete; no updates made")
 	} else {
 		displayPrintln("  [OK] Update complete")
 	}
@@ -133,14 +173,14 @@ func updateBrew(dryRun bool) error {
 		return nil
 	}
 
-	fmt.Println("    Updating Homebrew...")
+	fmt.Fprintln(progressWriter(), "    Updating Homebrew...")
 	r := exec.Run("brew", "update")
 	if r.Code != 0 {
 		return fmt.Errorf("brew update failed: %s", strings.TrimSpace(r.Stderr))
 	}
 	displayPrintln("    [OK] Command completed")
 
-	fmt.Println("    Upgrading packages...")
+	fmt.Fprintln(progressWriter(), "    Upgrading packages...")
 	r = exec.Run("brew", "upgrade")
 	if r.Code != 0 {
 		return fmt.Errorf("brew upgrade failed: %s", strings.TrimSpace(r.Stderr))
@@ -161,14 +201,14 @@ func updateFnm(dryRun bool) error {
 		return nil
 	}
 
-	fmt.Println("    Updating Node.js LTS via fnm...")
+	fmt.Fprintln(progressWriter(), "    Updating Node.js LTS via fnm...")
 	r := exec.Run("fnm", "install", "--lts")
 	if r.Code != 0 {
 		return fmt.Errorf("fnm install lts failed: %s", strings.TrimSpace(r.Stderr))
 	}
 	displayPrintln("    [OK] Command completed")
 
-	fmt.Println("    Setting fnm default to latest LTS...")
+	fmt.Fprintln(progressWriter(), "    Setting fnm default to latest LTS...")
 	r = exec.Run("fnm", "default", "lts-latest")
 	if r.Code != 0 {
 		return fmt.Errorf("fnm default failed: %s", strings.TrimSpace(r.Stderr))
@@ -188,7 +228,7 @@ func updateUv(dryRun bool) error {
 		return nil
 	}
 
-	fmt.Println("    Updating uv...")
+	fmt.Fprintln(progressWriter(), "    Updating uv...")
 	r := exec.Run("uv", "self", "update")
 	if r.Code != 0 {
 		return fmt.Errorf("uv self update failed: %s", strings.TrimSpace(r.Stderr))
@@ -236,7 +276,7 @@ func updateNpm(dryRun bool) error {
 		return nil
 	}
 
-	fmt.Printf("    Updating npm packages (%s)...\n", strings.Join(packages, ", "))
+	fmt.Fprintf(progressWriter(), "    Updating npm packages (%s)...\n", strings.Join(packages, ", "))
 	args := append([]string{"update", "-g"}, packages...)
 	r = exec.Run("npm", args...)
 	if r.Code != 0 {
@@ -265,17 +305,23 @@ func retryNpmWithSudo(packages []string, originalError string) error {
 		return fmt.Errorf("npm needs administrator access but no interactive terminal is available: %w", npm.CommandError("npm update -g", originalError))
 	}
 	defer tty.Close()
-	fmt.Fprintf(tty, "  npm cannot write to %s. Update %s with sudo? [y/N] ", prefix, strings.Join(packages, ", "))
-	answer, err := bufio.NewReader(tty).ReadString('\n')
-	if err != nil || (strings.TrimSpace(strings.ToLower(answer)) != "y" && strings.TrimSpace(strings.ToLower(answer)) != "yes") {
-		return fmt.Errorf("sudo retry declined: %w", npm.CommandError("npm update -g", originalError))
-	}
-	npmPath := exec.CommandPath("npm")
-	args := append([]string{npmPath, "update", "-g", "--prefix", prefix}, packages...)
-	cmd := osexec.Command("sudo", args...)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = tty, tty, tty
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("sudo npm update failed: %w", err)
+	err = progressHandoff(func() error {
+		fmt.Fprintf(tty, "  npm cannot write to %s. Update %s with sudo? [y/N] ", prefix, strings.Join(packages, ", "))
+		answer, err := bufio.NewReader(tty).ReadString('\n')
+		if err != nil || (strings.TrimSpace(strings.ToLower(answer)) != "y" && strings.TrimSpace(strings.ToLower(answer)) != "yes") {
+			return fmt.Errorf("sudo retry declined: %w", npm.CommandError("npm update -g", originalError))
+		}
+		npmPath := exec.CommandPath("npm")
+		args := append([]string{npmPath, "update", "-g", "--prefix", prefix}, packages...)
+		cmd := osexec.Command("sudo", args...)
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = tty, tty, tty
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("sudo npm update failed: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 	displayPrintln("    [OK] npm packages updated with sudo")
 	return nil

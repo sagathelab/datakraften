@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -9,6 +10,9 @@ import (
 )
 
 func TestEnsureAIToolsInstallsCopilotViaGHExtension(t *testing.T) {
+	var output bytes.Buffer
+	SetOutput(&output)
+	t.Cleanup(func() { SetOutput(nil) })
 	originalCommandExists := commandExists
 	originalRunCommand := runCommand
 	originalBrewInstalled := brewInstalled
@@ -53,6 +57,10 @@ func TestEnsureAIToolsInstallsCopilotViaGHExtension(t *testing.T) {
 	}
 
 	report := EnsureAITools(cfg)
+
+	if !strings.Contains(output.String(), "Installing GitHub Copilot CLI via GitHub CLI extension") {
+		t.Fatalf("unexpected output: %q", output.String())
+	}
 
 	if report.Enabled != 1 {
 		t.Fatalf("expected 1 enabled tool, got %d", report.Enabled)
@@ -148,5 +156,41 @@ func TestEnsureAIAppsSkipsMacOSOnlyCasksOnLinux(t *testing.T) {
 	}
 	if called {
 		t.Fatal("expected Linux skip to avoid invoking brew or code commands")
+	}
+}
+
+func TestInstallErrorCallbackBeforeNextTool(t *testing.T) {
+	oldExists, oldRun := commandExists, runCommand
+	t.Cleanup(func() { commandExists, runCommand = oldExists, oldRun })
+	commandExists = func(name string) bool { return name == "npm" }
+	var events []string
+	runCommand = func(name string, args ...string) execpkg.Result {
+		events = append(events, args[2])
+		return execpkg.Result{Code: 1, Stderr: "failure"}
+	}
+	report := EnsureAIToolsWithOptions(&config.Config{AITools: map[string]config.RuntimeConfig{
+		"codex": {Enabled: true}, "claude": {Enabled: true},
+	}}, InstallOptions{OnError: func(message string) { events = append(events, message) }})
+	if len(events) != 4 || events[0] != "@openai/codex" || events[2] != "@anthropic-ai/claude-code" || events[1] != report.Errors[0] || events[3] != report.Errors[1] {
+		t.Fatalf("unexpected events %v and report %+v", events, report)
+	}
+}
+
+func TestAppInstallErrorCallback(t *testing.T) {
+	oldExists, oldRun := commandExists, runCommand
+	t.Cleanup(func() { commandExists, runCommand = oldExists, oldRun })
+	commandExists = func(name string) bool { return name == "code" }
+	runCommand = func(name string, args ...string) execpkg.Result {
+		if args[0] == "--list-extensions" {
+			return execpkg.Result{}
+		}
+		return execpkg.Result{Code: 1, Stderr: "failure"}
+	}
+	var messages []string
+	report := EnsureAIAppsWithOptions(&config.Config{AIApps: map[string]config.RuntimeConfig{
+		"copilot": {Enabled: true},
+	}}, InstallOptions{OnError: func(message string) { messages = append(messages, message) }})
+	if len(messages) != 1 || len(report.Errors) != 1 || messages[0] != report.Errors[0] {
+		t.Fatalf("unexpected messages %v and report %+v", messages, report)
 	}
 }

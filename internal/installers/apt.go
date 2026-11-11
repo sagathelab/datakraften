@@ -36,8 +36,8 @@ func APTPackageInstalled(pkg string) bool {
 }
 
 func APTUpdate() error {
-	fmt.Println("    Updating APT cache...")
-	r := exec.Run("sudo", "apt-get", "update", "-qq")
+	outputPrintf("    Updating APT cache...\n")
+	r := runInstallerCommand("sudo", "apt-get", "update", "-qq")
 	if r.Code != 0 {
 		return fmt.Errorf("apt update failed: %s", r.Stderr)
 	}
@@ -48,7 +48,7 @@ func APTInstall(pkg string) error {
 	if APTPackageInstalled(pkg) {
 		return nil
 	}
-	r := exec.Run("sudo", "apt-get", "install", "-y", "-qq", pkg)
+	r := runInstallerCommand("sudo", "apt-get", "install", "-y", "-qq", pkg)
 	if r.Code != 0 {
 		return fmt.Errorf("apt install %s failed: %s", pkg, r.Stderr)
 	}
@@ -70,7 +70,7 @@ func APTEnsurePackages(pkgs []string) (int, error) {
 		return 0, err
 	}
 	for _, pkg := range missing {
-		fmt.Printf("    Installing %s...\n", pkg)
+		outputPrintf("    Installing %s...\n", pkg)
 		if err := APTInstall(pkg); err != nil {
 			return 0, err
 		}

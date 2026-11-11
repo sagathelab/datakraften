@@ -27,6 +27,17 @@ type InstallReport struct {
 	Errors           []string
 }
 
+type InstallOptions struct {
+	OnError func(string)
+}
+
+func (r *InstallReport) addError(message string, opts InstallOptions) {
+	r.Errors = append(r.Errors, message)
+	if opts.OnError != nil {
+		opts.OnError(message)
+	}
+}
+
 func (r InstallReport) HasFailures() bool {
 	return len(r.Errors) > 0
 }
@@ -74,6 +85,10 @@ func npmInstalled() bool {
 }
 
 func EnsureAITools(cfg *config.Config) InstallReport {
+	return EnsureAIToolsWithOptions(cfg, InstallOptions{})
+}
+
+func EnsureAIToolsWithOptions(cfg *config.Config, opts InstallOptions) InstallReport {
 	var report InstallReport
 
 	for _, tool := range cliTools {
@@ -91,7 +106,7 @@ func EnsureAITools(cfg *config.Config) InstallReport {
 		status, detail, err := installCLI(tool)
 		switch {
 		case err != nil:
-			report.Errors = append(report.Errors, fmt.Sprintf("%s: %s", tool.name, err))
+			report.addError(fmt.Sprintf("%s: %s", tool.name, err), opts)
 		case status == installStatusInstalled:
 			report.Installed = append(report.Installed, tool.name)
 		default:
@@ -134,35 +149,39 @@ func installCLI(tool cliTool) (installStatus, string, error) {
 	switch {
 	case tool.ghExtension != "":
 		if !commandExists("gh") {
-			fmt.Printf("    – %s: GitHub CLI not available\n", tool.name)
+			outputPrintf("    – %s: GitHub CLI not available\n", tool.name)
 			return installStatusSkipped, "GitHub CLI not available", nil
 		}
-		fmt.Printf("    Installing %s via GitHub CLI extension...\n", tool.name)
+		outputPrintf("    Installing %s via GitHub CLI extension...\n", tool.name)
 		r := runCommand("gh", "extension", "install", tool.ghExtension)
 		if r.Code != 0 {
 			return installStatusSkipped, "", fmt.Errorf("gh extension install failed: %s", r.Stderr)
 		}
 		return installStatusInstalled, "", nil
 	case tool.brewPkg != "" && brewInstalled():
-		fmt.Printf("    Installing %s via Homebrew...\n", tool.name)
+		outputPrintf("    Installing %s via Homebrew...\n", tool.name)
 		if err := installers.BrewInstall(tool.brewPkg); err != nil {
 			return installStatusSkipped, "", err
 		}
 		return installStatusInstalled, "", nil
 	case tool.npmPkg != "" && npmInstalled():
-		fmt.Printf("    Installing %s via npm...\n", tool.name)
+		outputPrintf("    Installing %s via npm...\n", tool.name)
 		r := runCommand("npm", "install", "-g", tool.npmPkg)
 		if r.Code != 0 {
 			return installStatusSkipped, "", npm.CommandError("npm install -g", r.Stderr)
 		}
 		return installStatusInstalled, "", nil
 	default:
-		fmt.Printf("    – %s: no suitable install method found\n", tool.name)
+		outputPrintf("    – %s: no suitable install method found\n", tool.name)
 		return installStatusSkipped, "no suitable install method found", nil
 	}
 }
 
 func EnsureAIApps(cfg *config.Config) InstallReport {
+	return EnsureAIAppsWithOptions(cfg, InstallOptions{})
+}
+
+func EnsureAIAppsWithOptions(cfg *config.Config, opts InstallOptions) InstallReport {
 	var report InstallReport
 
 	for _, app := range desktopApps {
@@ -173,7 +192,7 @@ func EnsureAIApps(cfg *config.Config) InstallReport {
 		report.Enabled++
 
 		if reason := unsupportedAppReason(app); reason != "" {
-			fmt.Printf("    – %s: %s\n", app.name, reason)
+			outputPrintf("    – %s: %s\n", app.name, reason)
 			report.Skipped = append(report.Skipped, fmt.Sprintf("%s (%s)", app.name, reason))
 			continue
 		}
@@ -186,7 +205,7 @@ func EnsureAIApps(cfg *config.Config) InstallReport {
 		status, detail, err := installApp(app)
 		switch {
 		case err != nil:
-			report.Errors = append(report.Errors, fmt.Sprintf("%s: %s", app.name, err))
+			report.addError(fmt.Sprintf("%s: %s", app.name, err), opts)
 		case status == installStatusInstalled:
 			report.Installed = append(report.Installed, app.name)
 		default:
@@ -224,14 +243,14 @@ func installApp(app desktopApp) (installStatus, string, error) {
 	switch {
 	case app.brewCask != "":
 		if reason := unsupportedAppReason(app); reason != "" {
-			fmt.Printf("    – %s: %s\n", app.name, reason)
+			outputPrintf("    – %s: %s\n", app.name, reason)
 			return installStatusSkipped, reason, nil
 		}
 		if !brewInstalled() {
-			fmt.Printf("    – %s: Homebrew not available\n", app.name)
+			outputPrintf("    – %s: Homebrew not available\n", app.name)
 			return installStatusSkipped, "Homebrew not available", nil
 		}
-		fmt.Printf("    Installing %s via Homebrew...\n", app.name)
+		outputPrintf("    Installing %s via Homebrew...\n", app.name)
 		r := runCommand("brew", "install", "--cask", app.brewCask)
 		if r.Code != 0 {
 			return installStatusSkipped, "", fmt.Errorf("brew install --cask failed: %s", r.Stderr)
@@ -239,10 +258,10 @@ func installApp(app desktopApp) (installStatus, string, error) {
 		return installStatusInstalled, "", nil
 	case app.extID != "":
 		if !commandExists("code") {
-			fmt.Printf("    – %s: VS Code CLI not available\n", app.name)
+			outputPrintf("    – %s: VS Code CLI not available\n", app.name)
 			return installStatusSkipped, "VS Code CLI not available", nil
 		}
-		fmt.Printf("    Installing %s VS Code extension...\n", app.name)
+		outputPrintf("    Installing %s VS Code extension...\n", app.name)
 		r := runCommand("code", "--install-extension", app.extID)
 		if r.Code != 0 {
 			if app.extID == "GitHub.copilot" && strings.Contains(strings.ToLower(r.Stderr), "extension 'github.copilot-chat' is a built-in extension") && strings.Contains(strings.ToLower(r.Stderr), "cannot be downgraded") {
@@ -252,7 +271,7 @@ func installApp(app desktopApp) (installStatus, string, error) {
 		}
 		return installStatusInstalled, "", nil
 	default:
-		fmt.Printf("    – %s: no install method defined\n", app.name)
+		outputPrintf("    – %s: no install method defined\n", app.name)
 		return installStatusSkipped, "no install method defined", nil
 	}
 }

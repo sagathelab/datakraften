@@ -31,7 +31,7 @@ func EnsureNode() (bool, error) {
 		return false, fmt.Errorf("fnm is required but not installed")
 	}
 
-	fmt.Println("    Installing Node.js LTS via fnm...")
+	outputPrintf("    Installing Node.js LTS via fnm...\n")
 	r := exec.Run("fnm", "install", "--lts")
 	if r.Code != 0 {
 		return false, fmt.Errorf("fnm install lts failed: %s", r.Stderr)

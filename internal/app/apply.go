@@ -20,6 +20,29 @@ import (
 	"github.com/sagathelab/datakraften/internal/system"
 )
 
+type ProgressStatus string
+
+const (
+	ProgressStarted   ProgressStatus = "started"
+	ProgressFailed    ProgressStatus = "failed"
+	ProgressCompleted ProgressStatus = "completed"
+)
+
+type ProgressEvent struct {
+	Step    string
+	Message string
+	Status  ProgressStatus
+	Err     error
+}
+
+type ProgressHook func(ProgressEvent)
+
+func emitProgress(hook ProgressHook, event ProgressEvent) {
+	if hook != nil {
+		hook(event)
+	}
+}
+
 type RuntimeStatus int
 
 const (
@@ -92,23 +115,48 @@ func prefixedInstallErrors(section string, errors []string) []string {
 }
 
 func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
+	return RunApplyWithProgress(cfg, dryRun, nil)
+}
+
+func RunApplyWithProgress(cfg *config.Config, dryRun bool, hook ProgressHook) *ApplyReport {
 	report := &ApplyReport{}
+	step := "configuration"
+	failed := false
+	started := false
+	start := func(name, message string) {
+		if started && !failed {
+			emitProgress(hook, ProgressEvent{Step: step, Status: ProgressCompleted})
+		}
+		step, failed, started = name, false, true
+		emitProgress(hook, ProgressEvent{Step: step, Message: message, Status: ProgressStarted})
+	}
+	fail := func(message string) {
+		report.Errors = append(report.Errors, message)
+		failed = true
+		emitProgress(hook, ProgressEvent{Step: step, Status: ProgressFailed, Err: fmt.Errorf("%s", message)})
+	}
+	defer func() {
+		if started && !failed {
+			emitProgress(hook, ProgressEvent{Step: step, Status: ProgressCompleted})
+		}
+	}()
 	pm := installers.DetectPackageManager()
 	verbosePrintf("packageManager=%s source=%s\n", pm, cfg.Source)
 
 	if cfg.Source == "team" {
+		start("configuration", "Fetching team configuration")
 		if cfg.URL == "" {
-			report.Errors = append(report.Errors, "team source requires a URL — set url in config")
+			fail("team source requires a URL — set url in config")
 			displayPrintln("  [ERROR] Team source is active but no url is set.")
-			fmt.Println("  Run 'dk init --team <url>' to configure.")
+			fmt.Fprintln(progressWriter(), "  Run 'dk init --team <url>' to configure.")
 			return report
 		}
 
-		fmt.Printf("  Fetching remote config from %s...\n", cfg.URL)
+		fmt.Fprintf(progressWriter(), "  Fetching remote config from %s...\n", cfg.URL)
 
 		remoteCfg, err := config.FetchRemote(cfg.URL)
 		if err != nil {
-			report.Errors = append(report.Errors, fmt.Sprintf("remote config: %s", err))
+			fail(fmt.Sprintf("remote config: %s", err))
 			displayPrintf("    [ERROR] %s\n", err)
 			return report
 		}
@@ -122,15 +170,20 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 		cfg.URL = url
 	}
 
-	fmt.Println()
+	if hook == nil {
+		fmt.Fprintln(progressWriter())
+	}
 	report.Started = true
-	displayStep(os.Stdout, 1, 8, "System packages")
+	start("system", "Checking system packages")
+	if hook == nil {
+		displayStep(progressWriter(), 1, 8, "System packages")
+	}
 
 	if !dryRun {
-		fmt.Println("    Checking system dependencies...")
+		fmt.Fprintln(progressWriter(), "    Checking system dependencies...")
 		n, err := installers.NativeEnsurePackages(installers.NativeBasePackages())
 		if err != nil {
-			report.Errors = append(report.Errors, fmt.Sprintf("%s: %s", pm, err))
+			fail(fmt.Sprintf("%s: %s", pm, err))
 			displayPrintf("    [ERROR] System dependencies: %s\n", err)
 		} else {
 			report.SystemChecked = true
@@ -145,15 +198,18 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 		displayPrintf("    [PLAN] Would install system dependencies via %s\n", pm)
 	}
 
-	fmt.Println()
-	displayStep(os.Stdout, 2, 8, "Developer tools")
+	fmt.Fprintln(progressWriter())
+	start("developer-tools", "Checking developer tools")
+	if hook == nil {
+		displayStep(progressWriter(), 2, 8, "Developer tools")
+	}
 
 	if pm != installers.BREW {
 		if !dryRun {
-			fmt.Println("    Checking Homebrew...")
+			fmt.Fprintln(progressWriter(), "    Checking Homebrew...")
 			installed, err := installers.BrewEnsureInstalled()
 			if err != nil {
-				report.Errors = append(report.Errors, fmt.Sprintf("Brew: %s", err))
+				fail(fmt.Sprintf("Brew: %s", err))
 				displayPrintf("    [ERROR] Homebrew: %s\n", err)
 			} else if installed {
 				displayPrintln("    [OK] Homebrew installed")
@@ -173,10 +229,10 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	verbosePrintf("brewPkgs=%v\n", installers.DefaultBrewPackages)
 
 	if !dryRun {
-		fmt.Println("    Checking Homebrew packages...")
+		fmt.Fprintln(progressWriter(), "    Checking Homebrew packages...")
 		n, err := installers.BrewEnsurePackages(installers.DefaultBrewPackages)
 		if err != nil {
-			report.Errors = append(report.Errors, fmt.Sprintf("Brew packages: %s", err))
+			fail(fmt.Sprintf("Brew packages: %s", err))
 			displayPrintf("    [ERROR] Brew packages: %s\n", err)
 		} else {
 			report.BrewChecked = true
@@ -191,14 +247,17 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 		displayPrintln("    [PLAN] Would install Brew packages: " + strings.Join(installers.DefaultBrewPackages, ", "))
 	}
 
-	fmt.Println()
-	displayStep(os.Stdout, 3, 8, "Runtimes")
+	fmt.Fprintln(progressWriter())
+	start("runtimes", "Checking runtimes")
+	if hook == nil {
+		displayStep(progressWriter(), 3, 8, "Runtimes")
+	}
 
 	if shouldInstallRuntime(cfg, "node") && !dryRun {
-		fmt.Println("    Checking Node.js...")
+		fmt.Fprintln(progressWriter(), "    Checking Node.js...")
 		installed, err := runtimes.EnsureNode()
 		if err != nil {
-			report.Errors = append(report.Errors, fmt.Sprintf("Node: %s", err))
+			fail(fmt.Sprintf("Node: %s", err))
 			displayPrintf("    [ERROR] Node.js: %s\n", err)
 		} else {
 			report.NodeVer = runtimes.NodeVersion()
@@ -221,10 +280,10 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	if shouldInstallRuntime(cfg, "python") && !dryRun {
-		fmt.Println("    Checking Python...")
+		fmt.Fprintln(progressWriter(), "    Checking Python...")
 		installed, err := runtimes.EnsurePython()
 		if err != nil {
-			report.Errors = append(report.Errors, fmt.Sprintf("Python: %s", err))
+			fail(fmt.Sprintf("Python: %s", err))
 			displayPrintf("    [ERROR] Python: %s\n", err)
 		} else {
 			report.PythonVer = runtimes.PythonVersion()
@@ -247,10 +306,10 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	if shouldInstallRuntime(cfg, "go") && !dryRun {
-		fmt.Println("    Checking Go...")
+		fmt.Fprintln(progressWriter(), "    Checking Go...")
 		installed, err := runtimes.EnsureGo()
 		if err != nil {
-			report.Errors = append(report.Errors, fmt.Sprintf("Go: %s", err))
+			fail(fmt.Sprintf("Go: %s", err))
 			displayPrintf("    [ERROR] Go: %s\n", err)
 		} else {
 			report.GoVer = runtimes.GoVersion()
@@ -273,10 +332,10 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	}
 
 	if shouldInstallRuntime(cfg, "dotnet") && !dryRun {
-		fmt.Println("    Checking .NET SDK...")
+		fmt.Fprintln(progressWriter(), "    Checking .NET SDK...")
 		installed, err := runtimes.EnsureDotnet()
 		if err != nil {
-			report.Errors = append(report.Errors, fmt.Sprintf(".NET: %s", err))
+			fail(fmt.Sprintf(".NET: %s", err))
 			displayPrintf("    [ERROR] .NET SDK: %s\n", err)
 		} else {
 			report.DotnetVer = runtimes.DotnetVersion()
@@ -298,21 +357,24 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 		}
 	}
 
-	fmt.Println()
-	displayStep(os.Stdout, 4, 8, "Shell")
+	fmt.Fprintln(progressWriter())
+	start("shell", "Configuring shell")
+	if hook == nil {
+		displayStep(progressWriter(), 4, 8, "Shell")
+	}
 
 	if !dryRun {
 		if !shell.FishInstalled() {
-			fmt.Println("    Installing fish via native package manager...")
+			fmt.Fprintln(progressWriter(), "    Installing fish via native package manager...")
 			if err := installers.NativeInstall(installers.FishPackageName()); err != nil {
-				report.Errors = append(report.Errors, fmt.Sprintf("Fish: %s", err))
+				fail(fmt.Sprintf("Fish: %s", err))
 				displayPrintf("    [ERROR] Fish install: %s\n", err)
 			}
 		}
 		if shell.FishInstalled() {
 			_, err := shell.FishEnsureSetup(brewPrefix)
 			if err != nil {
-				report.Errors = append(report.Errors, fmt.Sprintf("Shell config: %s", err))
+				fail(fmt.Sprintf("Shell config: %s", err))
 				displayPrintf("    [ERROR] Fish config: %s\n", err)
 			} else {
 				report.Shell = true
@@ -326,14 +388,17 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 		displayPrintln("    [PLAN] Would install and configure Fish shell")
 	}
 
-	fmt.Println()
-	displayStep(os.Stdout, 5, 8, "Editors")
+	fmt.Fprintln(progressWriter())
+	start("editors", "Checking editors")
+	if hook == nil {
+		displayStep(progressWriter(), 5, 8, "Editors")
+	}
 
 	if cfg.Editors != nil && cfg.Editors["zed"] == "true" {
 		if !dryRun {
-			fmt.Println("    Checking Zed...")
+			fmt.Fprintln(progressWriter(), "    Checking Zed...")
 			if err := editors.EnsureZed(); err != nil {
-				report.Errors = append(report.Errors, fmt.Sprintf("Zed: %s", err))
+				fail(fmt.Sprintf("Zed: %s", err))
 				displayPrintf("    [ERROR] Zed: %s\n", err)
 			}
 		} else {
@@ -353,14 +418,16 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 		}
 	}
 
-	fmt.Println()
-	displayStep(os.Stdout, 6, 8, "AI tools")
+	fmt.Fprintln(progressWriter())
+	start("ai-tools", "Checking AI tools")
+	if hook == nil {
+		displayStep(progressWriter(), 6, 8, "AI tools")
+	}
 
 	if !dryRun {
-		fmt.Println("    Checking AI tools...")
-		report.AITools = ai.EnsureAITools(cfg)
+		fmt.Fprintln(progressWriter(), "    Checking AI tools...")
+		report.AITools = ai.EnsureAIToolsWithOptions(cfg, ai.InstallOptions{OnError: func(message string) { fail("AI tools: " + message) }})
 		if report.AITools.HasFailures() {
-			report.Errors = append(report.Errors, prefixedInstallErrors("AI tools", report.AITools.Errors)...)
 			displayPrintf("    [ERROR] AI tools: %s\n", installReportSummary(report.AITools))
 		} else if report.AITools.Enabled == 0 {
 			displayPrintln("    [SKIP] AI tools: (disabled)")
@@ -371,14 +438,16 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 		displayPrintln("    [PLAN] Would install AI tools")
 	}
 
-	fmt.Println()
-	displayStep(os.Stdout, 7, 8, "AI apps")
+	fmt.Fprintln(progressWriter())
+	start("ai-apps", "Checking AI apps")
+	if hook == nil {
+		displayStep(progressWriter(), 7, 8, "AI apps")
+	}
 
 	if !dryRun {
-		fmt.Println("    Checking AI apps...")
-		report.AIApps = ai.EnsureAIApps(cfg)
+		fmt.Fprintln(progressWriter(), "    Checking AI apps...")
+		report.AIApps = ai.EnsureAIAppsWithOptions(cfg, ai.InstallOptions{OnError: func(message string) { fail("AI apps: " + message) }})
 		if report.AIApps.HasFailures() {
-			report.Errors = append(report.Errors, prefixedInstallErrors("AI apps", report.AIApps.Errors)...)
 			displayPrintf("    [ERROR] AI apps: %s\n", installReportSummary(report.AIApps))
 		} else if report.AIApps.Enabled == 0 {
 			displayPrintln("    [SKIP] AI apps: (disabled)")
@@ -389,8 +458,11 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 		displayPrintln("    [PLAN] Would install AI apps")
 	}
 
-	fmt.Println()
-	displayStep(os.Stdout, 8, 8, "Docker")
+	fmt.Fprintln(progressWriter())
+	start("docker", "Checking Docker")
+	if hook == nil {
+		displayStep(progressWriter(), 8, 8, "Docker")
+	}
 
 	dockerStatus := docker.Detect()
 	if dockerStatus.CliInstalled && dockerStatus.DaemonRunning {
@@ -399,7 +471,7 @@ func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 		displayPrintf("    [SKIP] %s\n", dockerStatus.Message)
 	}
 
-	fmt.Println()
+	fmt.Fprintln(progressWriter())
 	return report
 }
 

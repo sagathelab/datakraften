@@ -3,6 +3,7 @@ package exec
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -14,11 +15,32 @@ type Result struct {
 	Code   int
 }
 
-func Run(name string, args ...string) Result {
+type Options struct {
+	Stdin         io.Reader
+	Stdout        io.Writer
+	Stderr        io.Writer
+	CaptureStdout bool
+	CaptureStderr bool
+}
+
+func RunWithOptions(opts Options, name string, args ...string) Result {
 	cmd := exec.Command(name, args...)
+	cmd.Stdin = opts.Stdin
 	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	cmd.Stdout = opts.Stdout
+	cmd.Stderr = opts.Stderr
+	if opts.CaptureStdout {
+		cmd.Stdout = &stdout
+		if opts.Stdout != nil {
+			cmd.Stdout = io.MultiWriter(opts.Stdout, &stdout)
+		}
+	}
+	if opts.CaptureStderr {
+		cmd.Stderr = &stderr
+		if opts.Stderr != nil {
+			cmd.Stderr = io.MultiWriter(opts.Stderr, &stderr)
+		}
+	}
 
 	err := cmd.Run()
 	code := 0
@@ -29,36 +51,15 @@ func Run(name string, args ...string) Result {
 			code = -1
 		}
 	}
+	return Result{Stdout: strings.TrimSpace(stdout.String()), Stderr: strings.TrimSpace(stderr.String()), Code: code}
+}
 
-	return Result{
-		Stdout: strings.TrimSpace(stdout.String()),
-		Stderr: strings.TrimSpace(stderr.String()),
-		Code:   code,
-	}
+func Run(name string, args ...string) Result {
+	return RunWithOptions(Options{CaptureStdout: true, CaptureStderr: true}, name, args...)
 }
 
 func RunWithInput(input string, name string, args ...string) Result {
-	cmd := exec.Command(name, args...)
-	cmd.Stdin = strings.NewReader(input)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	code := 0
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			code = exitErr.ExitCode()
-		} else {
-			code = -1
-		}
-	}
-
-	return Result{
-		Stdout: strings.TrimSpace(stdout.String()),
-		Stderr: strings.TrimSpace(stderr.String()),
-		Code:   code,
-	}
+	return RunWithOptions(Options{Stdin: strings.NewReader(input), CaptureStdout: true, CaptureStderr: true}, name, args...)
 }
 
 func RunVerbose(name string, args ...string) Result {

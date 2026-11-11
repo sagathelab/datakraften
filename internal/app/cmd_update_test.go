@@ -212,3 +212,15 @@ func TestListUpdatableOnlyShowsSupportedTargets(t *testing.T) {
 		}
 	}
 }
+
+func TestUpdateProgressFailure(t *testing.T) {
+	failure := errors.New("update failed")
+	var events []ProgressEvent
+	step := updateStep{name: "example", run: func(bool) error { return failure }}
+	if err := runUpdateStep(step, false, func(event ProgressEvent) { events = append(events, event) }); !errors.Is(err, failure) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(events) != 2 || events[0].Status != ProgressStarted || events[1].Status != ProgressFailed || !errors.Is(events[1].Err, failure) {
+		t.Fatalf("unexpected events: %+v", events)
+	}
+}

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/sagathelab/datakraften/internal/ai"
+	"github.com/sagathelab/datakraften/internal/config"
 )
 
 func TestInstallReportSummaryShowsFailureInsteadOfAlreadyInstalled(t *testing.T) {
@@ -33,5 +34,15 @@ func TestInstallReportSummaryDoesNotAssumeUnreportedResults(t *testing.T) {
 	got := installReportSummary(ai.InstallReport{Enabled: 1})
 	if strings.Contains(got, "already installed") {
 		t.Fatalf("unreported result presented as installed: %q", got)
+	}
+}
+
+func TestApplyProgressConfigurationFailure(t *testing.T) {
+	var events []ProgressEvent
+	report := RunApplyWithProgress(&config.Config{Source: "team"}, false, func(event ProgressEvent) {
+		events = append(events, event)
+	})
+	if len(report.Errors) != 1 || len(events) != 2 || events[0].Status != ProgressStarted || events[1].Status != ProgressFailed || events[1].Err == nil {
+		t.Fatalf("unexpected report or events: %+v, %+v", report, events)
 	}
 }
