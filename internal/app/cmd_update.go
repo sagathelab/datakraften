@@ -319,13 +319,9 @@ func retryNpmOperationWithSudo(operation string, packages []string, originalErro
 	if prefixResult.Code != 0 || !strings.HasPrefix(prefix, "/") || strings.ContainsAny(prefix, "\r\n") {
 		return fmt.Errorf("cannot determine npm prefix for sudo retry: %w", npm.CommandError(command, originalError))
 	}
-	fmt.Fprintf(progressWriter(), "  npm cannot write to %s. %s %s with sudo? [y/N] ", prefix, strings.ToUpper(operation[:1])+operation[1:], strings.Join(packages, ", "))
-	answer, err := term.ReadPassword(int(os.Stdin.Fd()))
-	confirmed := strings.EqualFold(strings.TrimSpace(string(answer)), "y") || strings.EqualFold(strings.TrimSpace(string(answer)), "yes")
-	if confirmed && err == nil {
-		fmt.Fprintln(progressWriter(), "y")
-	} else {
-		fmt.Fprintln(progressWriter(), "n")
+	prompt := fmt.Sprintf("  npm cannot write to %s. %s %s with sudo? [y/N]: ", prefix, strings.ToUpper(operation[:1])+operation[1:], strings.Join(packages, ", "))
+	confirm := osexec.Command("/bin/sh", "-c", `printf '%s' "$1"; read -r answer || exit 1; case "$answer" in [yY]|[yY][eE][sS]) exit 0;; *) exit 1;; esac`, "sh", prompt)
+	if err := terminal.Run(confirm, os.Stdin, progressTerminalWriter()); err != nil {
 		return fmt.Errorf("sudo retry declined: %w", npm.CommandError(command, originalError))
 	}
 	npmPath := exec.CommandPath("npm")

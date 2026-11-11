@@ -189,11 +189,16 @@ esac
                 fcntl.ioctl(1, termios.TIOCSWINSZ, struct.pack('HHHH', 40, 100, 0, 0))
                 os.execve(binary, [binary, 'update', 'npm'], env)
             output = b''
-            while b'[y/N]' not in output:
+            while b'[y/N]: ' not in output:
                 ready, _, _ = select.select([fd], [], [], 10)
                 self.assertTrue(ready, output.decode(errors='replace'))
                 output += os.read(fd, 4096)
-            os.write(fd, b'y\n')
+            os.write(fd, b'y')
+            while not output.endswith(b'y'):
+                ready, _, _ = select.select([fd], [], [], 10)
+                self.assertTrue(ready, output.decode(errors='replace'))
+                output += os.read(fd, 4096)
+            os.write(fd, b'\n')
             while True:
                 try:
                     chunk = os.read(fd, 4096)
