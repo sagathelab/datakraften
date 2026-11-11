@@ -514,6 +514,39 @@ func TestTerminalWriterTracksNpmSpinner(t *testing.T) {
 	}
 }
 
+func TestTerminalWriterTracksFragmentedOSC(t *testing.T) {
+	for _, sequence := range []string{"\x1b]0;npm update\a", "\x1b]9;4;1;50\x1b\\", "\x1b]8;;https://example.test\x1b\\"} {
+		var out bytes.Buffer
+		r := &Renderer{out: &out, color: true, terminalHeadings: true, known: true, size: func() (int, int, error) { return 212, 47, nil }}
+		_ = r.Running("Updating npm")
+		w := r.TerminalWriter()
+		for _, b := range []byte(sequence) {
+			if _, err := w.Write([]byte{b}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		_, _ = w.Write([]byte("changed 2 packages\r\n"))
+		if !r.active {
+			t.Fatalf("OSC sequence lost progress: %q", sequence)
+		}
+		_ = r.Done("Updating npm")
+		if !strings.Contains(out.String(), sequence) || !strings.Contains(out.String(), "\x1b[32m●\x1b[0m Updating npm") {
+			t.Fatalf("missing OSC sequence or completed heading: %q", out.String())
+		}
+	}
+}
+
+func TestTerminalWriterFallsBackForUnsupportedOSC(t *testing.T) {
+	var out bytes.Buffer
+	r := &Renderer{out: &out, color: true, terminalHeadings: true, known: true, size: func() (int, int, error) { return 80, 20, nil }}
+	_ = r.Running("work")
+	sequence := "\x1b]1337;File=example\a"
+	_, _ = r.TerminalWriter().Write([]byte(sequence))
+	if r.active || !r.handoffHeading || !strings.Contains(out.String(), sequence) {
+		t.Fatalf("unsupported OSC was not safely forwarded: %q", out.String())
+	}
+}
+
 func TestTerminalWriterFlushesIncompleteSequences(t *testing.T) {
 	var out bytes.Buffer
 	r := &Renderer{out: &out, color: true, terminalHeadings: true, known: true, size: func() (int, int, error) { return 80, 20, nil }}

@@ -23,6 +23,17 @@ def terminal_screen(data, width=120, height=50):
     while i < len(text):
         c = text[i]
         i += 1
+        if c == '\x1b' and i < len(text) and text[i] == ']':
+            i += 1
+            while i < len(text):
+                if text[i] == '\a':
+                    i += 1
+                    break
+                if text[i:i + 2] == '\x1b\\':
+                    i += 2
+                    break
+                i += 1
+            continue
         if c == '\x1b' and i < len(text) and text[i] == '[':
             i += 1
             start = i
@@ -200,7 +211,7 @@ esac
         binary = os.environ.get('DK_TEST_BINARY')
         if not binary:
             self.skipTest('set DK_TEST_BINARY to the built dk executable')
-        cases = ((0, 32, 'normal'), (0, 32, 'npm_spinner'), (42, 31, 'normal'), (0, None, 'scroll'), (0, None, 'resize'), (130, None, 'interrupt'), (0, None, 'suspend'))
+        cases = ((0, 32, 'normal'), (0, 32, 'npm_spinner'), (0, 32, 'osc'), (42, 31, 'normal'), (0, None, 'scroll'), (0, None, 'resize'), (130, None, 'interrupt'), (0, None, 'suspend'))
         for exit_code, expected_color, mode in cases:
             with self.subTest(exit_code=exit_code, mode=mode), tempfile.TemporaryDirectory() as tmp:
                 root = pathlib.Path(tmp)
@@ -234,6 +245,11 @@ finally:
     termios.tcsetattr(0, termios.TCSANOW, original)
 if {mode!r} == "npm_spinner":
     for part in (b"\\x1b[", b"1G\\x1b[0K\\xe2", b"\\xa0\\x99", b"\\x1b[1G\\x1b[0K"):
+        sys.stdout.buffer.write(part)
+        sys.stdout.buffer.flush()
+        time.sleep(0.03)
+if {mode!r} == "osc":
+    for part in (b"\\x1b]", b"0;npm update", b"\\x07", b"\\x1b]9;4;1;50\\x1b", b"\\\\"):
         sys.stdout.buffer.write(part)
         sys.stdout.buffer.flush()
         time.sleep(0.03)

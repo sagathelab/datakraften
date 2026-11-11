@@ -245,6 +245,14 @@ func completeTerminalPrefix(p []byte) int {
 			if i+1 == len(p) {
 				return start
 			}
+			if p[i+1] == ']' {
+				end, _, complete := terminalOSC(p, i+2)
+				if !complete {
+					return start
+				}
+				i = end
+				continue
+			}
 			if p[i+1] == '[' {
 				i += 2
 				for i < len(p) && (p[i] < 0x40 || p[i] > 0x7e) {
@@ -266,6 +274,32 @@ func completeTerminalPrefix(p []byte) int {
 		i += size
 	}
 	return len(p)
+}
+
+func terminalOSC(p []byte, start int) (int, bool, bool) {
+	valid := true
+	for i := start; i < len(p); i++ {
+		if p[i] == '\a' || (p[i] == '\x1b' && i+1 < len(p) && p[i+1] == '\\') {
+			end := i + 1
+			if p[i] == '\x1b' {
+				end++
+			}
+			command, _, hasParams := strings.Cut(string(p[start:i]), ";")
+			switch command {
+			case "0", "1", "2", "4", "7", "8", "9", "10", "11", "12", "17", "19", "52", "104", "110", "111", "112", "133", "134":
+				return end, valid && hasParams, true
+			default:
+				return end, false, true
+			}
+		}
+		if p[i] == '\x1b' && i+1 == len(p) {
+			return 0, false, false
+		}
+		if p[i] < 0x20 || p[i] == 0x7f {
+			valid = false
+		}
+	}
+	return 0, false, false
 }
 
 func (r *Renderer) TerminalWriter() io.Writer { return &terminalWriter{renderer: r} }
@@ -321,6 +355,14 @@ func (r *Renderer) trackTerminal(p []byte) (int, int, bool, bool) {
 		i += size
 		switch {
 		case c == '\x1b':
+			if i < len(p) && p[i] == ']' {
+				end, valid, complete := terminalOSC(p, i+1)
+				if !complete || !valid {
+					return 0, 0, false, false
+				}
+				i = end
+				break
+			}
 			if i >= len(p) || p[i] != '[' {
 				return 0, 0, false, false
 			}
