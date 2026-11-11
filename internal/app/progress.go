@@ -88,13 +88,8 @@ func (p *progressOutput) runSudo(args ...string) exec.Result {
 	if !term.IsTerminal(int(os.Stdin.Fd())) || !term.IsTerminal(int(os.Stdout.Fd())) || !term.IsTerminal(int(os.Stderr.Fd())) {
 		return exec.Run("sudo", append([]string{"-n"}, args...)...)
 	}
-	tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
-	if err != nil {
-		return exec.Result{Code: -1, Stderr: fmt.Sprintf("cannot open terminal: %s", err)}
-	}
-	defer tty.Close()
 	cmd := osexec.Command("sudo", args...)
-	if err := terminal.Run(cmd, tty, p.renderer.TerminalWriter()); err != nil {
+	if err := terminal.Run(cmd, os.Stdin, p.renderer.TerminalWriter()); err != nil {
 		code := -1
 		if cmd.ProcessState != nil && cmd.ProcessState.ExitCode() != 0 {
 			code = cmd.ProcessState.ExitCode()

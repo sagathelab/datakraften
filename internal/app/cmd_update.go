@@ -319,13 +319,8 @@ func retryNpmOperationWithSudo(operation string, packages []string, originalErro
 	if prefixResult.Code != 0 || !strings.HasPrefix(prefix, "/") || strings.ContainsAny(prefix, "\r\n") {
 		return fmt.Errorf("cannot determine npm prefix for sudo retry: %w", npm.CommandError(command, originalError))
 	}
-	tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
-	if err != nil {
-		return fmt.Errorf("npm needs administrator access but no interactive terminal is available: %w", npm.CommandError(command, originalError))
-	}
-	defer tty.Close()
 	fmt.Fprintf(progressWriter(), "  npm cannot write to %s. %s %s with sudo? [y/N] ", prefix, strings.ToUpper(operation[:1])+operation[1:], strings.Join(packages, ", "))
-	answer, err := term.ReadPassword(int(tty.Fd()))
+	answer, err := term.ReadPassword(int(os.Stdin.Fd()))
 	confirmed := strings.EqualFold(strings.TrimSpace(string(answer)), "y") || strings.EqualFold(strings.TrimSpace(string(answer)), "yes")
 	if confirmed && err == nil {
 		fmt.Fprintln(progressWriter(), "y")
@@ -336,7 +331,7 @@ func retryNpmOperationWithSudo(operation string, packages []string, originalErro
 	npmPath := exec.CommandPath("npm")
 	args := append([]string{npmPath, operation, "-g", "--prefix", prefix}, packages...)
 	cmd := osexec.Command("sudo", args...)
-	if err := terminal.Run(cmd, tty, progressTerminalWriter()); err != nil {
+	if err := terminal.Run(cmd, os.Stdin, progressTerminalWriter()); err != nil {
 		return fmt.Errorf("sudo npm %s failed: %w", operation, err)
 	}
 	displayPrintf("    [OK] npm %s completed with sudo\n", operation)
