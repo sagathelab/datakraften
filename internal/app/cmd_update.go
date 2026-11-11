@@ -82,10 +82,6 @@ func listUpdatable() error {
 	return nil
 }
 
-func updateTool(name string, dryRun bool) error {
-	return UpdateToolWithProgress(name, dryRun, nil)
-}
-
 func UpdateToolWithProgress(name string, dryRun bool, hook ProgressHook) error {
 	name = strings.ToLower(name)
 	var step updateStep

@@ -6,12 +6,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sync"
-
-	"github.com/sagathelab/datakraften/internal/installers"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/sagathelab/datakraften/internal/installers"
 )
 
 type failingProgressWriter struct{}

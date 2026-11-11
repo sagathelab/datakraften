@@ -106,14 +106,6 @@ func installReportSummary(report ai.InstallReport) string {
 	return strings.Join(parts, "; ")
 }
 
-func prefixedInstallErrors(section string, errors []string) []string {
-	prefixed := make([]string, 0, len(errors))
-	for _, err := range errors {
-		prefixed = append(prefixed, fmt.Sprintf("%s: %s", section, err))
-	}
-	return prefixed
-}
-
 func RunApply(cfg *config.Config, dryRun bool) *ApplyReport {
 	return RunApplyWithProgress(cfg, dryRun, nil)
 }
