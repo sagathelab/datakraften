@@ -95,7 +95,7 @@ make install    # Install to ~/.local/bin/dk
 
 ## Project plan
 
-See [plans/datakraften-platform-plan.md](plans/datakraften-platform-plan.md) for the full product vision, architecture, and roadmap.
+See the [Datakraften 3.0 roadmap](plans/datakraften_3.0_roadmap.md) for the product direction and planned milestones. The earlier [platform plan](plans/datakraften-platform-plan.md) remains available for historical context.
 
 ## Platform targets
 
