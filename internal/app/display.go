@@ -10,9 +10,20 @@ import (
 )
 
 func displayColorEnabled(w io.Writer) bool {
+	if p, ok := w.(*progressOutput); ok {
+		return p.renderer.ColorEnabled()
+	}
 	file, ok := w.(*os.File)
 	_, noColor := os.LookupEnv("NO_COLOR")
 	return ok && term.IsTerminal(int(file.Fd())) && !noColor && os.Getenv("TERM") != "dumb"
+}
+
+func displayEmphasis(w io.Writer, text, color string) {
+	if displayColorEnabled(w) {
+		fmt.Fprintf(w, "\x1b[%sm%s\x1b[0m\n", color, text)
+	} else {
+		fmt.Fprintln(w, text)
+	}
 }
 
 func colorStatus(w io.Writer, text string) string {

@@ -68,40 +68,45 @@ func newApplyCmd() *cobra.Command {
 			}
 
 			if len(report.Errors) > 0 {
-				fmt.Fprintf(progressWriter(), "  Apply finished with %d error(s)\n", len(report.Errors))
+				displayEmphasis(progressWriter(), fmt.Sprintf("  ! Apply finished with %d error(s)", len(report.Errors)), "1;31")
 			} else {
-				fmt.Fprintln(progressWriter(), "  Apply complete")
+				displayEmphasis(progressWriter(), "  ✓ Apply complete", "1;32")
 			}
-			fmt.Fprintln(progressWriter(), "  Summary")
+			fmt.Fprintln(progressWriter())
+			displayEmphasis(progressWriter(), "  Summary", "1")
+			fmt.Fprintln(progressWriter(), "  -------")
+			row := func(label, value string) {
+				fmt.Fprintf(progressWriter(), "    %-16s %s\n", label, value)
+			}
 			if len(report.System) > 0 {
-				fmt.Fprintf(progressWriter(), "    System packages: %s\n", strings.Join(report.System, ", "))
+				row("System packages", strings.Join(report.System, ", "))
 			} else if report.SystemChecked {
-				fmt.Fprintln(progressWriter(), "    System packages: (already satisfied)")
+				row("System packages", "already satisfied")
 			} else {
-				fmt.Fprintln(progressWriter(), "    System packages: not completed")
+				row("System packages", "not completed")
 			}
 			if len(report.BrewPkgs) > 0 {
-				fmt.Fprintf(progressWriter(), "    Brew packages: %s\n", strings.Join(report.BrewPkgs, ", "))
+				row("Brew packages", strings.Join(report.BrewPkgs, ", "))
 			} else if report.BrewChecked {
-				fmt.Fprintln(progressWriter(), "    Brew packages: (already installed)")
+				row("Brew packages", "already installed")
 			} else {
-				fmt.Fprintln(progressWriter(), "    Brew packages: not completed")
+				row("Brew packages", "not completed")
 			}
 			if report.NodeVer != "" {
-				fmt.Fprintf(progressWriter(), "    Node.js %s (%s)\n", report.NodeVer, report.Node)
+				row("Node.js", fmt.Sprintf("%s (%s)", report.NodeVer, report.Node))
 			}
 			if report.PythonVer != "" {
-				fmt.Fprintf(progressWriter(), "    Python %s (%s)\n", report.PythonVer, report.Python)
+				row("Python", fmt.Sprintf("%s (%s)", report.PythonVer, report.Python))
 			}
 			if report.GoVer != "" {
-				fmt.Fprintf(progressWriter(), "    Go %s (%s)\n", report.GoVer, report.Go)
+				row("Go", fmt.Sprintf("%s (%s)", report.GoVer, report.Go))
 			}
 			if report.DotnetVer != "" {
-				fmt.Fprintf(progressWriter(), "    .NET SDK %s (%s)\n", report.DotnetVer, report.Dotnet)
+				row(".NET SDK", fmt.Sprintf("%s (%s)", report.DotnetVer, report.Dotnet))
 			}
 			if report.Started {
-				fmt.Fprintf(progressWriter(), "    AI tools: %s\n", installReportSummary(report.AITools))
-				fmt.Fprintf(progressWriter(), "    AI apps: %s\n", installReportSummary(report.AIApps))
+				row("AI tools", installReportSummary(report.AITools))
+				row("AI apps", installReportSummary(report.AIApps))
 			} else {
 				fmt.Fprintln(progressWriter(), "    AI tools and apps: not checked")
 			}
@@ -114,7 +119,8 @@ func newApplyCmd() *cobra.Command {
 			}
 
 			fmt.Fprintln(progressWriter())
-			fmt.Fprintln(progressWriter(), "  Next steps:")
+			displayEmphasis(progressWriter(), "  Next steps", "1")
+			fmt.Fprintln(progressWriter())
 			if report.Shell {
 				fmt.Fprintln(progressWriter(), "    Restart your shell or run: exec fish")
 			}

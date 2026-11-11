@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+	"unicode/utf8"
 
 	"golang.org/x/term"
 )
@@ -154,9 +155,11 @@ func (r *Renderer) event(status, color, message string, running bool) error {
 			_, err := r.write([]byte(r.formatAnchor(clean(message), color, 10000) + "\n"))
 			return err
 		}
-		if status == "OK" {
-			return nil
+		if _, err := r.write([]byte(r.formatAnchor(clean(message), color, 10000) + "\n")); err != nil {
+			return err
 		}
+		r.known = true
+		return nil
 	}
 	if running && r.known {
 		w, h, ok := r.dimensions()
@@ -195,8 +198,13 @@ func (r *Renderer) writeLog(p []byte, format func([]byte) []byte) (int, error) {
 	}
 	anchored := r.valid()
 	if anchored {
-		for _, c := range p {
-			if c != '\n' && (c < 32 || c > 126) {
+		if !utf8.Valid(p) {
+			r.active = false
+			r.known = false
+			anchored = false
+		}
+		for _, c := range string(p) {
+			if c != '\n' && !(c >= 32 && c <= 126) && !(unicode.Is(unicode.Latin, c) && unicode.IsLetter(c)) && c != '–' && c != '—' {
 				r.active = false
 				r.known = false
 				anchored = false
@@ -205,7 +213,7 @@ func (r *Renderer) writeLog(p []byte, format func([]byte) []byte) (int, error) {
 		}
 	}
 	if anchored {
-		for _, c := range p {
+		for _, c := range string(p) {
 			if c == '\n' {
 				r.distance++
 				r.col = 0

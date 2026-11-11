@@ -357,13 +357,27 @@ func TestTerminalHeadingsSurviveUntrackableOutput(t *testing.T) {
 	r := anchored(s)
 	r.terminalHeadings = true
 	_ = r.Running("AI apps")
-	_, _ = r.Write([]byte("    – skipped\n"))
+	_, _ = r.Write([]byte("    \t skipped\n"))
 	_ = r.Done("AI apps")
 	_ = r.Running("Docker")
 	_ = r.Done("Docker")
 	got := s.raw.String()
-	if strings.Contains(got, "[OK] AI apps") || strings.Contains(got, "[...] Docker") || !strings.Contains(got, "●\x1b[0m Docker") {
+	if !strings.Contains(got, "\x1b[32m●\x1b[0m AI apps") || !strings.Contains(got, "\x1b[32m●\x1b[0m Docker") || strings.Contains(got, "[...] Docker") {
 		t.Fatalf("inconsistent headings: %q", got)
+	}
+}
+
+func TestAnchorTracksCommonUnicodeText(t *testing.T) {
+	s := model(80, 20, 0)
+	r := anchored(s)
+	_ = r.Running("AI apps")
+	_, _ = r.Write([]byte("    – Codex: på macOS\n"))
+	if !r.active {
+		t.Fatal("lost anchor on common text")
+	}
+	_ = r.Done("AI apps")
+	if !strings.Contains(s.raw.String(), "\x1b[32m●\x1b[0m AI apps") {
+		t.Fatal("missing completed heading")
 	}
 }
 
