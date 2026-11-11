@@ -281,6 +281,15 @@ func (r *Renderer) Handoff(fn func() error) error {
 	if r.err != nil {
 		return r.err
 	}
+	if r.terminalHeadings && r.valid() && !r.wrap {
+		seq := fmt.Sprintf("\r\x1b[%dA\r\x1b[2K\r\x1b[%dB\r", r.distance, r.distance)
+		if r.col > 0 {
+			seq += fmt.Sprintf("\x1b[%dC", r.col)
+		}
+		if _, err := r.write([]byte(seq)); err != nil {
+			return err
+		}
+	}
 	r.active = false
 	r.known = false
 	if err := r.endPartial(); err != nil {

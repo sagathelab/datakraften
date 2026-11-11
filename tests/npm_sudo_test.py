@@ -1,9 +1,12 @@
 import os
+import fcntl
 import pathlib
 import pty
 import select
 import subprocess
+import struct
 import tempfile
+import termios
 import unittest
 
 
@@ -93,9 +96,11 @@ esac
             npm.chmod(0o755)
             sudo.chmod(0o755)
             log = root / 'sudo.log'
-            env = dict(os.environ, HOME=str(home), PATH=str(bin_dir), TEST_SUDO_LOG=str(log))
+            env = dict(os.environ, HOME=str(home), PATH=str(bin_dir), TEST_SUDO_LOG=str(log), TERM='xterm')
+            env.pop('NO_COLOR', None)
             pid, fd = pty.fork()
             if pid == 0:
+                fcntl.ioctl(1, termios.TIOCSWINSZ, struct.pack('HHHH', 40, 100, 0, 0))
                 os.execve(binary, [binary, 'update', 'npm'], env)
             output = b''
             while b'[y/N]' not in output:
@@ -103,8 +108,18 @@ esac
                 self.assertTrue(ready, output.decode(errors='replace'))
                 output += os.read(fd, 4096)
             os.write(fd, b'y\n')
+            while True:
+                try:
+                    chunk = os.read(fd, 4096)
+                except OSError:
+                    break
+                if not chunk:
+                    break
+                output += chunk
             _, status = os.waitpid(pid, 0)
             self.assertEqual(os.waitstatus_to_exitcode(status), 0)
+            self.assertIn(b'\x1b[2K', output.split(b'[y/N]')[0])
+            self.assertIn(b'\x1b[32m\xe2\x97\x8f\x1b[0m Updating npm', output)
             self.assertEqual(log.read_text().splitlines(), [str(npm), 'update', '-g', '--prefix', '/protected/prefix', '@openai/codex'])
             os.close(fd)
 
