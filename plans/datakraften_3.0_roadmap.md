@@ -13,6 +13,21 @@ Dette er fortsatt kjernen. Datakraften skal i tillegg være en **støttespiller 
 
 Målet er å bli en foretrukket løsning for utviklere fordi produktet er nyttig i hverdagen, forståelig, pålitelig og verdt tilliten. Det er en ambisjon som må vinnes gjennom faktiske brukerbehov og kvalitet – ikke noe en versjonsnummerering i seg selv oppnår.
 
+### Produktbeslutning: Én sammenhengende løsning for maskin og prosjekter
+
+Datakraften skal både hjelpe utvikleren med **den lokale utviklermaskinen** og tilby **prosjektfunksjonalitet som en sentral del av produktet**. `dk` skal gjøre det enkelt å finne, sette opp og vedlikeholde utviklerverktøy, runtimes og rammeverk, og deretter bruke riktige versjoner, miljøvariabler og kommandoer i hvert prosjekt. Node er den første konkrete versjonsstyrte arbeidsflyten, ikke en begrensning på den langsiktige retningen.
+
+Repoet er førstevalget for delt prosjektoppsett: samme utvikler og team kan arbeide i flere repoer med ulike behov, uten å skifte global maskinkonfigurasjon. Maskinen har fortsatt et personlig grunnlag; en valgfri, felles teamstandard kan undersøkes for behov på tvers av repoer. Denne retningen er besluttet. Format, backender og detaljer i kommandolinjen skal utformes og testes før implementering.
+
+```text
+Personlig utviklermaskin: shell, editor, Git og personlige verktøy
+  ├── Repo A: Node 22, prosjektvariabler og egne kommandoer
+  ├── Repo B: Node 24, andre variabler og egne kommandoer
+  └── Repo C: andre runtimes og rammeverk etter behov
+```
+
+Prosjektmiljøet avgrenses i første omgang til prosessen som `dk` starter og dens barn. Det er ikke en sikkerhetssandkasse og isolerer ikke automatisk systempakker, tjenester, filer eller nettverk. Et prosjekt skal ikke endre et annet prosjekts oppsett eller maskinens globale standard som en skjult bivirkning.
+
 ### Produktløftet for 3.0
 
 1. **Oppdag:** Finn relevante utviklerverktøy og forstå hva de gjør, hvem de passer for og hvilke alternativer som finnes.
@@ -124,7 +139,9 @@ På testede WSL-, Fedora- og Ubuntu-oppsett kan en bruker forhåndsvise, anvende
 
 ### Mål
 
-Et prosjekt skal kunne beskrive verktøyversjoner, ikke-hemmelige miljøvariabler og navngitte oppgaver. En utvikler skal forstå og kjøre prosjektet uten å endre maskinens globale standardversjoner.
+Prosjektfunksjonalitet er en prioritert del av 3.0: Et repo skal kunne beskrive runtimes og versjoner, støttede verktøy og rammeverk, ikke-hemmelige miljøvariabler og navngitte oppgaver. En utvikler skal enkelt kunne oppdage hva prosjektet trenger, få hjelp til å sette det opp og kjøre det uten å endre maskinens globale standardversjoner. Teamet deler kravene i repoet; hver utvikler kan ha flere prosjekter med forskjellige krav på samme maskin.
+
+En runtime som Node og et prosjektrammeverk er ulike ting. Første leveranse skal styre Node-versjonen og kunne kjøre prosjektets eksisterende kommandoer, for eksempel et rammeverks `dev`-skript. Støtte for å installere eller opprette bestemte rammeverk skal komme via eksplisitte, dokumenterte integrasjoner; det er ikke en påstand om at 3.0 automatisk administrerer alle rammeverk eller prosjektavhengigheter.
 
 Følgende er **et illustrerende forslag**, ikke en eksisterende kommando eller vedtatt endelig syntaks:
 
@@ -146,9 +163,23 @@ project:
 ```bash
 # Foreslått brukeropplevelse
 cd mitt-prosjekt
+dk project status  # viser krav, valgt versjon, kilde og mangler
+dk project setup   # viser og gjennomfører valgt prosjektoppsett
 dk run dev
 dk run test
 ```
+
+Kommandoene og YAML-strukturen er illustrasjoner av ønsket resultat, ikke eksisterende funksjoner eller en låst spesifikasjon. `status` skal være lesende; et `setup`-steg skal forklare kilder og endringer og innhente nødvendige valg før installasjon. `dk run` skal forklare manglende krav og kunne kjøre en navngitt oppgave i prosjektets miljø etter at innholdet er godkjent.
+
+### Konkrete produktkrav
+
+- **Oppdage:** Fra repoet eller en undermappe skal brukeren kunne se prosjektrot, kilde til krav, ønsket og aktiv versjon, tilgjengelig backend og mangler uten at inspeksjon kjører prosjektkode eller installerer noe.
+- **Sette opp:** Brukeren skal kunne klargjøre prosjektet med et tydelig valg, kilde og forhåndsvisning av nødvendige installasjoner. Eksisterende kompatible installasjoner skal gjenbrukes når det er trygt og mulig.
+- **Versjonsstyre:** To repoer skal kunne velge forskjellige Node-versjoner side om side. `dk run` skal bruke repoets valgte versjon også når en annen Node står først i brukerens vanlige `PATH`.
+- **Konfigurere miljø:** Prosjektet kan angi vanlige variabler og krav til lokalt tilgjengelige hemmeligheter. Verdier som er hemmelige skal ikke kreves i delte filer eller vises i logger. Prosessmiljøet skal ikke endre forelder-shellet.
+- **Kjøre:** Prosjektet kan gi navn til oppgaver som `dev`, `build` og `test`; brukeren kan liste og kjøre dem i riktig arbeidsmappe med prosjektets verktøy og variabler.
+- **Samarbeide:** Konfigurasjonen kan versjonskontrolleres i repoet, gjennomgås i pull requests og brukes av teamet uten en egen, maskinglobal teamkonfigurasjon. Lokal tilpasning og CI-bruk krever dokumenterte regler for tillit og overstyring.
+- **Feilsøke:** Ved ukjent prosjekt, manglende runtime, uklar versjon, backendkonflikt, feilende installasjon eller avslått tillit skal `dk` forklare årsaken og en mulig neste handling.
 
 ### Kontrakt som må utformes og testes
 
@@ -165,7 +196,7 @@ dk run test
 
 ### Ferdig når
 
-To testprosjekter med ulike Node-versjoner kan kjøres etter hverandre med `dk run`; hvert prosjekt får riktig versjon og miljø, testoppgavens exit-kode og signaler videreføres, og global Node-standard forblir uendret. Manglende backend, motstridende konfigurasjon, ukjent prosjekt og ikke-interaktiv kjøring testes eksplisitt. Ingen kode kjøres ved ren inspeksjon.
+To uavhengige repoer med henholdsvis Node 22 og Node 24 kan klargjøres med uttrykkelig valg og kjøres etter hverandre med `dk run`, også fra en undermappe. Et testskript i hvert repo dokumenterer faktisk Node-versjon, arbeidsmappe og egne ikke-hemmelige variabler; disse samsvarer med repoets krav, og endres ikke av det andre repoet. Den globale Node-standarden forblir uendret. Tester dekker nytt oppsett, gjenbruk, manglende versjon, flere Node-installasjoner på `PATH`, konflikter, ukjent prosjekt, endret tillit, ikke-interaktiv kjøring, avbrudd, argumenter og exit-koder. Inspeksjon installerer ingenting og kjører ikke prosjektkode. Hemmeligheter vises ikke i Datakraftens utdata eller logger; oppgaver brukeren kjører kan selv håndtere og vise egne miljøverdier.
 
 ## 8. Produktområde: Sikkerhet som løpende støtte
 
@@ -219,11 +250,13 @@ Det første dekningsområdet er eksplisitt dokumentert og testet fra deteksjon t
 
 ## 9. Produktområde: Deling, team og tillit
 
-- Behold den eksisterende modellen med `source: default | custom | team`, og planlegg migrering før endringer i skjema eller semantikk.
+- **Repo først:** Prosjektets krav deles normalt i det enkelte repoet og kan være forskjellige fra andre repoer i samme team. Et felles teamgrunnlag er valgfritt og skal ikke erstatte repoets egne krav eller en utviklers personlige maskinoppsett.
+- Dagens `source: default | custom | team` er maskinorientert og skal fortsatt fungere mens prosjektmodellen utvikles. Kartlegg faktisk bruk og utform en migreringsvei før eventuell utfasing eller endring; det er ikke besluttet at dagens globale teammodell skal være den fremtidige prosjektmodellen.
 - Delte konfigurasjoner skal kunne inspiseres og valideres før de påvirker maskinen. Vis opprinnelse, innhold/endringer og hvilke installasjoner eller oppgaver som følger.
 - Definer hvordan teamkonfigurasjon festes til en bestemt versjon eller et innholdshash, hvordan oppdatering av tillit skjer, og hva som skjer når kilden er utilgjengelig eller innholdet er endret. HTTPS alene er ikke tilstrekkelig garanti for at innholdet er godkjent.
 - Ingen hemmeligheter i delte filer. Beskriv integrasjonspunkter for eksisterende hemmelighetshåndtering uten å lage en egen hemmelighetstjeneste som 3.0-krav.
 - Teamets anbefalinger skal kunne sameksistere med lokale valg gjennom dokumentert presedens og synlige avvik. Ikke hev at alle maskiner er identiske når kilder, versjoner eller plattformstøtte varierer.
+- Felles prosjektmaler eller delte konfigurasjoner på tvers av repoer er mulige senere tillegg, ikke et krav for å bruke et selvstendig repo. Definer versjonering, tillit og konflikthåndtering før slike avhengigheter innføres.
 - Før kommersielle teamfunksjoner eller sentral innsamling vurderes, dokumenter personvern, eierskap, nytte og eksplisitt samtykke.
 
 ## 10. Plattform og kompatibilitet
@@ -269,9 +302,9 @@ Fasene er avhengighetsstyrte, ikke kalenderløfter. Versjonsnumre før 3.0 og ek
 **Prioritet: første produktutvidelse.**
 
 - Prosjektfil med definert søk, presedens, skjemaversjon og en avklart håndtering av eksisterende prosjektfiler.
-- Én testet Node-adapter, prosjektlokalt prosessmiljø, ikke-hemmelige miljøvariabler og navngitte oppgaver via `dk run`.
+- En sammenhengende flyt for prosjektinspeksjon, uttrykkelig oppsett og `dk run`, med én testet Node-adapter, prosjektlokalt prosessmiljø, ikke-hemmelige miljøvariabler og navngitte oppgaver.
 - Oversikt over planlagt kjøring, tillit for nytt eller endret kodekjørende innhold og eksplisitt håndtering av manglende versjoner.
-- Integrasjonstester for to ulike Node-prosjekter, feil, avbrudd, ukjente prosjektfiler og eksisterende versjonsbehandler.
+- Integrasjonstester for to uavhengige repoer med Node 22 og 24, egne miljøvariabler og oppgaver, samt feil, avbrudd, ukjente prosjektfiler og eksisterende versjonsbehandler.
 
 **Utgangskriterium:** Akseptansekriteriet i kapittel 7 er oppfylt på prioriterte miljøer. Beslutning om ytterligere backender og språk tas ut fra faktisk bruk.
 
@@ -311,7 +344,7 @@ Fasene er avhengighetsstyrte, ikke kalenderløfter. Versjonsnumre før 3.0 og ek
 
 - [ ] Visjonen og løftene på nettside og i dokumentasjon stemmer med det som faktisk er tilgjengelig.
 - [ ] En dokumentert og testet brukerreise dekker oppdagelse, oppsett, prosjektkjøring, diagnostikk og vedlikehold. Katalogen trenger ikke dekke alle verktøy.
-- [ ] Prosjektkjøring oppfyller kontrakten og akseptansekriteriene i kapittel 7, med minst én testet Node-backend.
+- [ ] Prosjektinspeksjon, oppsett og kjøring oppfyller kontrakten og akseptansekriteriene i kapittel 7, med minst én testet Node-backend og to repoer med ulike versjoner.
 - [ ] Sikkerhetsfunksjonene oppfyller et begrenset, offentlig dokumentert dekningsområde med eksplisitt håndtering av ukjent, feil og utdatert informasjon.
 - [ ] Eksisterende brukere har en testet migreringsvei, og maskinens eksisterende verktøy og ikke-administrerte filer respekteres.
 - [ ] Testmatrisen dekker prioriterte distroer, WSL og aktuelle shell, med dokumenterte begrensninger for andre plattformer.
@@ -353,7 +386,7 @@ Målene under er forslag til evaluering, ikke påståtte resultater. Sett tallfe
 4. **Miljøvariabler og hemmeligheter:** Hva er standard for arv, overstyring, skjuling og `.env`-filer? Hvilke eksterne hemmelighetsløsninger er relevante uten å gjøre én obligatorisk?
 5. **Sikkerhetsdekning:** Hvilke konkrete verktøy/økosystemer og datakilder skal støttes først, og hvilke forhold gjør en kontroll ukjent?
 6. **Katalog:** Hvilke to kategorier gir mest verdi først? Hvem kvalitetssikrer dataene, og hvordan håndteres rettelser og utdatert informasjon?
-7. **Team:** Hvordan verifiseres og oppdateres fjernkonfigurasjon, og hvordan balanseres felles krav mot lokale valg?
+7. **Team:** Skal dagens maskinorienterte teamkonfigurasjon beholdes, migreres eller fases ut, og hvordan kan repoer eventuelt dele et felles grunnlag med tydelig tillit, versjonering og presedens?
 8. **Plattform:** Hvilke macOS- og WSL-miljøer kan faktisk testes før 3.0, og hvem har ansvar for testene?
 9. **Vedlikehold:** Hvilke eksisterende `dk update`-operasjoner kan avgrenses trygt, og hvor må bredere oppdatering forklares eller kreve særskilt valg?
 10. **Kapasitet og styring:** Hvem eier hvert område, hvem kan godkjenne sikkerhets- og produktbeslutninger, og hva må tas ut dersom kapasiteten ikke strekker til?
