@@ -34,9 +34,7 @@ type version struct {
 
 func parseVersion(s string, exact bool) (version, error) {
 	var v version
-	if strings.HasPrefix(s, "v") {
-		s = s[1:]
-	}
+	s = strings.TrimPrefix(s, "v")
 	parts := strings.Split(s, ".")
 	if len(parts) > 3 || (exact && len(parts) != 3) {
 		return v, ErrInvalidVersion
