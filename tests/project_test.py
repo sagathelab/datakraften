@@ -210,7 +210,7 @@ project:
             for repo, version in zip(repos, ('22', '24')):
                 result = dk(repo, 'run', 'test', '--', 'argument with spaces')
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(result.stdout.strip(), f'{version}|project-{version}|{repo}|argument with spaces')
+                self.assertEqual(result.stdout.strip(), f'{version}|project-{version}|{repo.resolve()}|argument with spaces')
                 failed = dk(repo, 'run', 'fail')
                 self.assertEqual(failed.returncode, 7, failed.stderr)
                 self.assertNotIn('Usage:', failed.stderr)
