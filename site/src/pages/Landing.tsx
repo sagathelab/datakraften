@@ -84,15 +84,15 @@ export default function Landing() {
             <p className="product-eyebrow">BUILT FOR PEOPLE AND TEAMS</p>
             <h2>A shared starting point. Room to make it yours.</h2>
             <p>
-              Use a local configuration for your own machine, or point a team at a shared YAML file.
-              Platform support and installed tools can still vary between machines.
+              Import a shared YAML template once, then make the resulting local configuration your
+              own. Platform support and installed tools can still vary between machines.
             </p>
             <Link to="/docs/teams">Explore team configuration →</Link>
           </div>
           <pre>
             <code>
               {
-                '# Local config\nsource: team\nurl: https://example.com/team.yaml\n\n# Remote team.yaml\nai_tools:\n  codex:\n    enabled: true\n    manager: npm'
+                '# Import a shared starting point\ndk init --from https://example.com/workstation.yaml\n\n# The resulting local config is yours to edit\nsource: custom\nai_tools:\n  codex:\n    enabled: true\n    manager: npm'
               }
             </code>
           </pre>

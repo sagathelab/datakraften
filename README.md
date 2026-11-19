@@ -20,31 +20,26 @@ dk update          # Update managed tools
 
 ## What is Datakraften?
 
-Datakraften (`dk`) is a CLI that orchestrates existing tools — `apt`, `brew`, `fnm`, `uv`, `Devbox`, `Nix` and more — to turn a fresh or unstructured machine into a consistent, productive, and AI-ready development environment.
+Datakraften (`dk`) is a CLI that orchestrates existing tools — including `apt`, `brew`, `fnm` and `uv` — to set up a development workstation and run project tasks with a project-specific Node.js version.
 
-It is **not** a package manager. It is an orchestration layer with opinionated profiles and excellent diagnostics.
+It uses existing package and version managers, with workstation configuration and diagnostics.
 
-## Profiles
+## Configuration
 
-| Profile | Description |
-|---------|-------------|
-| `minimal` | Core system tools only |
-| `default` | General developer setup |
-| `ai` | AI-native development environment |
-| `dotnet` | .NET developer setup |
-| `frontend` | Frontend developer setup |
-| `platform` | Platform engineer setup |
+`dk init` creates a local workstation configuration. `dk init --from <https-url>` imports a partial YAML template once, merges it with the built-in defaults and saves the result locally; later edits are yours and the URL is not fetched again. `dk init --migrate-team` explicitly converts an existing legacy team configuration and preserves a backup. Review the import warnings: some existing workstation settings are not yet used by `dk apply`.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
 | `dk init` | Generate configuration file |
-| `dk apply` | Install everything in your profile (idempotent) |
+| `dk apply` | Apply the workstation configuration |
 | `dk doctor` | Run diagnostics |
 | `dk status` | Show installed tools overview |
-| `dk profile list` | List available profiles |
-| `dk profile use <name>` | Switch active profile |
+| `dk project status` | Inspect the current project's requirements without installing or running anything |
+| `dk project trust` | Review and approve the current project configuration |
+| `dk project setup` | Install the missing project Node version after confirmation |
+| `dk run <task>` | Run a trusted project task in its project environment |
 | `dk update` | Update managed tools; npm updates only enabled, installed AI tools |
 | `dk upgrade` | Upgrade dk to the latest release |
 | `dk npm setup` | Configure a user-owned npm prefix and shell PATH |
@@ -54,7 +49,7 @@ your npm user prefix; existing global packages are not moved and may need reinst
 A custom prefix may conflict with Node version managers such as fnm or nvm. Use a
 version manager's own writable prefix instead when appropriate.
 
-All commands support `--dry-run` (preview changes) and `--json` (structured output).
+Use `--help` on a command to see the flags it supports. `dk project status --json` returns a machine-readable project status.
 
 ## Quick start
 
@@ -62,8 +57,8 @@ All commands support `--dry-run` (preview changes) and `--json` (structured outp
 # Install dk
 curl -fsSL https://datakraften.no/install | bash
 
-# Initialize with a profile
-dk init --profile default
+# Initialize a workstation configuration
+dk init
 
 # Apply the configuration
 dk apply
@@ -72,9 +67,29 @@ dk apply
 dk doctor
 ```
 
+## Project environments
+
+Put a `datakraften.yaml` in the project directory:
+
+```yaml
+version: 1
+project:
+  tools:
+    node: "22"
+  env:
+    NODE_ENV: development
+  tasks:
+    dev: npm run dev
+    test: npm test
+```
+
+Run `dk project status`, review and trust the configuration with `dk project trust`, then run `dk project setup` and `dk run dev`. Project tasks run through `/bin/sh` from the directory containing the configuration. `dk project trust --yes` explicitly approves the current file without an interactive prompt; any change requires renewed trust. Project variables are passed to the task; do not put secrets in a shared YAML file or print them in tasks.
+
+The first project backend supports Node.js through `fnm` in `PATH`, with numeric major, major.minor or exact versions. `dk project setup` installs a missing version into a separate Datakraften-managed fnm store without changing your fnm default. Only Node is supported as a project tool in this release; other tools are rejected. Existing `.nvmrc` and `mise.toml` files are not used for version selection yet. Project tasks inherit the process environment; this is not a security sandbox.
+
 ## AI tooling
 
-The `ai` profile installs and configures:
+The configuration supports tools including:
 
 - [OpenAI Codex CLI](https://github.com/openai/codex)
 - [OpenCode](https://opencode.ai)
@@ -82,14 +97,14 @@ The `ai` profile installs and configures:
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 - [Gemini CLI](https://github.com/google-gemini/gemini-cli)
 
-Run `dk profile use ai && dk apply` to set up an AI-ready environment.
+Enable the desired tools in the local configuration and run `dk apply`.
 
 ## Development
 
 ```bash
 make build      # Build dk CLI
 make test       # Run tests
-make lint       # go vet ./...
+make lint       # golangci-lint run ./...
 make install    # Install to ~/.local/bin/dk
 ```
 

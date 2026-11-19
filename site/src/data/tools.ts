@@ -39,12 +39,12 @@ export const tools: Record<string, ToolDef> = {
       {
         title: 'dk init',
         id: 'init',
-        body: "Generate your Datakraften configuration file. Detects your operating system, package manager, and writes ~/.config/datakraften/config.yaml.\n\n$ dk init\n\nNo arguments creates a default config (source: default) with full tooling defaults.\n\n$ dk init --custom\n\nCreate a custom config (source: custom) — you own this file. You'll be asked whether to start from an empty skeleton or a pre-filled template. You must edit the file to customize.\n\n$ dk init --custom ./my-config.yaml\n\nCreate from an existing YAML file. Validates the file, then uses it as your configuration (with source: custom).\n\n$ dk init --team https://example.com/team.yaml\n\nCreate a thin team config (source: team) pointing to a remote YAML. The remote URL is required.\n\nWhat it does:\n- Detects platform (WSL, Linux, macOS)\n- Identifies native package manager (apt, dnf, yum, pacman, brew)\n- Generates a YAML config based on the chosen source\n- source: default can overwrite existing; source: custom never overwrites without confirmation",
+        body: 'Create your workstation configuration in ~/.config/datakraften/config.yaml. Initialization writes configuration; run `dk apply` separately to make workstation changes.\n\nCreate the standard configuration:\n$ dk init\n\nImport a partial template from an HTTPS URL once:\n$ dk init --from https://example.com/workstation.yaml\n\nThe template overrides matching defaults; omitted settings keep their defaults. Nested maps merge recursively. The resulting source: custom file is local and editable. `dk apply` does not fetch the template again. Existing configuration requires confirmation before replacement; --yes explicitly approves replacement.\n\nConvert an existing legacy team pointer to a local configuration:\n$ dk init --migrate-team\n\nMigration imports the existing URL, merges defaults, and preserves the original in config.yaml.team.bak. Review the result before applying it.\n\n`dk init --team <url>` remains available for the legacy live-remote mode. `dk init --custom` creates an editable local configuration.',
       },
       {
         title: 'dk apply',
         id: 'apply',
-        body: 'Install everything defined in your configuration. Idempotent -- safe to run repeatedly.\n\nApply your configuration:\n$ dk apply\n\nPreview what would happen without making changes:\n$ dk apply --dry-run\n\nNOTE: Preview without installing\n\nWhat it installs:\n- System packages -- via apt, dnf, yum, pacman, or brew\n- Homebrew -- installs brew if missing, then brew packages\n- Runtimes -- Node.js via fnm, Python via uv, Go, .NET SDK\n- Shell -- Fish shell config with managed blocks\n- AI tools -- CLI tools + desktop apps\n- Skips already-installed tools. Uses sudo only for system packages.\n\nTeam source:\nIf your config has source: team, `dk apply` fetches the remote YAML fresh before installing. The remote file is the single source of truth — your local config only stores ~source: team~ and ~url~. If the remote YAML is invalid or unreachable, `dk apply` aborts.\n\nDry-run mode:\nUse --dry-run to see what would be installed without making changes:\n\n$ dk apply --dry-run\n> [dry-run] would install system packages: git curl build-essential ...\n> [dry-run] would install brew packages: fish starship atuin fzf ...\n> [dry-run] would install Node.js via fnm (LTS)',
+        body: "Apply the workstation configuration from ~/.config/datakraften/config.yaml:\n$ dk apply\n\nPreview without applying changes:\n$ dk apply --dry-run\n\nApply uses the local file created by `dk init --from` or `dk init --migrate-team`; it does not refetch that template. Existing source: team configurations retain legacy behavior and fetch their configured URL during apply.\n\nThe apply flow checks system and Homebrew packages, runtimes, Fish configuration, editors, and configured AI tools. It may request sudo for system operations or an explicitly approved npm retry.\n\nNOTE: A repository's datakraften.yaml is a separate project configuration; `dk apply` does not execute its tasks.",
       },
       {
         title: 'dk doctor',
@@ -58,7 +58,12 @@ export const tools: Record<string, ToolDef> = {
       {
         title: 'Config sources',
         id: 'sources',
-        body: 'Datakraften supports three config sources. The source determines where your configuration comes from.\n\n**default** — The built-in config embedded in the dk binary. Full tooling defaults for a developer workstation. Run `dk init` (no args) to recreate it.\n\n**custom** — A local config file you own. Run `dk init --custom` to create one (empty skeleton or pre-filled template). Edit it freely — `dk init --custom` never overwrites without asking.\n\n**team** — A thin config pointing to a remote YAML URL. The remote file defines everything. Run `dk init --team <url>` to set it up. Every `dk apply` fetches the remote YAML fresh.\n\n$ dk init\n> source: default — full default config\n\n$ dk init --custom\n> ? Create config as: Empty skeleton / Pre-filled with defaults\n> source: custom — you must edit the file to customize\n\n$ dk init --team https://example.com/team.yaml\n> Fetching remote config from https://example.com/team.yaml...\n> ✓ Remote config validated\n> source: team — thin config, remote is single source of truth\n\nNOTE: The remote URL is required for team config — there is no fallback to a local config. If the remote YAML is invalid or unreachable, `dk apply` aborts with an error.',
+        body: 'The workstation configuration is stored at ~/.config/datakraften/config.yaml.\n\n- default — created from Datakraften defaults with `dk init`\n- custom — an editable local configuration, including files created with `dk init --from` and `dk init --migrate-team`\n- team — the legacy URL-pointer mode, still read and fetched by `dk apply`\n\nA from import fetches the template only during initialization. Later edits belong to the local file and later changes to the remote template are not automatically applied. A project datakraften.yaml is separate from all workstation sources.',
+      },
+      {
+        title: 'Project environments',
+        id: 'project',
+        body: 'A repository can describe its project Node.js requirement, non-secret environment values, and tasks in datakraften.yaml:\n\n| version: 1\n| project:\n|   tools:\n|     node: "22"\n|   env:\n|     NODE_ENV: development\n|   tasks:\n|     dev: npm run dev\n|     test: npm test\n\nFrom the repository or a subdirectory, inspect the requirements:\n$ dk project status\n\nReview the file and approve its tasks and environment, then preview or install a missing Node version:\n$ dk project trust\n$ dk project setup --dry-run\n$ dk project setup\n\nRun a named task in the project directory:\n$ dk run dev\n$ dk run test\n\nProject tools currently support Node.js through fnm only. Use a numeric major, major.minor, or major.minor.patch version such as "22" or "22.11.0". fnm must already be available in PATH; setup can install a missing Node version.\n\nNOTE: Project configuration is not a security sandbox. Tasks execute as your user and may access files, the network, and inherited environment. Do not store secrets in a shared YAML file.',
       },
       {
         title: 'dk upgrade',
@@ -126,7 +131,7 @@ export const tools: Record<string, ToolDef> = {
       {
         question: 'Can I share one config across a team?',
         answer:
-          'Yes. Use a team source that points to a remote YAML URL so every developer gets the same workstation definition.',
+          'Share a partial HTTPS template and import it once with dk init --from. Each developer owns the resulting local configuration; later template changes are not applied automatically.',
       },
     ],
     keywords: [
@@ -153,7 +158,7 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'How it works',
-        body: 'fnm adds a shim directory to your PATH and switches Node.js versions by updating symlinks. The shell integration (fnm env) ensures the right version is active in every new terminal. When you cd into a project with a .nvmrc file, fnm automatically reads the version and switches to it.',
+        body: 'fnm manages multiple installed Node.js versions. Its shell integration can switch versions when you enter a project with a .nvmrc or .node-version file, provided fnm is activated in that shell. Datakraften configures this integration in its managed Fish setup; existing Bash and other shells may need their own setup.\n\nFor a Datakraften project, declare a numeric Node version in datakraften.yaml and use `dk project status`, `dk project setup`, and `dk run`. Project tasks use the selected Node version without changing the global default.',
       },
       {
         title: 'Tips',
@@ -596,60 +601,50 @@ export const tools: Record<string, ToolDef> = {
   config: {
     id: 'config',
     title: 'Configuration',
-    subtitle: 'Understanding the Datakraften YAML config structure in depth',
+    subtitle: 'Workstation templates and project environments',
     sections: [
       {
         title: 'Overview',
-        body: 'Datakraften uses a single YAML file at ~/.config/datakraften/config.yaml to define your development environment. For source: default and source: custom, every setting lives in this one file. For source: team, it is a thin pointer — just ~source: team~ and ~url~ — and the actual tool settings are fetched fresh from the remote URL on each `dk apply`.\n\nThe config is split into top-level sections, each controlling a different aspect of your workstation. Here is the full structure:',
+        body: 'Datakraften uses two separate YAML files for different purposes. ~/.config/datakraften/config.yaml describes your workstation. A repository can contain datakraften.yaml for project tools, environment values, and tasks. Project commands do not rewrite your workstation configuration.',
       },
       {
-        title: 'source',
-        body: 'The source field selects where your configuration comes from. Three options:\n\n- default — built-in config embedded in dk, full developer workstation defaults\n- custom — local-only, edit everything yourself. Created with `dk init --custom`\n- team — thin config pointing to a remote YAML URL (single source of truth)\n\nWhen source: team is active, a ~url~ field must be set pointing to a YAML file hosted anywhere accessible via HTTPS. The remote YAML defines every tool setting — ~system_packages~, ~brew_packages~, ~runtimes~, ~shell~, ~editors~, ~ai_tools~, and ~ai_apps~. The local config stores only ~source: team~ and ~url~; it is never a full config.\n\nSet up team config:\n\n$ dk init --team https://example.com/team-config.yaml\n> Fetching remote config from https://example.com/team-config.yaml...\n> ✓ Remote config validated\n\nAfter the URL is set, every `dk apply` fetches the remote YAML fresh and applies it:\n\n$ dk apply\n> Fetching remote config from https://example.com/team-config.yaml...\n> ✓ Remote config loaded\n\nNOTE: Because the remote YAML is fetched fresh each time, updates to the shared config take effect immediately on the next `dk apply`.',
+        title: 'Importing workstation defaults',
+        body: 'Create defaults with `dk init`, or import a partial HTTPS template:\n\n$ dk init --from https://example.com/workstation.yaml\n\nThe template is fetched once and recursively merged into platform defaults. Supplied values override defaults, including false; omitted keys retain defaults. Unknown keys, invalid types, and null values are rejected. The resulting source: custom file is stored locally and can be edited.\n\nNOTE: The template is not fetched again during `dk apply`. Existing configurations require confirmation before replacement. Review the template and its source. Some accepted settings are saved but not yet used by `dk apply`; the importer warns about affected settings.',
       },
       {
-        title: 'system_packages',
-        body: "Packages installed via your native package manager (apt, dnf, yum, pacman, or brew). The bootstrapper auto-detects which manager to use.\n\n| system_packages:\n|   - build-essential\n|   - curl\n|   - git\n|   - unzip\n\nThese are installed with sudo (where applicable) before any other step. `dk apply` skips already-installed packages automatically.\n\nTIP: Use your package manager's native name for each package — dk passes the name directly to apt install or dnf install.",
+        title: 'Legacy team sources',
+        body: 'Existing source: team configurations point to a remote URL that `dk apply` fetches each time. To migrate an existing team pointer to an editable local configuration:\n\n$ dk init --migrate-team\n\nThe command imports its URL, merges defaults, asks before replacement, and preserves the original as config.yaml.team.bak. Review the resulting file before `dk apply`. `dk init --team` continues to create the legacy live-remote mode.',
       },
       {
-        title: 'brew_packages',
-        body: "Packages installed via Homebrew. Datakraften installs Homebrew if it's not already present, then uses it for the tools listed here. Most developer tooling comes through brew.\n\n| brew_packages:\n|   - fish\n|   - starship\n|   - atuin\n|   - fzf\n|   - fd\n|   - broot\n|   - bottom\n|   - gh\n|   - docker\n|   - docker-compose\n|   - powershell\n\nTIP: Homebrew keeps packages in /home/linuxbrew/.linuxbrew — isolated from system packages, which means cleaner upgrades and fewer conflicts.",
+        title: 'Workstation runtimes and AI tools',
+        body: 'For example, a partial workstation import may override an enabled runtime or AI tool:\n\n| runtimes:\n|   node:\n|     enabled: false\n| ai_tools:\n|   claude:\n|     enabled: true\n\nOnly declared keys override defaults. `dk apply` uses the local workstation configuration. Project Node version selection uses the separate project file described below.',
       },
       {
-        title: 'runtimes',
-        body: "Programming language runtimes and their version managers. Each runtime has its own enabled flag and optional version.\n\n| runtimes:\n|   node:\n|     enabled: true\n|     manager: fnm\n|     version: lts\n|   python:\n|     enabled: true\n|     manager: uv\n|     version: latest\n|   go:\n|     enabled: true\n|     manager: brew\n|     version: latest\n|   dotnet:\n|     enabled: false\n|     manager: brew\n|     version: latest\n\n- Node.js is managed by fnm (Fast Node Manager). Set version to lts for the latest LTS, or pin a specific version like 20 or 22.\n- Python is managed by uv. It installs the latest stable Python version and sets up uv as the default package manager.\n- Go is installed via Homebrew. Enabled by default.\n- .NET SDK is installed via Homebrew. Disabled by default.\n\nTIP: Set enabled: false for runtimes you don't need — `dk apply` will skip them entirely.",
+        title: 'Project configuration',
+        body: 'Create datakraften.yaml at your project root:\n\n| version: 1\n| project:\n|   tools:\n|     node: "22"\n|   env:\n|     NODE_ENV: development\n|   tasks:\n|     test: npm test\n\nIn a Git repository, project commands search the current directory and its parents up to the nearest repository root; the nearest file wins. Git worktrees and nested repositories have their own boundary. Outside a repository, only the current directory is checked. The YAML file itself must be a regular file, not a symlink.\n\nProject runtime support currently covers Node.js via fnm. Use numeric major, major.minor, or major.minor.patch versions. Project values affect the task process and its children, not your parent shell or global Node default. `dk init` and `dk apply` continue to use the workstation configuration.',
       },
       {
-        title: 'shell',
-        body: 'Shell configuration managed by Datakraften. Currently supports Fish shell with managed config blocks.\n\n| shell:\n|   fish:\n|     enabled: true\n|     managed_config: true\n\nWhen enabled, `dk apply`:\n- Installs Fish shell via Homebrew\n- Sets Fish as your default shell (effective after re-login)\n- Writes a managed config to ~/.config/fish/config.fish with Homebrew PATH, fnm integration, uv completions, Atuin, FZF, Starship, and aliases\n- Sets managed blocks so Datakraften can safely re-apply without duplicating entries\n\nTIP: You can edit ~/.config/fish/config.fish freely — Datakraften only touches sections between managed block markers.',
-      },
-      {
-        title: 'editors',
-        body: 'Code editor detection and auto-install. Datakraften detects which editors are already installed and optionally installs Zed.\n\n| editors:\n|   vscode:\n|     enabled: true\n|   zed:\n|     enabled: true\n|   cursor:\n|     enabled: true\n\n- VS Code — detected on the Windows side when running under WSL (via Windows Registry), or as a native Linux install. Not installed by Datakraften; install manually from code.visualstudio.com.\n- Zed — detected on Linux/WSL. Can be auto-installed by `dk apply` if missing.\n- Cursor — detected on Windows side under WSL.\n\nTIP: On WSL, editors installed on Windows are detected automatically and the code (or cursor) command is made available inside your Linux environment.',
-      },
-      {
-        title: 'ai_tools & ai_apps',
-        body: "AI-powered developer tools — the differentiating feature of Datakraften. Two sections control what gets installed:\n\n**~ai_tools~** — CLI tools installed via npm or Homebrew:\n\n| ai_tools:\n|   codex:\n|     enabled: true\n|     manager: npm\n|     version: latest\n|   opencode:\n|     enabled: true\n|     manager: brew\n|     version: latest\n|   copilot:\n|     enabled: true\n|     manager: brew\n|     version: latest\n|   claude:\n|     enabled: false\n|     manager: npm\n|     version: latest\n|   gemini:\n|     enabled: false\n|     manager: npm\n|     version: latest\n\n**~ai_apps~** — desktop apps installed via Homebrew Cask or VS Code extension:\n\n| ai_apps:\n|   codex:\n|     enabled: true\n|     manager: brew\n|     version: latest\n|   claude:\n|     enabled: false\n|     manager: brew\n|     version: latest\n|   copilot:\n|     enabled: true\n|     manager: vscode\n|     version: latest\n\n`dk apply` handles both sections. CLI tools are installed first, then desktop apps. Apps that require a specific platform (e.g., macOS-only brew casks) are skipped gracefully.\n\nTIP: Some AI tools require API keys or subscriptions (GitHub Copilot subscription, OpenAI API key). Check each tool's documentation for authentication requirements.",
+        title: 'Trust and tasks',
+        body: 'Review the project file before running commands. `dk project status` reads project requirements without executing project tasks. `dk project trust` shows the tasks and environment variable names and asks for approval. Trust is tied to the file location and contents; changing the file requires approval again.\n\n$ dk project status\n$ dk project trust\n$ dk project setup --dry-run\n$ dk project setup\n$ dk run test\n\nFor non-interactive use, review the file and explicitly run `dk project trust --yes` before setup or running tasks. `dk project setup --yes` approves installation but does not replace project trust.\n\nNOTE: Tasks run as your user, not in a sandbox. Do not store secrets in shared YAML. Tasks themselves can print inherited or project environment values.',
       },
     ],
     website: '',
     commonTasks: [
       {
-        title: 'Set up a team config',
-        command: 'dk init --team <url>',
+        title: 'Import a shared workstation template',
+        command: 'dk init --from <url>',
         details:
-          'Point your local config to a shared remote YAML that defines the full workstation for your team.',
+          'Merge a partial HTTPS YAML template with defaults and save a local, editable config.',
       },
       {
-        title: 'Create a custom config',
-        command: 'dk init --custom',
-        details:
-          'Generate a local config file that you own — edit it freely without overwrite risk.',
+        title: 'Migrate a legacy team config',
+        command: 'dk init --migrate-team',
+        details: 'Convert an existing team URL into a local config, preserving a backup.',
       },
       {
-        title: 'Apply your configuration',
-        command: 'dk apply',
-        details:
-          'Install everything defined in your config — system packages, runtimes, shell config, editors, and AI tools.',
+        title: 'Inspect a project',
+        command: 'dk project status',
+        details: 'Review the discovered project file, Node version, trust and tasks.',
       },
     ],
   },
@@ -681,32 +676,28 @@ export const tools: Record<string, ToolDef> = {
 
   teams: {
     id: 'teams',
-    title: 'Team Configs',
-    subtitle: 'Standardized dev environments across your whole team with shared YAML configs',
+    title: 'Sharing Configurations',
+    subtitle: 'Share a workstation starting point and configure each repository',
     sections: [
       {
-        title: 'Why team configs?',
-        body: "Every team has a stack — specific tools, runtimes, linters, and conventions. Without automation, each new hire spends hours (or days) setting up their machine, and inconsistencies creep in across the team. Datakraften's team config solves this with a single shared YAML file.\n\nThe idea is simple: define your team's ideal workstation once, host the YAML file somewhere your team can reach it, and each developer's local config becomes a thin pointer — just ~source: team~ and ~url~. On every `dk apply`, the remote YAML is fetched fresh, validated, and applied. No local copy, no drift.\n\n$ curl -fsSL https://datakraften.no/install | bash\n$ dk init --team https://example.com/team.yaml\n$ dk apply\n\nNOTE: Onboarding goes from hours to minutes. Every machine is identical. No tribal knowledge needed. Updates to the shared config take effect on the next `dk apply`.",
+        title: 'Share a workstation starting point',
+        body: 'A team can share an HTTPS YAML template with the workstation settings it wants to suggest. Each developer imports it once; the result is an editable local file. Team members can adjust their own settings afterwards.\n\n$ dk init --from https://example.com/workstation.yaml\n$ dk apply\n\nThe URL must return YAML over HTTPS. Review the source and its contents before importing. Missing settings use Datakraften defaults; settings explicitly supplied by the template override those defaults.',
       },
       {
-        title: 'Setting up a team config',
-        body: "The remote YAML defines everything — it IS the config. Create a file with the exact toolset your team needs and host it somewhere accessible. Each developer's local config only needs:\n\n| source: team\n| url: https://raw.githubusercontent.com/your-org/team-config/main/datakraften.yaml\n\nHere is an example of what the remote YAML file itself might look like:\n\n| system_packages:\n|   - build-essential\n|   - curl\n|   - git\n|   - unzip\n|   - postgresql-client\n|   - redis-tools\n|\n| brew_packages:\n|   - fish\n|   - starship\n|   - atuin\n|   - fzf\n|   - gh\n|   - docker\n|\n| runtimes:\n|   node:\n|     enabled: true\n|     version: lts\n|   python:\n|     enabled: true\n|   dotnet:\n|     enabled: true\n|\n| shell:\n|   fish:\n|     enabled: true\n|     managed_config: true\n|\n| editors:\n|   vscode:\n|     enabled: true\n|   zed:\n|     enabled: true\n|\n| ai_tools:\n|   codex:\n|     enabled: true\n|   opencode:\n|     enabled: true\n|   copilot:\n|     enabled: true\n|   claude:\n|     enabled: false\n|   gemini:\n|     enabled: false\n| ai_apps:\n|   codex:\n|     enabled: true\n|   claude:\n|     enabled: false\n|   copilot:\n|     enabled: true\n\nNOTE: Commit this file to your team's infrastructure repo or a shared gist, then share the raw URL. Every developer who runs `dk init --team <url>` gets exactly this setup — and every `dk apply` re-fetches it fresh, so updates are instant.",
+        title: 'Example: partial workstation template',
+        body: 'This partial file disables Python and enables Claude in the imported workstation configuration:\n\n| runtimes:\n|   python:\n|     enabled: false\n| ai_tools:\n|   claude:\n|     enabled: true\n\nOther settings keep their platform defaults. Importing the template does not install tools. Run `dk apply` separately after reviewing the resulting config.\n\nNOTE: A shared template is a starting point, not a guarantee of identical machines.',
       },
       {
-        title: 'Hosting your YAML',
-        body: "Any HTTPS-accessible URL works. Popular options:\n\n- GitHub repository — commit the YAML to your team's repo and use the raw.githubusercontent.com URL\n- GitHub Gist — create a secret or public gist and use the raw URL\n- Internal wiki — host it behind your company's SSO or VPN\n- S3 / Cloud Storage — with a signed URL or public bucket\n- Your own server — any static file server works\n\nThe URL is set during `dk init --team <url>`. Datakraften fetches the remote YAML to validate it, then stores only the URL locally. On every `dk apply`, the remote YAML is re-fetched fresh — the remote file is always the single source of truth. This means the environment is always up to date with the latest version of the shared config.\n\nTIP: Use a versioned path (e.g. /v1/datakraften.yaml or a git tag) to control when team members pick up changes. When you update the shared config, tell your team to run `dk apply` to pull the latest version immediately.",
+        title: 'Local ownership and updates',
+        body: 'After import, ~/.config/datakraften/config.yaml has source: custom and is owned by the developer. Edit it as needed. Later changes to the template are not automatically fetched or applied. Re-importing is an explicit operation and asks before replacing an existing config; keep a copy of local changes you want to retain.\n\nUse a versioned raw HTTPS URL when you need a specific template revision. Do not put passwords, tokens, or secrets in the YAML or URL.',
       },
       {
-        title: 'Best practices',
-        body: "Start with the default profile, test it, then iterate:\n\n- Begin with the default profile on your own machine — run `dk init` then `dk apply`\n\n- Customize your remote YAML for your team's stack. Add specific packages, remove what you don't need.\n\n- Host the YAML and share the raw URL. Ask a teammate to run `dk init` with it on a fresh machine.\n\n- Keep the remote YAML minimal — install only what every developer needs. Let individuals add their own tools on top.\n\n- Version your config. Use a git tag or a versioned path so you can roll back if something breaks.\n\n- Document exceptions. Not everything fits in YAML. Add a comment or a README alongside your remote config for manual steps.\n\n- Run `dk doctor` after `dk apply` to verify everything is set up correctly.\n\n- Update periodically. Point your team to run `dk apply` when you push a new version of the remote YAML — changes take effect immediately.",
+        title: 'Project configuration for each repository',
+        body: 'A team can commit a separate datakraften.yaml to each repository. Projects can require different numeric Node versions and define their own tasks and non-secret environment values:\n\n| version: 1\n| project:\n|   tools:\n|     node: "22"\n|   env:\n|     NODE_ENV: development\n|   tasks:\n|     test: npm test\n\n$ dk project status\n$ dk project trust\n$ dk project setup\n$ dk run test\n\nNode is currently the only project runtime supported, using fnm. Review tasks and environment settings before trusting a project. Tasks run as your user with the project\'s process environment; they are not sandboxed.',
       },
       {
-        title: 'Example: Node.js team config',
-        body: 'A minimal remote YAML for a Node.js backend team. Developers point their local config to this URL and get the exact same environment:\n\n| system_packages:\n|   - build-essential\n|   - curl\n|   - git\n|\n| brew_packages:\n|   - fish\n|   - starship\n|   - gh\n|   - docker\n|\n| runtimes:\n|   node:\n|     enabled: true\n|     version: lts\n|   python:\n|     enabled: false\n|   dotnet:\n|     enabled: false\n|\n| shell:\n|   fish:\n|     enabled: true\n|\n| editors:\n|   vscode:\n|     enabled: true\n|\n| ai_tools:\n|   codex:\n|     enabled: true\n|   opencode:\n|     enabled: true\n|   copilot:\n|     enabled: true\n|   claude:\n|     enabled: false\n|   gemini:\n|     enabled: false\n| ai_apps:\n|   codex:\n|     enabled: true\n|   claude:\n|     enabled: false\n|   copilot:\n|     enabled: true\n\nNOTE: Every developer gets Node.js LTS, fish shell with Starship, GitHub CLI, Docker, VS Code detection, and AI tools — nothing more, nothing less.',
-      },
-      {
-        title: 'Example: Full-stack team config',
-        body: 'A comprehensive remote YAML for a full-stack team working with Node.js, Python, Go, and .NET:\n\n| system_packages:\n|   - build-essential\n|   - curl\n|   - git\n|   - unzip\n|   - postgresql-client\n|   - redis-tools\n|   - jq\n|\n| brew_packages:\n|   - fish\n|   - starship\n|   - atuin\n|   - fzf\n|   - fd\n|   - broot\n|   - bottom\n|   - gh\n|   - docker\n|   - powershell\n|\n| runtimes:\n|   node:\n|     enabled: true\n|     version: lts\n|   python:\n|     enabled: true\n|   go:\n|     enabled: true\n|   dotnet:\n|     enabled: true\n|\n| shell:\n|   fish:\n|     enabled: true\n|\n| editors:\n|   vscode:\n|     enabled: true\n|   zed:\n|     enabled: true\n|\n| ai_tools:\n|   codex:\n|     enabled: true\n|   opencode:\n|     enabled: true\n|   copilot:\n|     enabled: true\n|   claude:\n|     enabled: false\n|   gemini:\n|     enabled: false\n| ai_apps:\n|   codex:\n|     enabled: true\n|   claude:\n|     enabled: false\n|   copilot:\n|     enabled: true\n\nNOTE: Extends the minimal setup with additional system tools (postgresql-client, redis-tools, jq) and PowerShell — all from a single shared URL.',
+        title: 'Legacy team configuration',
+        body: 'Existing `source: team` configurations and `dk init --team` still use the legacy live-remote mode: the URL is fetched during `dk apply`. To convert an existing team pointer into an editable local config:\n\n$ dk init --migrate-team\n\nMigration fetches the configured URL, merges it with defaults and asks before replacement. The old pointer is saved as config.yaml.team.bak. After migration, the imported template is not fetched again by `dk apply`.',
       },
     ],
     website: '',

@@ -49,6 +49,8 @@ func newApp() *App {
 	rootCmd.AddCommand(newUpgradeCmd())
 	rootCmd.AddCommand(newUpdateCmd())
 	rootCmd.AddCommand(newNpmCmd())
+	rootCmd.AddCommand(newProjectCmd())
+	rootCmd.AddCommand(newRunCmd())
 
 	a.RootCmd = rootCmd
 	return a

@@ -2,8 +2,10 @@ package app
 
 import (
 	"fmt"
+	neturl "net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -135,6 +137,8 @@ url: %s
 func newInitCmd() *cobra.Command {
 	var customFlag string
 	var teamURLFlag string
+	var fromURL string
+	var migrateTeam, yes bool
 
 	cmd := &cobra.Command{
 		Use:   "init",
@@ -143,7 +147,10 @@ func newInitCmd() *cobra.Command {
 
 No arguments creates a default config (source: default).
 Use --custom to create a custom config (source: custom) that you own.
-Use --team to create a thin config pointing to a remote YAML (source: team).`,
+Use --from to import a remote YAML once and merge it with defaults.
+Use --migrate-team to convert an existing team configuration into a local config.
+Use --team for the legacy remote team configuration.`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			displayTitle(os.Stdout, "init", "Configure your workstation")
 			home, _ := os.UserHomeDir()
@@ -153,9 +160,14 @@ Use --team to create a thin config pointing to a remote YAML (source: team).`,
 			hasCustom := cmd.Flags().Changed("custom")
 			hasTeam := cmd.Flags().Changed("team")
 
-			if hasCustom && hasTeam {
-				fmt.Println("  Specify only one of --custom or --team.")
-				return nil
+			choices := 0
+			for _, selected := range []bool{hasCustom, hasTeam, cmd.Flags().Changed("from"), migrateTeam} {
+				if selected {
+					choices++
+				}
+			}
+			if choices > 1 {
+				return fmt.Errorf("specify only one of --custom, --team, --from or --migrate-team")
 			}
 
 			existing := false
@@ -163,6 +175,9 @@ Use --team to create a thin config pointing to a remote YAML (source: team).`,
 				existing = true
 			}
 
+			if cmd.Flags().Changed("from") || migrateTeam {
+				return initFromURL(configPath, configDir, fromURL, existing, migrateTeam, yes)
+			}
 			if !hasCustom && !hasTeam {
 				return initDefault(configPath, configDir, existing)
 			}
@@ -177,6 +192,9 @@ Use --team to create a thin config pointing to a remote YAML (source: team).`,
 
 	cmd.Flags().StringVarP(&customFlag, "custom", "c", "", "Path to a YAML file with custom tool configuration")
 	cmd.Flags().StringVarP(&teamURLFlag, "team", "t", "", "Team config URL (creates a thin config pointing to a remote YAML)")
+	cmd.Flags().StringVar(&fromURL, "from", "", "Import an HTTPS YAML template once and merge it with defaults")
+	cmd.Flags().BoolVar(&migrateTeam, "migrate-team", false, "Migrate an existing team config to a local config")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Confirm replacement when importing or migrating")
 
 	return cmd
 }
@@ -448,17 +466,32 @@ func initTeam(configPath, configDir string, existing bool, url string) error {
 		}
 		url = input
 	}
+	if existing {
+		var overwrite bool
+		prompt := &survey.Confirm{Message: "Config already exists. Replace it with a legacy team config?", Default: false}
+		if err := survey.AskOne(prompt, &overwrite); err != nil {
+			return fmt.Errorf("confirmation required: %w", err)
+		}
+		if !overwrite {
+			fmt.Println("  Cancelled; existing configuration preserved.")
+			return nil
+		}
+	}
 
-	fmt.Printf("  Fetching remote config from %s...\n", url)
+	remoteHost := "remote server"
+	if parsed, err := neturl.Parse(url); err == nil && parsed.Hostname() != "" {
+		remoteHost = parsed.Hostname()
+	}
+	fmt.Printf("  Fetching remote config from %s...\n", remoteHost)
 
 	_, err := config.FetchRemote(url)
 	if err != nil {
-		displayPrintf("  [ERROR] %s\n", err)
+		displayPrintln("  [ERROR] Could not fetch or validate the remote configuration")
 		return fmt.Errorf("failed to load remote config")
 	}
 	displayPrintln("  [OK] Remote config validated")
 
-	thinCfg := fmt.Sprintf(teamConfigYAML, url)
+	thinCfg := fmt.Sprintf(teamConfigYAML, strconv.Quote(url))
 
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return fmt.Errorf("failed to create config dir: %w", err)
@@ -474,7 +507,9 @@ func initTeam(configPath, configDir string, existing bool, url string) error {
 	fmt.Println()
 	displayHeading(os.Stdout, "Config preview")
 	for _, line := range strings.Split(thinCfg, "\n") {
-		if strings.TrimSpace(line) != "" {
+		if strings.HasPrefix(line, "url:") {
+			fmt.Printf("    url: (hidden)\n")
+		} else if strings.TrimSpace(line) != "" {
 			fmt.Printf("    %s\n", line)
 		}
 	}
