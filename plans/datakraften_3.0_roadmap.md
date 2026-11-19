@@ -69,9 +69,9 @@ Dette veikartet tar utgangspunkt i implementasjonen, ikke i eldre løfter i READ
 - Arbeidsstasjonens konfigurasjon er lokal (`source: default` eller `source: custom`). `dk init --from` importerer en partiell HTTPS-mal én gang. Det finnes ingen løpende teamkonfigurasjon fra URL og ingen egen migreringsflyt fra det tidligere forsøket.
 - `dk project status`, `dk project trust`, `dk project setup` og `dk run` støtter prosjektfilen `datakraften.yaml` med `version: 1`. Node er første runtime, med `fnm` som standard og `nvm` som eksplisitt valg. Oppgaver kjøres med prosjektets miljø i en egen prosess, ikke i en sandkasse.
 - Oppsettet bruker eksisterende verktøy, blant annet systemets pakkebehandler, Homebrew, `fnm` og `uv`. AI-verktøy og editorer er del av produktets oppsett og deteksjon, med ulik støtte avhengig av plattform.
-- `dk apply` setter i dag opp Fish. Det finnes generatorer for Bash og Zsh, men de blir ikke generelt aktivert av `dk apply`. Fish-oppsettet inneholder `fnm --use-on-cd`; det betyr ikke at automatisk Node-bytte er aktivt i alle eksisterende shell eller miljøer.
+- `dk apply` kan skrive en administrert blokk for Fish, Bash eller Zsh, eller hoppe over shell-oppsett. Det endrer ikke innloggingsshellet. Generert standard velger Fish; eldre innstillinger som ikke brukes av `dk apply`, leses med en advarsel. `dk status` og `dk doctor` skiller ønsket oppsett fra det som er oppdaget på maskinen.
 - `dk doctor` viser informasjon om miljøet, blant annet kjente Homebrew- og Go-installasjoner utenfor `PATH`. Den er ikke en generell sikkerhetsskanner.
-- `dk update` har i dag mål for Homebrew, fnm, uv og utvalgte npm-verktøy. Homebrew-oppdateringen kan omfatte alle Homebrew-pakker; den skal ikke fremstilles som begrenset til Datakraften-eide pakker.
+- `dk update` har mål for Homebrew, fnm, uv og utvalgte npm-verktøy. Standardsteget for Homebrew velger bare installerte formler fra Datakraftens standardliste, uavhengig av hvem som installerte dem. Homebrew kan fortsatt endre avhengigheter. Bruk `dk update brew-all` for en full oppdatering, inkludert aktuelle casks.
 - Utgivelsesflyten bygger Linux og macOS for amd64 og arm64, med SHA256-filer og installasjonsskript. En sjekksum hentet fra samme kilde som binæren er integritetskontroll, ikke en uavhengig bekreftelse av utgiver.
 
 ### Finnes ikke som komplett 3.0-løsning
@@ -264,7 +264,7 @@ dk apply
 
 ### Flettekontrakt for lokal maskinkonfigurasjon
 
-1. Generer samme plattformtilpassede standard som `dk init` uten ekstern fil ville brukt.
+1. Bruk samme innebygde standard som `dk init` uten ekstern fil.
 2. Hent og parse den eksterne YAML-filen som en partiell maskinkonfigurasjon. Valider tillatte felter, typer, format og versjon før noe skrives eller kjøres.
 3. Flett objekter rekursivt: felter som finnes i den eksterne filen, overstyrer standardverdiene på samme nøkkel; manglende felter beholder standardverdiene. Eksplisitt `false` og tom streng beholdes der skjemaet tillater dem. Et tomt objekt overstyrer ikke et eksisterende standardobjekt. Det nåværende skjemaet har ingen listefelt; hvis slike felt innføres, skal eksplisitte lister erstatte, ikke utvide, standardlisten. `null`, ugyldige typer og ukjente nøkler avvises.
 4. Valider den fullstendige flettede konfigurasjonen, vis kilden og et forståelig resultat eller en oversikt over endringene, og lagre først deretter atomisk i `~/.config/datakraften/config.yaml`. Ikke lagre hemmeligheter i kildemetadata eller vise dem i utdata.

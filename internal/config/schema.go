@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"maps"
 	"regexp"
 	"slices"
 
@@ -11,6 +12,10 @@ import (
 )
 
 var keyPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
+func RuntimeNames() []string { return []string{"node", "python", "go", "dotnet"} }
+func AIToolNames() []string  { return []string{"codex", "claude", "gemini", "opencode", "copilot"} }
+func AIAppNames() []string   { return []string{"codex", "claude", "copilot"} }
 
 func Decode(data []byte) (map[string]any, error) {
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
@@ -95,7 +100,8 @@ func Validate(data map[string]any) error {
 		delete(data, "profile")
 	}
 
-	for key, value := range data {
+	for _, key := range slices.Sorted(maps.Keys(data)) {
+		value := data[key]
 		switch key {
 		case "source":
 		case "version":
@@ -109,6 +115,11 @@ func Validate(data map[string]any) error {
 		case "shell":
 			if err := validateFields(key, value, "default", "prompt", "history", "fuzzy_finder"); err != nil {
 				return err
+			}
+			if target, ok := value.(map[string]any)["default"]; ok {
+				if err := ValidateShellTarget(ShellTarget(target.(string))); err != nil {
+					return err
+				}
 			}
 		case "runtimes", "ai_tools", "ai_apps", "tools", "editors":
 			if err := validateEntries(key, value); err != nil {
@@ -126,12 +137,13 @@ func validateEntries(section string, value any) error {
 	if !ok {
 		return fmt.Errorf("%s must be a mapping", section)
 	}
-	for key, item := range m {
+	for _, key := range slices.Sorted(maps.Keys(m)) {
+		item := m[key]
 		path := section + "." + key
 		switch section {
 		case "runtimes", "ai_tools", "ai_apps":
 			if section == "runtimes" {
-				if !slices.Contains([]string{"node", "python", "go", "dotnet"}, key) {
+				if !slices.Contains(RuntimeNames(), key) {
 					return fmt.Errorf("unknown field %s", path)
 				}
 			} else if enabled, ok := item.(bool); ok {
@@ -172,7 +184,8 @@ func validateFields(path string, value any, fields ...string) error {
 	if !ok {
 		return fmt.Errorf("%s must be a mapping", path)
 	}
-	for key, item := range m {
+	for _, key := range slices.Sorted(maps.Keys(m)) {
+		item := m[key]
 		if !slices.Contains(fields, key) {
 			return fmt.Errorf("unknown field %s.%s", path, key)
 		}
@@ -185,4 +198,43 @@ func validateFields(path string, value any, fields ...string) error {
 		}
 	}
 	return nil
+}
+
+func Warnings(settings map[string]any) []string {
+	var paths []string
+	for section, value := range settings {
+		fields, _ := value.(map[string]any)
+		for key, item := range fields {
+			path := section + "." + key
+			switch section {
+			case "system", "tooling", "tools":
+				paths = append(paths, path)
+			case "shell":
+				if key != "default" {
+					paths = append(paths, path)
+				}
+			case "editors":
+				if key != "zed" {
+					paths = append(paths, path)
+				}
+			case "runtimes", "ai_tools", "ai_apps":
+				if (section == "ai_tools" && !slices.Contains(AIToolNames(), key)) ||
+					(section == "ai_apps" && !slices.Contains(AIAppNames(), key)) {
+					paths = append(paths, path)
+					continue
+				}
+				entry, _ := item.(map[string]any)
+				for field := range entry {
+					if field != "enabled" {
+						paths = append(paths, path+"."+field)
+					}
+				}
+			}
+		}
+	}
+	slices.Sort(paths)
+	for i, path := range paths {
+		paths[i] = path + " is ignored by dk apply"
+	}
+	return paths
 }

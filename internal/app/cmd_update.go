@@ -35,9 +35,17 @@ func newUpdateCmd() *cobra.Command {
 	var dryRun bool
 
 	cmd := &cobra.Command{
-		Use:          "update",
-		Short:        "Update managed tools to their latest versions",
-		Long:         `Update all managed developer tools (brew packages, runtimes, AI tools) or a specific tool by name.`,
+		Use:   "update [target]",
+		Short: "Update developer tools",
+		Long: `Update developer tools, or select a specific target with 'dk update <target>'.
+
+The default Homebrew step and 'dk update brew' target only installed formulae
+from dk's curated default list, regardless of who installed them. They use local
+Homebrew metadata and skip automatic cleanup. Run 'brew update' separately
+to refresh that metadata. Homebrew can still change dependencies and dependents.
+
+'dk update brew-all' explicitly runs 'brew update' followed by 'brew upgrade'
+for all eligible formulae and casks. It is not part of the default update.`,
 		SilenceUsage: true,
 		Args:         cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -46,7 +54,7 @@ func newUpdateCmd() *cobra.Command {
 			}
 
 			if len(args) > 0 {
-				subtitle := "Updating a managed tool"
+				subtitle := "Updating a selected target"
 				if dryRun {
 					subtitle = "Preview only; no updates will be made"
 				}
@@ -75,7 +83,7 @@ func newUpdateCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&list, "list", "l", false, "List supported update targets")
-	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Show what would be updated without making changes")
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Preview update commands without running them")
 
 	return cmd
 }
@@ -83,13 +91,14 @@ func newUpdateCmd() *cobra.Command {
 func listUpdatable() error {
 	displayTitle(os.Stdout, "update", "Available update targets")
 
-	fmt.Println("    brew — all Homebrew packages")
+	fmt.Println("    brew — installed formulae from dk's curated default list")
+	fmt.Println("    brew-all — full Homebrew refresh and upgrade (explicit only; includes eligible casks)")
 	fmt.Println("    fnm — Node.js runtime")
 	fmt.Println("    uv — Python runtime")
 	fmt.Println("    npm — enabled Datakraften npm tools")
 
 	fmt.Println()
-	fmt.Println("  Run 'dk update <tool>' to update a specific tool.")
+	fmt.Println("  Run 'dk update <target>' to update a specific target.")
 
 	return nil
 }
@@ -102,7 +111,11 @@ func UpdateToolWithProgress(name string, dryRun bool, hook ProgressHook) error {
 	case "python":
 		name = "uv"
 	}
-	for _, step := range updateSteps {
+	steps := updateSteps
+	if name == "brew-all" {
+		steps = []updateStep{{name: "brew-all", run: updateBrewAll}}
+	}
+	for _, step := range steps {
 		if step.name == name {
 			cfg, err := loadUpdateConfig(step.configured != nil)
 			if err != nil {
@@ -151,7 +164,7 @@ func updateAll(dryRun bool) error {
 }
 
 func updateTitle(dryRun bool) {
-	subtitle := "Updating managed tools"
+	subtitle := "Updating developer tools"
 	if dryRun {
 		subtitle = "Preview only; no updates will be made"
 	}
@@ -208,25 +221,85 @@ func updateBrew(dryRun bool) error {
 		return nil
 	}
 
-	if dryRun {
-		displayPrintln("    [PLAN] Would run: brew update && brew upgrade")
+	list := scopedBrewCommand("list", "--formula", "--full-name")
+	out, err := list.Output()
+	if err != nil {
+		var exitErr *osexec.ExitError
+		if errors.As(err, &exitErr) && strings.TrimSpace(string(exitErr.Stderr)) != "" {
+			return fmt.Errorf("cannot list installed Homebrew formulae (brew list --formula --full-name): %w: %s", err, strings.TrimSpace(string(exitErr.Stderr)))
+		}
+		return fmt.Errorf("cannot list installed Homebrew formulae (brew list --formula --full-name): %w", err)
+	}
+
+	installed := make(map[string]bool)
+	for _, name := range strings.Fields(string(out)) {
+		installed[name] = true
+	}
+	var formulae []string
+	for _, name := range installers.DefaultBrewPackages {
+		if installed[name] {
+			formulae = append(formulae, name)
+		} else if coreName := "homebrew/core/" + name; installed[coreName] {
+			formulae = append(formulae, coreName)
+		}
+	}
+	if len(formulae) == 0 {
+		displayPrintln("    [SKIP] No installed formulae match dk's curated default Homebrew list")
 		return nil
 	}
 
-	fmt.Fprintln(progressWriter(), "    Updating Homebrew...")
-	r := exec.Run("brew", "update")
-	if r.Code != 0 {
-		return fmt.Errorf("brew update failed: %s", strings.TrimSpace(r.Stderr))
+	displayPrintln("    Using local Homebrew metadata; run 'brew update' separately to refresh it.")
+	displayPrintln("    Homebrew may also change dependencies and dependents.")
+	args := append([]string{"upgrade", "--formula"}, formulae...)
+	if dryRun {
+		displayPrintf("    [PLAN] Would run: brew %s (auto-update and cleanup disabled)\n", strings.Join(args, " "))
+		return nil
+	}
+
+	fmt.Fprintf(progressWriter(), "    Upgrading installed formulae from dk's default list: %s\n", strings.Join(formulae, ", "))
+	if err := runBrewCommand(scopedBrewCommand(args...)); err != nil {
+		return fmt.Errorf("%w; some formulae may already have been upgraded", err)
 	}
 	displayPrintln("    [OK] Command completed")
+	return nil
+}
 
-	fmt.Fprintln(progressWriter(), "    Upgrading packages...")
-	r = exec.Run("brew", "upgrade")
-	if r.Code != 0 {
-		return fmt.Errorf("brew upgrade failed: %s", strings.TrimSpace(r.Stderr))
+func updateBrewAll(dryRun bool) error {
+	if !installers.BrewInstalled() {
+		displayPrintln("    [SKIP] Homebrew not installed, skipping")
+		return nil
+	}
+
+	if dryRun {
+		displayPrintln("    [PLAN] Would run: brew update && brew upgrade (all eligible formulae and casks)")
+		return nil
+	}
+
+	fmt.Fprintln(progressWriter(), "    Refreshing Homebrew metadata...")
+	if err := runBrewCommand(osexec.Command("brew", "update")); err != nil {
+		return err
+	}
+	fmt.Fprintln(progressWriter(), "    Upgrading all eligible Homebrew formulae and casks...")
+	if err := runBrewCommand(osexec.Command("brew", "upgrade")); err != nil {
+		return fmt.Errorf("%w; some packages may already have been upgraded", err)
 	}
 	displayPrintln("    [OK] Command completed")
+	return nil
+}
 
+func scopedBrewCommand(args ...string) *osexec.Cmd {
+	cmd := osexec.Command("brew", args...)
+	// A Homebrew metadata refresh can also migrate installed packages.
+	cmd.Env = append(cmd.Environ(), "HOMEBREW_NO_AUTO_UPDATE=1", "HOMEBREW_FORCE_API_AUTO_UPDATE=", "HOMEBREW_NO_INSTALL_CLEANUP=1")
+	return cmd
+}
+
+func runBrewCommand(cmd *osexec.Cmd) error {
+	cmd.Stdout = progressWriter()
+	cmd.Stderr = cmd.Stdout
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s failed: %w", strings.Join(cmd.Args, " "), err)
+	}
 	return nil
 }
 

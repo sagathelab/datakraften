@@ -39,21 +39,21 @@ export const tools: Record<string, ToolDef> = {
       {
         title: 'dk init',
         id: 'init',
-        body: 'Create a workstation configuration in `~/.config/datakraften/config.yaml`. This path does not use `XDG_CONFIG_HOME`. Initialization writes configuration; run `dk apply` separately to install and configure tools.\n\nGenerate the built-in defaults for this machine:\n$ dk init\n\nChoose a custom starting point interactively, or supply a local YAML file:\n$ dk init --custom\n$ dk init --custom ./workstation.yaml\n\nImport a template once from an HTTPS URL that serves raw YAML:\n$ dk init --from https://example.com/workstation.yaml\n\nDatakraften validates the template and recursively merges it into the built-in defaults for your OS, not into your existing file. It shows the template host and a summary of overrides, with text values hidden. The result is an editable local `source: custom` file. If a config already exists, dk asks before overwriting it unless you use `--yes`. Review the saved file before applying it.',
+        body: 'Create a workstation configuration in `~/.config/datakraften/config.yaml`. This path does not use `XDG_CONFIG_HOME`. Initialization writes configuration; run `dk apply` separately to install and configure tools.\n\nGenerate the built-in defaults:\n$ dk init\n\nChoose a custom starting point interactively, or supply a local YAML file:\n$ dk init --custom\n$ dk init --custom ./workstation.yaml\n\nImport a template once from an HTTPS URL that serves raw YAML:\n$ dk init --from https://example.com/workstation.yaml\n\nDatakraften validates and merges the template into the built-in defaults, not into your existing file. It shows the template host and a summary of overrides, with text values hidden. The result is an editable local `source: custom` file. If a config already exists, dk asks before overwriting it unless you use `--yes`.',
       },
       {
         title: 'dk apply',
         id: 'apply',
-        body: "Apply the workstation configuration from `~/.config/datakraften/config.yaml`:\n$ dk apply\n\nPreview without applying changes:\n$ dk apply --dry-run\n\nApply reads the local configuration. It does not fetch an imported template again, though installers can still download software.\n\nThe apply flow checks system and Homebrew packages, runtimes, Fish configuration, editors, and configured AI tools. It may request sudo for system operations or an explicitly approved npm retry.\n\nNOTE: A repository's `datakraften.yaml` is a separate project configuration; `dk apply` does not execute its tasks.",
+        body: "Apply the workstation configuration from `~/.config/datakraften/config.yaml`:\n$ dk apply\n\nPreview without applying changes:\n$ dk apply --dry-run\n\nApply reads the local configuration. It does not fetch an imported template again, though installers can still download software. It checks the baseline system and Homebrew packages, then applies enabled runtimes, editors, AI tools, and the selected shell's managed block. It may request sudo for system operations or an explicitly approved npm retry.\n\nNOTE: A repository's `datakraften.yaml` is separate; `dk apply` does not execute its tasks.",
       },
       {
         title: 'dk doctor',
         id: 'doctor',
-        body: 'Run comprehensive diagnostics on your system. Checks every category that dk apply configures.\n\nRun a full diagnostic:\n$ dk doctor\n\nGet machine-readable output:\n$ dk doctor --json\n\nNOTE: Machine-readable output\n\nCheck categories:\n- System -- distribution, kernel, WSL version, systemd\n- Tools -- git, curl, build tools, Homebrew\n- Runtimes -- Node.js, Python, Go, .NET SDK\n- Editors -- VS Code, Zed, Cursor detection\n- Docker -- daemon status, socket access, WSL integration\n- Shell -- Fish config, Starship prompt, Atuin, FZF',
+        body: 'Diagnose the system, tools, runtimes, editors, Docker, and shell. The report separates configured intent, what is detected, and the last apply. For shells, it distinguishes the configured target from the shell named by `SHELL` and reports the managed blocks it finds.\n\n$ dk doctor\n$ dk doctor --json',
       },
       {
         title: 'dk status',
-        body: 'Quick overview of installed tools and their versions.\n\n$ dk status\n> System:    Fedora 40 (WSL2)\n> Shell:     fish 3.7.1\n> Node:      22.x\n> Python:    3.12.x\n> Go:        1.24.x\n> .NET:      8.0.x\n> Git:       2.45.x\n> Brew:      4.x\n> Docker:    running',
+        body: 'See your configured workstation settings, detected tools and versions, and the last apply as separate sections. A missing config does not prevent inspection; an invalid config is reported as an error.\n\n$ dk status\n$ dk status --json',
       },
       {
         title: 'Config sources',
@@ -73,7 +73,7 @@ export const tools: Record<string, ToolDef> = {
       {
         title: 'dk update',
         id: 'update',
-        body: 'Update managed developer tools to their latest versions. Supports updating all tools at once or targeting a specific tool.\n\nUpdate Homebrew packages, Node.js LTS via fnm, Python via uv, and enabled AI tools installed in the active global npm prefix:\n$ dk update\n\nUpdate a specific tool:\n$ dk update brew\n\n$ dk update fnm\n\n$ dk update uv\n\n$ dk update npm\n\nList available updatable tools:\n$ dk update --list\n\nPreview updates without applying them:\n$ dk update --dry-run',
+        body: 'Update the default selection of developer tools:\n$ dk update\n\nThe Homebrew step only targets installed formulae on the Datakraften default list. This includes matching formulae you installed yourself. It uses local Homebrew metadata and disables automatic cleanup. Casks are not targeted, but Homebrew can still change dependencies or dependents.\n\nPreview or run just the scoped Homebrew update:\n$ dk update brew --dry-run\n$ dk update brew\n\nOpt in to a full Homebrew refresh and upgrade, including eligible casks:\n$ dk update brew-all --dry-run\n$ dk update brew-all\n\nOther targets are `fnm`, `uv`, and `npm`. The npm step only updates enabled AI tools installed in the active global npm prefix.\n$ dk update --list',
       },
     ],
     website: 'https://github.com/sagathelab/datakraften',
@@ -102,7 +102,8 @@ export const tools: Record<string, ToolDef> = {
       {
         title: 'Refresh managed tools',
         command: 'dk update',
-        details: 'Update Homebrew, fnm, uv, and enabled npm AI tools through one command.',
+        details:
+          'Update selected Homebrew formulae, fnm, uv, and enabled npm AI tools. A full Homebrew upgrade requires dk update brew-all.',
       },
     ],
     troubleshooting: [
@@ -427,7 +428,7 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'Tips',
-        body: 'TIP: Always run gh auth login first.\n\nTIP: gh status shows your latest notifications.\n\nTIP: If you have the GitHub Copilot CLI extension installed, try gh copilot.',
+        body: 'TIP: Run `gh auth login` first for commands that need GitHub access.\n\nTIP: `gh status` shows your latest notifications. GitHub Copilot CLI is a separate `copilot` command.',
       },
     ],
     website: 'https://cli.github.com/',
@@ -440,18 +441,18 @@ export const tools: Record<string, ToolDef> = {
     sections: [
       {
         title: 'What is it?',
-        body: 'GitHub Copilot CLI brings Copilot to your terminal -- get command suggestions, explanations, and translations from natural language without leaving the command line.',
+        body: 'GitHub Copilot CLI is a standalone coding assistant that can explain code, propose edits, and run tools from your terminal. It replaces the discontinued `gh copilot` extension.',
+      },
+      {
+        title: 'Install',
+        body: 'Enable `ai_tools.copilot.enabled` in your workstation configuration and run `dk apply`. Datakraften uses the official Homebrew cask on supported systems. It leaves an existing `copilot` on `PATH` alone.\n\nWith Homebrew, you can also install it directly:\n$ brew install --cask copilot-cli\n\nNOTE: Routine `dk update` does not target casks. Follow the official Copilot CLI instructions for Copilot updates.',
       },
       {
         title: 'Basic Usage',
-        body: 'Suggest a command:\n$ gh copilot suggest "list all modified files"\n\nExplain a command:\n$ gh copilot explain "git rebase -i HEAD~3"\n\nWhat the shell?:\n$ gh copilot what-the-shell\n\nInteractive mode:\n$ gh copilot',
-      },
-      {
-        title: 'Tips',
-        body: 'TIP: Run gh copilot without arguments to enter interactive mode.\n\nTIP: Uses GPT models under the hood -- great for learning git and shell commands.\n\nTIP: You must be logged in with gh auth login and have a Copilot subscription.',
+        body: 'Start an interactive session:\n$ copilot\n\nUse `/login` in Copilot CLI to sign in, then ask a question in your own words. Review proposed edits and commands before approving them.\n\nNOTE: You need a GitHub Copilot plan. Your organization may also need to enable Copilot CLI.',
       },
     ],
-    website: 'https://github.com/github/gh-copilot',
+    website: 'https://docs.github.com/en/copilot/how-tos/copilot-cli/install-copilot-cli',
   },
 
   az: {
@@ -611,15 +612,15 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'Importing workstation defaults',
-        body: 'Use an HTTPS URL that returns raw YAML, not an HTML file preview:\n\n$ dk init --from https://example.com/workstation.yaml\n\nDatakraften fetches the template during initialization and merges it recursively with the built-in defaults for your OS, not with your existing configuration. Supplied values override defaults, including `false`; omitted keys retain defaults. The importer validates the template and merged result. The template must be one YAML mapping; unknown settings, invalid types, and null values are rejected.\n\nThe CLI shows the template host and a summary of overrides with text values hidden. It warns about accepted settings that are saved but may not affect `dk apply`. Review the source and inspect the saved `source: custom` file before applying it.\n\nNOTE: If a config already exists, the import asks before replacing it unless you use `--yes`. Later `dk apply` runs read the local file without fetching the template again. Installing software may still use the network.',
+        body: 'Use an HTTPS URL that returns raw YAML, not an HTML file preview:\n\n$ dk init --from https://example.com/workstation.yaml\n\nDatakraften fetches the template during initialization and merges it recursively with the built-in defaults, not with your existing configuration. Supplied values override defaults, including `false`; omitted keys retain defaults. The template must be one YAML mapping; unknown settings, invalid types, and null values are rejected.\n\nThe CLI shows the template host and a summary of overrides with text values hidden. Older supported file formats can contain settings such as `runtimes.node.version` or `tools` that dk reads but does not apply; those settings produce a warning. Review the saved `source: custom` file before applying it.\n\nNOTE: If a config already exists, the import asks before replacing it unless you use `--yes`. Later `dk apply` runs read the local file without fetching the template again. Installing software may still use the network.',
       },
       {
         title: 'Creating a local workstation configuration',
         body: 'Run `dk init` to write the built-in defaults as `source: default`. Run `dk init --custom` to choose an empty skeleton or a starting point pre-filled with defaults. To supply settings from a local YAML file instead:\n\n$ dk init --custom ./workstation.yaml\n\nUnlike the HTTPS import, the local-file option merges supplied settings into the existing configuration, or starts from the supplied settings if there is no configuration yet. Nested maps merge recursively. If the file exists, dk asks before overwriting it unless you use `--yes`.',
       },
       {
-        title: 'Workstation runtimes and AI tools',
-        body: 'For example, a partial workstation import may override an enabled runtime or AI tool:\n\n| runtimes:\n|   node:\n|     enabled: false\n| ai_tools:\n|   claude:\n|     enabled: true\n\nOnly declared keys override defaults. `dk apply` uses the local workstation configuration. Project Node version selection uses the separate project file described below.',
+        title: 'Workstation settings',
+        body: 'For example, a partial workstation import can select Bash, disable the workstation Node setup, and enable Claude:\n\n| shell:\n|   default: bash\n| runtimes:\n|   node:\n|     enabled: false\n| ai_tools:\n|   claude:\n|     enabled: true\n\n`shell.default` accepts `fish`, `bash`, `zsh`, or `none`. `dk init` defaults to Fish. Omitting the shell from a standalone local config leaves shell setup off. Only Fish can be installed by `dk apply`; Bash and Zsh must already be on `PATH`. Switching or disabling shell setup leaves previous managed blocks in place and never changes the login shell.\n\nUse `enabled` for supported runtimes and AI entries, and `editors.zed` for Zed. A disabled entry does not uninstall anything. Baseline system and Homebrew packages still apply; project Node version selection uses the separate project file.',
       },
       {
         title: 'Project configuration',
@@ -686,11 +687,11 @@ export const tools: Record<string, ToolDef> = {
     sections: [
       {
         title: 'Share a workstation starting point',
-        body: 'Host a partial workstation YAML file at an HTTPS URL that serves the raw file, not a web preview. Each developer can import it once:\n\n$ dk init --from https://example.com/workstation.yaml\n\nReview the source before importing. dk validates the YAML, merges it into the built-in defaults for the developer’s OS, and summarizes the overrides. The import does not install tools. Review the saved file, then preview and apply it:\n\n$ dk apply --dry-run\n$ dk apply',
+        body: 'Host a partial workstation YAML file at an HTTPS URL that serves the raw file, not a web preview. Each developer can import it once:\n\n$ dk init --from https://example.com/workstation.yaml\n\nReview the source before importing. dk validates the YAML, merges it into the built-in defaults, and summarizes the overrides. The import does not install tools. Review the saved file, then preview and apply it:\n\n$ dk apply --dry-run\n$ dk apply',
       },
       {
         title: 'Example: partial workstation template',
-        body: 'This partial file disables Python and enables Claude in the imported workstation configuration:\n\n| runtimes:\n|   python:\n|     enabled: false\n| ai_tools:\n|   claude:\n|     enabled: true\n\nOther settings keep their platform defaults. Importing the template does not install tools. Run `dk apply` separately after reviewing the resulting config.\n\nNOTE: A shared template is a starting point, not a guarantee of identical machines.',
+        body: 'This partial file disables Python and enables Claude in the imported workstation configuration:\n\n| runtimes:\n|   python:\n|     enabled: false\n| ai_tools:\n|   claude:\n|     enabled: true\n\nOther settings keep their built-in defaults. Importing the template does not install tools. Run `dk apply` separately after reviewing the resulting config.\n\nNOTE: A shared template is a starting point, not a guarantee of identical machines.',
       },
       {
         title: 'Local ownership and updates',

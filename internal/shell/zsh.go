@@ -10,75 +10,48 @@ import (
 )
 
 func ZshConfigPath() string {
-	return filepath.Join(system.HomeDir(), ".zshrc")
-}
-
-func ZshDetectExistingConfig() string {
-	path := ZshConfigPath()
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return ""
+	if dir := os.Getenv("ZDOTDIR"); filepath.IsAbs(dir) {
+		return filepath.Join(dir, ".zshrc")
 	}
-	return string(content)
-}
-
-func ZshHasManagedBlock() bool {
-	content := ZshDetectExistingConfig()
-	return strings.Contains(content, managedStart)
+	return filepath.Join(system.HomeDir(), ".zshrc")
 }
 
 func ZshGenerateConfig(brewPrefix string, enableStarship bool, enableAtuin bool, enableFzf bool, fnmConfigured bool, uvConfigured bool) string {
 	var sb strings.Builder
 
-	sb.WriteString("# Datakraften managed configuration\n")
-	sb.WriteString("# Edit with caution — managed blocks are regenerated on 'dk apply'\n\n")
-
 	sb.WriteString(managedStart + "\n")
 	sb.WriteString("case \":$PATH:\" in *:\"$HOME/.local/bin\":*) ;; *) export PATH=\"$HOME/.local/bin:$PATH\" ;; esac\n")
 
 	if brewPrefix != "" {
-		sb.WriteString(fmt.Sprintf("eval \"$(%s/bin/brew shellenv)\"\n", brewPrefix))
+		brew := posixQuote(filepath.Join(brewPrefix, "bin", "brew"))
+		fmt.Fprintf(&sb, "[ ! -x %s ] || eval \"$(%s shellenv zsh)\"\n", brew, brew)
 	}
 
 	if fnmConfigured {
-		sb.WriteString("eval \"$(fnm env --use-on-cd --shell zsh)\"\n")
+		sb.WriteString("! command -v fnm >/dev/null 2>&1 || eval \"$(fnm env --use-on-cd --shell zsh)\"\n")
 	}
 
 	if uvConfigured {
-		sb.WriteString("eval \"$(uv generate-shell-completion zsh)\"\n")
+		sb.WriteString("! command -v uv >/dev/null 2>&1 || eval \"$(uv generate-shell-completion zsh)\"\n")
 	}
 
 	if enableStarship {
-		sb.WriteString("eval \"$(starship init zsh)\"\n")
+		sb.WriteString("! command -v starship >/dev/null 2>&1 || eval \"$(starship init zsh)\"\n")
 	}
 
 	if enableAtuin {
-		sb.WriteString("eval \"$(atuin init zsh)\"\n")
+		sb.WriteString("! command -v atuin >/dev/null 2>&1 || eval \"$(atuin init zsh)\"\n")
 	}
 
 	if enableFzf {
-		sb.WriteString("source <(fzf --zsh)\n")
+		sb.WriteString("! command -v fzf >/dev/null 2>&1 || source <(fzf --zsh)\n")
 	}
-
-	sb.WriteString("export EDITOR=\"code --wait\"\n")
 
 	sb.WriteString(managedEnd + "\n")
-
-	if !ZshHasManagedBlock() {
-		sb.WriteString("\n# User configuration below\n# Add your custom config here\n")
-	}
 
 	return sb.String()
 }
 
 func ZshWriteConfig(config string) error {
 	return writeConfig(ZshConfigPath(), config)
-}
-
-func ZshEnsureSetup(brewPrefix string) (bool, error) {
-	config := ZshGenerateConfig(brewPrefix, true, true, true, true, true)
-	if err := ZshWriteConfig(config); err != nil {
-		return false, err
-	}
-	return true, nil
 }

@@ -36,8 +36,8 @@ func TestDoctorFindsCommandsOnPath(t *testing.T) {
 	t.Setenv("PATH", dir)
 	report := &doctor.Report{}
 	captureStdout(t, func() {
-		RunDoctorTools(report)
-		RunDoctorRuntimes(report)
+		RunDoctorTools(report, nil)
+		RunDoctorRuntimes(report, nil)
 	})
 	for _, id := range []string{"tool.brew", "runtime.go"} {
 		found := false
@@ -71,8 +71,8 @@ func TestDoctorReportsInstalledCommandsOutsidePath(t *testing.T) {
 	t.Setenv("SHELL", "/bin/bash")
 	report := &doctor.Report{}
 	output := captureStdout(t, func() {
-		RunDoctorTools(report)
-		RunDoctorRuntimes(report)
+		RunDoctorTools(report, nil)
+		RunDoctorRuntimes(report, nil)
 	})
 	for _, item := range []struct{ id, name string }{{"tool.brew", "brew"}, {"runtime.go", "go"}} {
 		path := filepath.Join(dir, item.name)

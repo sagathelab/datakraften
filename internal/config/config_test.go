@@ -70,6 +70,8 @@ func TestLoadRejectsInvalidWorkstationConfig(t *testing.T) {
 		{"ai_apps: {codex: {enabled: 'true'}}", "ai_apps.codex.enabled must be a boolean"},
 		{"editors: {zed: optional}", "editors.zed must be true or false"},
 		{"tools: {docker: 1}", "tools.docker must be a boolean"},
+		{"shell: {default: ' '}", "shell.default must be fish, bash, zsh or none"},
+		{"shell: {default: false}", "shell.default must be a string"},
 		{"shell: {unused: value}", "unknown field shell.unused"},
 		{"system: {package_manager: &pm apt}\ntooling: {package_manager: *pm}", "YAML aliases"},
 	} {
@@ -81,5 +83,55 @@ func TestLoadRejectsInvalidWorkstationConfig(t *testing.T) {
 				t.Fatalf("wanted %q, got %v", tt.want, err)
 			}
 		})
+	}
+}
+
+func TestLegacyWorkstationSettingsAreReadableAndWarned(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	path := DefaultConfigPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	const input = `version: 1
+source: default
+system: {package_manager: apt}
+tooling: {package_manager: brew}
+shell: {default: fish, prompt: starship, history: atuin, fuzzy_finder: fzf}
+tools: {github_cli: true, azure_cli: true, docker: true}
+runtimes:
+  node: {enabled: true, manager: fnm, version: lts}
+  python: {enabled: true, manager: uv, version: latest}
+  go: {enabled: true, manager: brew, version: latest}
+  dotnet: {enabled: true, manager: brew, version: latest}
+editors: {vscode: true, zed: true, cursor: optional}
+ai_tools:
+  codex: {enabled: true, manager: npm, version: latest}
+  opencode: {enabled: true, manager: brew, version: latest}
+  copilot: {enabled: true, manager: gh, version: latest}
+  claude: {enabled: false, manager: npm, version: latest}
+  gemini: {enabled: false, manager: npm, version: latest}
+ai_apps:
+  codex: {enabled: true, manager: brew, version: latest}
+  claude: {enabled: false, manager: brew, version: latest}
+  copilot: {enabled: true, manager: vscode, version: latest}
+`
+	if err := os.WriteFile(path, []byte(input), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ShellTarget() != ShellFish || !cfg.RuntimeEnabled("node") || cfg.Editors["zed"] != "true" || !cfg.AITools["copilot"].Enabled {
+		t.Fatalf("supported intent lost: %+v", cfg)
+	}
+	if len(cfg.Warnings) != 34 {
+		t.Errorf("expected 34 ignored settings: %q", cfg.Warnings)
+	}
+	warnings := strings.Join(cfg.Warnings, "\n")
+	for _, field := range []string{"system.package_manager", "tooling.package_manager", "shell.fuzzy_finder", "tools.docker", "runtimes.node.version", "editors.vscode", "ai_tools.codex.manager", "ai_apps.claude.version"} {
+		if !strings.Contains(warnings, field+" is ignored by dk apply") {
+			t.Errorf("missing warning for %q: %s", field, warnings)
+		}
 	}
 }

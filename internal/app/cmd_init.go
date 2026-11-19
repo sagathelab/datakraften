@@ -8,7 +8,6 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/sagathelab/datakraften/internal/config"
-	"github.com/sagathelab/datakraften/internal/installers"
 	"github.com/sagathelab/datakraften/internal/system"
 	"github.com/spf13/cobra"
 )
@@ -16,96 +15,47 @@ import (
 var defaultConfigYAML = `version: 1
 source: default
 
-system:
-  package_manager: %s
-
-tooling:
-  package_manager: brew
-
 shell:
   default: fish
-  prompt: starship
-  history: atuin
-  fuzzy_finder: fzf
-
-tools:
-  github_cli: true
-  azure_cli: true
-  docker: true
 
 runtimes:
   node:
     enabled: true
-    manager: fnm
-    version: lts
   python:
     enabled: true
-    manager: uv
-    version: latest
   go:
     enabled: true
-    manager: brew
-    version: latest
   dotnet:
     enabled: true
-    manager: brew
-    version: latest
 
 editors:
-  vscode: true
   zed: true
-  cursor: optional
 
 ai_tools:
   codex:
     enabled: true
-    manager: npm
-    version: latest
   opencode:
     enabled: true
-    manager: brew
-    version: latest
   copilot:
     enabled: true
-    manager: gh
-    version: latest
   claude:
     enabled: false
-    manager: npm
-    version: latest
   gemini:
     enabled: false
-    manager: npm
-    version: latest
 ai_apps:
   codex:
     enabled: true
-    manager: brew
-    version: latest
   claude:
     enabled: false
-    manager: brew
-    version: latest
   copilot:
     enabled: true
-    manager: vscode
-    version: latest
 `
 
 var skeletonConfigYAML = `version: 1
 source: custom
 
-system:
-  package_manager: %s
-
-tooling:
-  package_manager: ""
-
 shell:
-  default: bash
-  prompt: ""
-  history: ""
-  fuzzy_finder: ""
+  default: none
 
 runtimes:
   node:
@@ -116,10 +66,6 @@ runtimes:
     enabled: false
   dotnet:
     enabled: false
-    manager: brew
-    version: latest
-
-tools: {}
 
 editors: {}
 
@@ -187,14 +133,12 @@ Use --from <HTTPS URL> to import a raw YAML template once and merge it with defa
 	return cmd
 }
 
-func builtInConfig(template string) string {
-	return fmt.Sprintf(template, installers.DetectPackageManager())
-}
-
 func saveInitConfig(path string, data []byte, existing, yes bool) (bool, error) {
-	if _, err := config.Decode(data); err != nil {
+	settings, err := config.Decode(data)
+	if err != nil {
 		return false, fmt.Errorf("invalid configuration: %w", err)
 	}
+	printConfigWarnings(config.Warnings(settings))
 	if existing && !yes {
 		var confirmed bool
 		prompt := &survey.Confirm{Message: "Overwrite the existing workstation configuration?", Default: false}
@@ -213,7 +157,7 @@ func saveInitConfig(path string, data []byte, existing, yes bool) (bool, error) 
 }
 
 func initDefault(configPath string, existing, yes bool) error {
-	cfg := builtInConfig(defaultConfigYAML)
+	cfg := defaultConfigYAML
 	printConfigPreview(cfg)
 	saved, err := saveInitConfig(configPath, []byte(cfg), existing, yes)
 	if err != nil || !saved {
@@ -256,9 +200,9 @@ func initCustomPrompt(configPath string, existing, yes bool) error {
 	if err := survey.AskOne(templatePrompt, &templateChoice); err != nil {
 		return fmt.Errorf("choose a custom configuration: %w", err)
 	}
-	cfg := builtInConfig(skeletonConfigYAML)
+	cfg := skeletonConfigYAML
 	if templateChoice == 1 {
-		cfg = strings.Replace(builtInConfig(defaultConfigYAML), "source: default", "source: custom", 1)
+		cfg = strings.Replace(defaultConfigYAML, "source: default", "source: custom", 1)
 	}
 	printConfigPreview(cfg)
 	saved, err := saveInitConfig(configPath, []byte(cfg), existing, yes)
@@ -289,7 +233,6 @@ func initCustomMerge(configPath, customFile string, existing, yes bool) error {
 	if len(paths) > 0 {
 		fmt.Printf("  Settings supplied: %s\n", strings.Join(paths, ", "))
 	}
-	warnUnusedConfig(paths)
 	saved, err := saveInitConfig(configPath, result, existing, yes)
 	if err != nil || !saved {
 		return err

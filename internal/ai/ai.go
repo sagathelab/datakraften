@@ -2,7 +2,6 @@ package ai
 
 import (
 	"fmt"
-	"path"
 	"runtime"
 	"strings"
 
@@ -45,12 +44,12 @@ func (r InstallReport) HasFailures() bool {
 }
 
 type cliTool struct {
-	name        string
-	key         string
-	brewPkg     string
-	npmPkg      string
-	cmd         string
-	ghExtension string
+	name     string
+	key      string
+	brewPkg  string
+	brewCask string
+	npmPkg   string
+	cmd      string
 }
 
 var cliTools = []cliTool{
@@ -58,7 +57,7 @@ var cliTools = []cliTool{
 	{name: "Claude Code", key: "claude", npmPkg: "@anthropic-ai/claude-code", cmd: "claude"},
 	{name: "Gemini CLI", key: "gemini", npmPkg: "@google-gemini/gemini-cli", cmd: "gemini"},
 	{name: "OpenCode", key: "opencode", brewPkg: "opencode", cmd: "opencode"},
-	{name: "GitHub Copilot CLI", key: "copilot", ghExtension: "github/gh-copilot"},
+	{name: "GitHub Copilot CLI", key: "copilot", brewCask: "copilot-cli", cmd: "copilot"},
 }
 
 type desktopApp struct {
@@ -100,7 +99,7 @@ func EnsureAIToolsWithOptions(cfg *config.Config, opts InstallOptions) InstallRe
 
 		report.Enabled++
 
-		if toolInstalled(tool) {
+		if commandExists(tool.cmd) {
 			report.AlreadyInstalled = append(report.AlreadyInstalled, tool.name)
 			continue
 		}
@@ -119,45 +118,19 @@ func EnsureAIToolsWithOptions(cfg *config.Config, opts InstallOptions) InstallRe
 	return report
 }
 
-func toolInstalled(tool cliTool) bool {
-	switch {
-	case tool.ghExtension != "":
-		return ghExtensionInstalled(tool.ghExtension)
-	case tool.cmd != "":
-		return commandExists(tool.cmd)
-	default:
-		return false
-	}
-}
-
-func ghExtensionInstalled(repo string) bool {
-	if !commandExists("gh") {
-		return false
-	}
-	if repo == "github/gh-copilot" && runCommand("gh", "copilot", "--help").Code == 0 {
-		return true
-	}
-
-	r := runCommand("gh", "extension", "list")
-	if r.Code != 0 {
-		return false
-	}
-
-	name := path.Base(repo)
-	return strings.Contains(r.Stdout, repo) || strings.Contains(r.Stdout, name)
-}
-
 func installCLI(tool cliTool, opts InstallOptions) (installStatus, string, error) {
 	switch {
-	case tool.ghExtension != "":
-		if !commandExists("gh") {
-			outputPrintf("    – %s: GitHub CLI not available\n", tool.name)
-			return installStatusSkipped, "GitHub CLI not available", nil
+	case tool.brewCask != "":
+		if !brewInstalled() {
+			return installStatusSkipped, "Homebrew not available; see https://docs.github.com/copilot/how-tos/copilot-cli/install-copilot-cli", nil
 		}
-		outputPrintf("    Installing %s via GitHub CLI extension...\n", tool.name)
-		r := runCommand("gh", "extension", "install", tool.ghExtension)
+		if runCommand("brew", "list", "--cask", tool.brewCask).Code == 0 {
+			return installStatusSkipped, tool.cmd + " is installed by Homebrew but not on PATH; check your Homebrew shell setup", nil
+		}
+		outputPrintf("    Installing %s via Homebrew...\n", tool.name)
+		r := runCommand("brew", "install", "--cask", tool.brewCask)
 		if r.Code != 0 {
-			return installStatusSkipped, "", fmt.Errorf("gh extension install failed: %s", r.Stderr)
+			return installStatusSkipped, "", fmt.Errorf("brew install --cask %s failed: %s", tool.brewCask, r.Stderr)
 		}
 		return installStatusInstalled, "", nil
 	case tool.brewPkg != "" && brewInstalled():

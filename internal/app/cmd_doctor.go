@@ -2,12 +2,14 @@ package app
 
 import (
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 
+	"github.com/sagathelab/datakraften/internal/config"
 	"github.com/sagathelab/datakraften/internal/doctor"
 	"github.com/sagathelab/datakraften/internal/exec"
-	"github.com/sagathelab/datakraften/internal/system"
 	"github.com/spf13/cobra"
 )
 
@@ -16,66 +18,40 @@ func newDoctorCmd() *cobra.Command {
 	var category string
 
 	cmd := &cobra.Command{
-		Use:   "doctor",
-		Short: "Diagnose your development environment",
-		Long:  `Check WSL status, tools, runtimes, editors, Docker, AI tooling, and more.`,
+		Use:          "doctor",
+		Short:        "Diagnose your development environment",
+		Long:         `Report configured intent and check WSL status, tools, runtimes, editors, Docker, and shell setup.`,
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			state := LoadState()
-			report := &doctor.Report{}
-
+			switch category {
+			case "", "system", "tools", "runtimes", "editors", "docker", "shell":
+			default:
+				return fmt.Errorf("unknown doctor category; choose system, tools, runtimes, editors, docker or shell")
+			}
+			workstation, cfg, err := loadWorkstationReport()
+			if err != nil {
+				return err
+			}
+			printConfigWarnings(workstation.Configuration.Warnings)
+			report := &doctorReport{workstationReport: workstation}
+			if !jsonOutput {
+				displayTitle(os.Stdout, "doctor", "Environment diagnostics")
+				workstation.print(os.Stdout)
+			}
+			buildDoctorReport(report, category, cfg)
+			report.SummaryText = report.Summary()
 			if jsonOutput {
-				buildDoctorReport(report, category)
-				report.PrintJSON()
-				return nil
-			}
-
-			displayTitle(os.Stdout, "doctor", "Environment diagnostics")
-
-			if state.LastApply != "" {
-				fmt.Printf("  Last apply: %s\n", state.LastApply)
-				fmt.Printf("  Source: %s", state.ActiveSource)
-				fmt.Println()
-				fmt.Println()
-			}
-
-			if category == "" || category == "system" {
-				RunDoctorSystem(report)
-				fmt.Println()
-			}
-
-			if category == "" || category == "tools" {
-				RunDoctorTools(report)
-				fmt.Println()
-			}
-
-			if category == "" || category == "runtimes" {
-				RunDoctorRuntimes(report)
-				fmt.Println()
-			}
-
-			if category == "" || category == "editors" {
-				RunDoctorEditors(report)
-				fmt.Println()
-			}
-
-			if category == "" || category == "docker" {
-				RunDoctorDocker(report)
-				fmt.Println()
-			}
-
-			if category == "" || category == "shell" {
-				RunDoctorShell(report, state)
-				fmt.Println()
+				return printReportJSON(report)
 			}
 
 			displayHeading(os.Stdout, "Summary")
 			fmt.Println("  -------")
-			fmt.Println("    " + report.Summary())
+			fmt.Println("    " + report.SummaryText)
 			fmt.Println()
 
 			if fix {
 				displayHeading(os.Stdout, "Auto-fix")
-				runAutoFix(report, category)
+				runAutoFix(&report.Report, category)
 				fmt.Println()
 			}
 
@@ -147,42 +123,71 @@ func runAutoFix(r *doctor.Report, category string) {
 	}
 }
 
-func buildDoctorReport(r *doctor.Report, category string) {
-	if category == "" || category == "system" {
-		RunDoctorSystem(r)
-	}
-	if category == "" || category == "tools" {
-		RunDoctorTools(r)
-	}
-	if category == "" || category == "runtimes" {
-		RunDoctorRuntimes(r)
-	}
-	if category == "" || category == "editors" {
-		RunDoctorEditors(r)
-	}
-	if category == "" || category == "docker" {
-		RunDoctorDocker(r)
-	}
-	if category == "" || category == "shell" {
-		RunDoctorShell(r, LoadState())
+type doctorReport struct {
+	workstationReport
+	doctor.Report
+	Shell       *detectedShells `json:"shell,omitempty"`
+	SummaryText string          `json:"summary"`
+}
+
+func buildDoctorReport(r *doctorReport, category string, cfg *config.Config) {
+	for _, section := range []struct {
+		name string
+		run  func()
+	}{
+		{"system", func() { RunDoctorSystem(&r.Report) }},
+		{"tools", func() { RunDoctorTools(&r.Report, cfg) }},
+		{"runtimes", func() { RunDoctorRuntimes(&r.Report, cfg) }},
+		{"editors", func() { RunDoctorEditors(&r.Report) }},
+		{"docker", func() { RunDoctorDocker(&r.Report) }},
+		{"shell", func() {
+			detected := detectShells()
+			r.Shell = &detected
+			runDoctorShell(&r.Report, detected, r.Configuration.Shell)
+		}},
+	} {
+		if category == "" || category == section.name {
+			section.run()
+			fmt.Fprintln(doctorOutput())
+		}
 	}
 }
 
-func RunDoctorShell(r *doctor.Report, state *State) {
-	current := system.CurrentShell()
-	r.Add(doctor.Check{ID: "shell", Title: "Current shell", Category: "shell",
-		Severity: "info", Status: skipStatus(current != ""), Message: current})
-	r.Add(doctor.Check{ID: "shell.managed", Title: "Managed Fish config", Category: "shell",
-		Severity: "info", Status: skipStatus(state.ManagedShell), Fix: "run 'dk apply' to configure shell"})
-	displayHeading(doctorOutput(), "Shell")
-	if current != "" {
-		displayFprintf(doctorOutput(), "    [OK] Current shell: %s\n", current)
-	} else {
-		displayFprintln(doctorOutput(), "    [SKIP] Current shell unknown")
+func runDoctorShell(r *doctor.Report, detected detectedShells, target config.ShellTarget) {
+	displayHeading(doctorOutput(), "Detected shell")
+	addCheck := func(check doctor.Check) {
+		check.Category, check.Severity = "shell", "warning"
+		r.Add(check)
+		label := map[string]string{"pass": "OK", "skip": "SKIP", "fail": "WARN"}[check.Status]
+		displayFprintf(doctorOutput(), "    [%s] %s: %s\n", label, check.Title, check.Message)
+		if check.Fix != "" {
+			displayFprintf(doctorOutput(), "           %s\n", check.Fix)
+		}
 	}
-	if state.ManagedShell {
-		displayFprintln(doctorOutput(), "    [OK] Managed Fish config saved")
-	} else {
-		displayFprintln(doctorOutput(), "    [SKIP] Run 'dk apply' to configure shell")
+	addCheck(doctor.Check{ID: "shell", Title: "Current shell ($SHELL)",
+		Status: skipStatus(detected.Current != ""), Message: detected.currentLabel()})
+	for _, name := range slices.Sorted(maps.Keys(detected.Targets)) {
+		item := detected.Targets[name]
+		status, fix := skipStatus(item.ManagedBlock == "present"), ""
+		if name == target {
+			switch item.ManagedBlock {
+			case "absent":
+				fix = "run 'dk apply' to configure this shell"
+			case "invalid", "unreadable":
+				status, fix = "fail", "Check the startup file and its managed block markers before running 'dk apply'"
+			}
+			if !item.Installed && item.ManagedBlock != "invalid" && item.ManagedBlock != "unreadable" {
+				status = "fail"
+				if name == config.ShellFish {
+					fix = "run 'dk apply' to ensure Fish is installed and configured"
+				} else if item.ManagedBlock == "absent" {
+					fix = "Install " + string(name) + " separately and run 'dk apply' to configure it"
+				} else {
+					fix = "Install " + string(name) + " separately; dk apply only configures it"
+				}
+			}
+		}
+		addCheck(doctor.Check{ID: "shell." + string(name), Title: string(name),
+			Status: status, Message: item.description(), Fix: fix})
 	}
 }

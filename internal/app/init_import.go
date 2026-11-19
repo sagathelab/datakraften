@@ -107,7 +107,7 @@ func initFromURL(configPath, address string, existing, yes bool) error {
 	if err != nil {
 		return err
 	}
-	defaults := []byte(builtInConfig(defaultConfigYAML))
+	defaults := []byte(defaultConfigYAML)
 	result, paths, err := importConfig(defaults, data)
 	if err != nil {
 		return fmt.Errorf("invalid template: %w", err)
@@ -143,30 +143,12 @@ func previewImport(defaults, result []byte, paths []string) error {
 	for _, path := range paths {
 		fmt.Printf("    %s: %s -> %s\n", path, previewValue(before, path), previewValue(after, path))
 	}
-	warnUnusedConfig(paths)
 	return nil
 }
 
-func warnUnusedConfig(paths []string) {
-	var ignored []string
-	for _, path := range paths {
-		if path != "version" && !importSettingApplied(path) {
-			ignored = append(ignored, path)
-		}
-	}
-	if len(ignored) > 0 {
-		fmt.Printf("  [WARN] These settings will be saved, but current dk apply does not use them: %s\n", strings.Join(ignored, ", "))
-	}
-}
-
-func importSettingApplied(path string) bool {
-	switch path {
-	case "runtimes.node.enabled", "runtimes.python.enabled", "runtimes.go.enabled", "runtimes.dotnet.enabled", "editors.zed",
-		"ai_tools.codex.enabled", "ai_tools.claude.enabled", "ai_tools.gemini.enabled", "ai_tools.opencode.enabled", "ai_tools.copilot.enabled",
-		"ai_apps.codex.enabled", "ai_apps.claude.enabled", "ai_apps.copilot.enabled":
-		return true
-	default:
-		return false
+func printConfigWarnings(warnings []string) {
+	for _, warning := range warnings {
+		fmt.Fprintf(os.Stderr, "  [WARN] %s\n", warning)
 	}
 }
 

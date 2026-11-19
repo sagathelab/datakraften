@@ -8,6 +8,8 @@ import (
 )
 
 func TestShellConfigPreservesUserContent(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Setenv("ZDOTDIR", "")
 	for _, tc := range []struct {
 		name     string
 		path     func() string
@@ -68,6 +70,22 @@ func TestShellConfigPreservesUserContent(t *testing.T) {
 	}
 }
 
+func TestShellConfigPathsHonorAbsoluteOverrides(t *testing.T) {
+	home, dir := t.TempDir(), t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	t.Setenv("ZDOTDIR", dir)
+	if path := FishConfigPath(); path != filepath.Join(dir, "fish", "config.fish") {
+		t.Errorf("unexpected Fish path: %q", path)
+	}
+	if path := ZshConfigPath(); path != filepath.Join(dir, ".zshrc") {
+		t.Errorf("unexpected Zsh path: %q", path)
+	}
+	if path := BashConfigPath(); path != filepath.Join(home, ".bashrc") {
+		t.Errorf("unexpected Bash path: %q", path)
+	}
+}
+
 func TestWriteConfigRejectsMalformedExistingBlock(t *testing.T) {
 	for _, existing := range []string{managedStart + "\nuser data\n", managedEnd + "\n", managedStart + "\n" + managedEnd + "\n" + managedStart + "\n" + managedEnd} {
 		t.Run(existing, func(t *testing.T) {
@@ -86,5 +104,39 @@ func TestWriteConfigRejectsMalformedExistingBlock(t *testing.T) {
 				t.Fatalf("changed malformed config: %q", got)
 			}
 		})
+	}
+}
+
+func TestWriteConfigTreatsInlineMarkerTextAsUserContent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config")
+	before := "printf '%s' '" + managedStart + "'\r\n"
+	after := "printf '%s' '" + managedEnd + "'\r\n"
+	original := before + managedStart + "\r\nold\r\n" + managedEnd + "\r\n" + after
+	if err := os.WriteFile(path, []byte(original), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeConfig(path, managedStart+"\nnew\n"+managedEnd); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(path)
+	if want := strings.Replace(original, "\r\nold\r\n", "\r\nnew\r\n", 1); err != nil || string(got) != want {
+		t.Fatalf("expected %q, got %q: %v", want, got, err)
+	}
+}
+
+func TestManagedBlockStatusDoesNotFollowDanglingSymlinkToCreateFile(t *testing.T) {
+	dir := t.TempDir()
+	path, target := filepath.Join(dir, "config"), filepath.Join(dir, "missing")
+	if err := os.Symlink(target, path); err != nil {
+		t.Fatal(err)
+	}
+	if got := ManagedBlockStatus(path); got != "unreadable" {
+		t.Errorf("expected unreadable, got %q", got)
+	}
+	if err := writeConfig(path, managedStart+"\nnew\n"+managedEnd); err == nil {
+		t.Fatal("expected write error")
+	}
+	if _, err := os.Stat(target); !os.IsNotExist(err) {
+		t.Fatalf("dangling link target was changed: %v", err)
 	}
 }

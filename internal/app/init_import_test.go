@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -26,9 +25,31 @@ func withTemplate(t *testing.T, input string, status int) {
 	t.Cleanup(func() { http.DefaultTransport = old })
 }
 
+func TestGeneratedWorkstationTemplatesOnlyAdvertiseSupportedSettings(t *testing.T) {
+	for _, tc := range []struct {
+		input, source, target string
+	}{
+		{defaultConfigYAML, "default", "fish"},
+		{skeletonConfigYAML, "custom", "none"},
+	} {
+		data, err := config.Decode([]byte(tc.input))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if data["source"] != tc.source || data["shell"].(map[string]any)["default"] != tc.target {
+			t.Errorf("unexpected source or shell: %v", data)
+		}
+		for _, warning := range config.Warnings(data) {
+			if !strings.HasPrefix(warning, "ai_tools.copilot.") && !strings.HasPrefix(warning, "ai_apps.copilot.") {
+				t.Errorf("template advertises unsupported setting: %s", warning)
+			}
+		}
+	}
+}
+
 func TestImportConfigMergesAndValidates(t *testing.T) {
-	defaults := []byte(fmt.Sprintf(defaultConfigYAML, "dnf"))
-	out, paths, err := importConfig(defaults, []byte("runtimes:\n  node:\n    enabled: false\n  python: {}\nshell:\n  prompt: ''\nai_tools:\n  codex: false\n"))
+	defaults := []byte(defaultConfigYAML)
+	out, paths, err := importConfig(defaults, []byte("runtimes:\n  node:\n    enabled: false\n  python: {}\nshell:\n  default: none\n  prompt: ''\nai_tools:\n  codex: false\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,13 +60,13 @@ func TestImportConfigMergesAndValidates(t *testing.T) {
 	runtimes := data["runtimes"].(map[string]interface{})
 	node := runtimes["node"].(map[string]interface{})
 	python := runtimes["python"].(map[string]interface{})
-	if node["enabled"] != false || node["manager"] != "fnm" || node["version"] != "lts" || python["enabled"] != true || data["source"] != "custom" {
+	if node["enabled"] != false || len(node) != 1 || python["enabled"] != true || data["source"] != "custom" {
 		t.Fatalf("invalid merge: %s", out)
 	}
-	if data["shell"].(map[string]interface{})["prompt"] != "" || data["ai_tools"].(map[string]interface{})["codex"].(map[string]interface{})["enabled"] != false {
+	if shell, _ := data["shell"].(map[string]interface{}); shell["default"] != "none" || shell["prompt"] != "" || data["ai_tools"].(map[string]interface{})["codex"].(map[string]interface{})["enabled"] != false {
 		t.Fatalf("explicit zero lost: %s", out)
 	}
-	if strings.Join(paths, ",") != "ai_tools.codex.enabled,runtimes.node.enabled,shell.prompt" {
+	if strings.Join(paths, ",") != "ai_tools.codex.enabled,runtimes.node.enabled,shell.default,shell.prompt" {
 		t.Fatalf("paths: %q", paths)
 	}
 	for _, input := range []string{"<html>bad</html>", "runtimes: [", "runtimes:\n  node:\n    enabled: null", "runtimes:\n  node:\n    enabled: maybe", "runtimes:\n  node:\n    unknown: 1", "unknown: true", "version: 2", "source: team", "shell: null", "{}\n---\nunknown: true", ""} {
@@ -194,19 +215,25 @@ func TestImportPreviewMasksValuesAndWarnsOnUnsupportedSettings(t *testing.T) {
 	t.Setenv("HOME", home)
 	withTemplate(t, "shell:\n  prompt: secret-value\nruntimes:\n  node:\n    enabled: false\n    version: '22'\n", http.StatusOK)
 	path := config.DefaultConfigPath()
-	output := captureStdout(t, func() {
-		if err := initFromURL(path, "https://example.com/config?token=secret-token", false, false); err != nil {
-			t.Fatal(err)
-		}
+	var output string
+	warnings := captureWorkstationStderr(t, func() {
+		output = captureStdout(t, func() {
+			if err := initFromURL(path, "https://example.com/config?token=secret-token", false, false); err != nil {
+				t.Fatal(err)
+			}
+		})
 	})
 	for _, forbidden := range []string{"secret-value", "secret-token"} {
-		if strings.Contains(output, forbidden) {
-			t.Fatalf("secret leaked: %s", output)
+		if strings.Contains(output+warnings, forbidden) {
+			t.Fatalf("secret leaked: %s %s", output, warnings)
 		}
 	}
-	for _, expected := range []string{"runtimes.node.enabled: true -> false", "current dk apply does not use them", "runtimes.node.version", "shell.prompt"} {
-		if !strings.Contains(output, expected) {
-			t.Fatalf("missing %q: %s", expected, output)
+	if !strings.Contains(output, "runtimes.node.enabled: true -> false") {
+		t.Fatalf("missing preview: %s", output)
+	}
+	for _, path := range []string{"runtimes.node.version", "shell.prompt"} {
+		if !strings.Contains(warnings, path+" is ignored by dk apply") {
+			t.Fatalf("missing warning for %q: %s", path, warnings)
 		}
 	}
 }

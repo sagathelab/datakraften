@@ -29,6 +29,7 @@ func newApplyCmd() *cobra.Command {
 				}
 				return fmt.Errorf("cannot load configuration: %w", err)
 			}
+			printConfigWarnings(cfg.Warnings)
 
 			subtitle := fmt.Sprintf("Source: %s", cfg.Source)
 			if dryRun {
@@ -115,8 +116,8 @@ func newApplyCmd() *cobra.Command {
 			}
 			fmt.Fprintln(progressWriter())
 			displayNextSteps(progressWriter())
-			if report.Shell {
-				fmt.Fprintln(progressWriter(), "    Restart your shell or run: exec fish")
+			if report.Shell != "" {
+				fmt.Fprintf(progressWriter(), "    Start a new %s session to load its configuration\n", report.Shell)
 			}
 			fmt.Fprintln(progressWriter(), "    Run 'dk doctor' to verify everything")
 			fmt.Fprintln(progressWriter())

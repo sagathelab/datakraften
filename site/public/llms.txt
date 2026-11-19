@@ -31,7 +31,7 @@ The main mental model is:
 2. Create a config with `dk init`
 3. Review the config and preview with `dk apply --dry-run`, then apply with `dk apply`
 4. Verify the machine with `dk doctor`
-5. Keep `dk` and managed tools up to date with `dk upgrade` and `dk update`
+5. Upgrade `dk` with `dk upgrade` and update selected tools with `dk update`
 
 ## Workstation configuration
 
@@ -54,7 +54,8 @@ These are the primary user-facing commands:
 - `dk doctor` — run diagnostics across system, tools, runtimes, editors, Docker, and shell
 - `dk status` — show detected tools and versions
 - `dk upgrade` — self-update the `dk` binary from GitHub Releases with checksum verification
-- `dk update` — update managed developer tools
+- `dk update` — update installed formulae from the default Homebrew list, Node via fnm, uv, and enabled installed npm AI tools; scoped Homebrew updates use local metadata and do not target casks
+- `dk update brew-all` — explicitly refresh Homebrew and upgrade all eligible formulae and casks
 - `dk project status` — inspect a repository's requirements, trust, and task names without running tasks or installing tools
 - `dk project trust` — review task commands and environment variable names, then approve the project file
 - `dk project setup` — check for the declared Node.js version and install it if needed and approved
@@ -144,7 +145,7 @@ Current AI CLI tools in the product model:
 
 Important detail:
 
-- GitHub Copilot CLI is handled via the GitHub CLI extension `github/gh-copilot`, not as a Homebrew formula
+- GitHub Copilot CLI is the standalone `copilot` command. Datakraften installs the Homebrew cask `copilot-cli`, not the retired `gh copilot` extension. Routine `dk update` does not target casks.
 
 Current AI app/editor integration model includes:
 

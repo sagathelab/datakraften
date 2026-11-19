@@ -15,7 +15,7 @@ curl -fsSL https://datakraften.no/install | bash
 dk init
 dk apply
 dk doctor
-dk update          # Update managed tools
+dk update          # Update the default selection of developer tools
 ```
 
 ## What is Datakraften?
@@ -30,19 +30,22 @@ It uses existing package and version managers, with workstation configuration an
 
 Workstation configuration and the repository's `datakraften.yaml` are separate. Do not put credentials in either file.
 
+Set `shell.default` to `fish`, `bash`, `zsh`, or `none`. `dk init` defaults to Fish; omitting the setting from a standalone local config leaves shell setup off. `dk apply` edits only the selected shell's managed block, never changes your login shell, and leaves previous blocks in place. The generated YAML only includes options `dk apply` uses. Old settings such as runtime `manager` and `version` still load but are ignored with warnings.
+
 ## Commands
 
 | Command | Description |
 |---------|-------------|
 | `dk init` | Generate configuration file |
 | `dk apply` | Apply the workstation configuration |
-| `dk doctor` | Run diagnostics |
-| `dk status` | Show installed tools overview |
+| `dk doctor` | Diagnose the detected environment alongside the configured workstation settings |
+| `dk status` | Show configured choices, detected tools, and last apply separately |
 | `dk project status` | Inspect the current project's requirements without installing or running anything |
 | `dk project trust` | Review and approve the current project configuration |
 | `dk project setup` | Install the missing project Node version after confirmation |
 | `dk run <task>` | Run a trusted project task in its project environment |
-| `dk update` | Update managed tools; npm updates only enabled, installed AI tools |
+| `dk update` | Update selected Homebrew formulae, fnm, uv, and enabled, installed npm AI tools |
+| `dk update brew-all` | Explicitly refresh and upgrade all eligible Homebrew packages |
 | `dk upgrade` | Upgrade dk to the latest release |
 | `dk npm setup` | Configure a user-owned npm prefix and shell PATH |
 
@@ -52,6 +55,8 @@ A custom prefix may conflict with Node version managers such as fnm or nvm. Use 
 version manager's own writable prefix instead when appropriate.
 
 Use `--help` on a command to see the flags it supports. `dk project status --json` returns a machine-readable project status.
+
+The Homebrew step in `dk update` and `dk update brew` targets installed formulae from the Datakraften default list, even if you installed them yourself. It uses local Homebrew metadata, skips automatic cleanup, and does not target casks. Homebrew can still change dependencies or dependents. Preview with `dk update brew --dry-run`. Use `dk update brew-all` only when you want a full Homebrew upgrade.
 
 ## Quick start
 
@@ -106,7 +111,7 @@ The configuration supports tools including:
 
 - [OpenAI Codex CLI](https://github.com/openai/codex)
 - [OpenCode](https://opencode.ai)
-- [GitHub Copilot CLI](https://github.com/github/gh-copilot)
+- [GitHub Copilot CLI](https://github.com/github/copilot-cli)
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 - [Gemini CLI](https://github.com/google-gemini/gemini-cli)
 

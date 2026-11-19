@@ -6,6 +6,8 @@ import (
 )
 
 func TestDoctorJSONIsMachineReadable(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("PATH", t.TempDir())
 	old := jsonOutput
 	jsonOutput = true
 	t.Cleanup(func() { jsonOutput = old })

@@ -2,7 +2,6 @@ package shell
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -13,72 +12,46 @@ func BashConfigPath() string {
 	return filepath.Join(system.HomeDir(), ".bashrc")
 }
 
-func BashDetectExistingConfig() string {
-	path := BashConfigPath()
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return ""
-	}
-	return string(content)
-}
-
-func BashHasManagedBlock() bool {
-	content := BashDetectExistingConfig()
-	return strings.Contains(content, managedStart)
-}
-
 func BashGenerateConfig(brewPrefix string, enableStarship bool, enableAtuin bool, enableFzf bool, fnmConfigured bool, uvConfigured bool) string {
 	var sb strings.Builder
-
-	sb.WriteString("# Datakraften managed configuration\n")
-	sb.WriteString("# Edit with caution — managed blocks are regenerated on 'dk apply'\n\n")
 
 	sb.WriteString(managedStart + "\n")
 	sb.WriteString("case \":$PATH:\" in *:\"$HOME/.local/bin\":*) ;; *) export PATH=\"$HOME/.local/bin:$PATH\" ;; esac\n")
 
 	if brewPrefix != "" {
-		sb.WriteString(fmt.Sprintf("eval \"$(%s/bin/brew shellenv)\"\n", brewPrefix))
+		brew := posixQuote(filepath.Join(brewPrefix, "bin", "brew"))
+		fmt.Fprintf(&sb, "[ ! -x %s ] || eval \"$(%s shellenv bash)\"\n", brew, brew)
 	}
 
 	if fnmConfigured {
-		sb.WriteString("eval \"$(fnm env --use-on-cd --shell bash)\"\n")
+		sb.WriteString("! command -v fnm >/dev/null 2>&1 || eval \"$(fnm env --use-on-cd --shell bash)\"\n")
 	}
 
 	if uvConfigured {
-		sb.WriteString("eval \"$(uv generate-shell-completion bash)\"\n")
+		sb.WriteString("! command -v uv >/dev/null 2>&1 || eval \"$(uv generate-shell-completion bash)\"\n")
 	}
 
 	if enableStarship {
-		sb.WriteString("eval \"$(starship init bash)\"\n")
+		sb.WriteString("! command -v starship >/dev/null 2>&1 || eval \"$(starship init bash)\"\n")
 	}
 
 	if enableAtuin {
-		sb.WriteString("eval \"$(atuin init bash)\"\n")
+		sb.WriteString("! command -v atuin >/dev/null 2>&1 || eval \"$(atuin init bash)\"\n")
 	}
 
 	if enableFzf {
-		sb.WriteString("eval \"$(fzf --bash)\"\n")
+		sb.WriteString("! command -v fzf >/dev/null 2>&1 || eval \"$(fzf --bash)\"\n")
 	}
-
-	sb.WriteString("export EDITOR=\"code --wait\"\n")
 
 	sb.WriteString(managedEnd + "\n")
-
-	if !BashHasManagedBlock() {
-		sb.WriteString("\n# User configuration below\n# Add your custom config here\n")
-	}
 
 	return sb.String()
 }
 
-func BashWriteConfig(config string) error {
-	return writeConfig(BashConfigPath(), config)
+func posixQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
 }
 
-func BashEnsureSetup(brewPrefix string) (bool, error) {
-	config := BashGenerateConfig(brewPrefix, true, true, true, true, true)
-	if err := BashWriteConfig(config); err != nil {
-		return false, err
-	}
-	return true, nil
+func BashWriteConfig(config string) error {
+	return writeConfig(BashConfigPath(), config)
 }

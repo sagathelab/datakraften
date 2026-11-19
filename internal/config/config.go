@@ -14,20 +14,20 @@ type RuntimeConfig struct {
 	Version string `yaml:"version"`
 }
 
+type ShellTarget string
+
+const (
+	ShellNone ShellTarget = "none"
+	ShellFish ShellTarget = "fish"
+	ShellBash ShellTarget = "bash"
+	ShellZsh  ShellTarget = "zsh"
+)
+
 type Config struct {
 	Version string `yaml:"version"`
 	Source  string `yaml:"source"`
-	System  struct {
-		PackageManager string `yaml:"package_manager"`
-	} `yaml:"system"`
-	Tooling struct {
-		PackageManager string `yaml:"package_manager"`
-	} `yaml:"tooling"`
-	Shell struct {
-		Default     string `yaml:"default"`
-		Prompt      string `yaml:"prompt"`
-		History     string `yaml:"history"`
-		FuzzyFinder string `yaml:"fuzzy_finder"`
+	Shell   struct {
+		Default ShellTarget `yaml:"default"`
 	} `yaml:"shell"`
 	Runtimes struct {
 		Node   RuntimeConfig `yaml:"node"`
@@ -35,10 +35,31 @@ type Config struct {
 		Go     RuntimeConfig `yaml:"go"`
 		Dotnet RuntimeConfig `yaml:"dotnet"`
 	} `yaml:"runtimes"`
-	Tools   map[string]bool          `yaml:"tools"`
-	Editors map[string]string        `yaml:"editors"`
-	AITools map[string]RuntimeConfig `yaml:"ai_tools"`
-	AIApps  map[string]RuntimeConfig `yaml:"ai_apps"`
+	Editors  map[string]string        `yaml:"editors"`
+	AITools  map[string]RuntimeConfig `yaml:"ai_tools"`
+	AIApps   map[string]RuntimeConfig `yaml:"ai_apps"`
+	Warnings []string                 `yaml:"-"`
+}
+
+func (c *Config) ShellTarget() ShellTarget {
+	if c.Shell.Default == "" {
+		return ShellNone
+	}
+	return c.Shell.Default
+}
+
+func (c *Config) RuntimeEnabled(name string) bool {
+	switch name {
+	case "node":
+		return c.Runtimes.Node.Enabled
+	case "python":
+		return c.Runtimes.Python.Enabled
+	case "go":
+		return c.Runtimes.Go.Enabled
+	case "dotnet":
+		return c.Runtimes.Dotnet.Enabled
+	}
+	return false
 }
 
 func DefaultConfigPath() string {
@@ -61,7 +82,7 @@ func Load() (*Config, error) {
 	if err := node.Encode(settings); err != nil {
 		return nil, fmt.Errorf("cannot encode workstation configuration: %w", err)
 	}
-	cfg := Config{Source: "default"}
+	cfg := Config{Source: "default", Warnings: Warnings(settings)}
 	if err := node.Decode(&cfg); err != nil {
 		return nil, fmt.Errorf("cannot decode workstation configuration: %w", err)
 	}
@@ -91,6 +112,15 @@ func ReadFile(path string) (map[string]any, error) {
 		return nil, fmt.Errorf("invalid workstation configuration %s: %w", path, err)
 	}
 	return settings, nil
+}
+
+func ValidateShellTarget(target ShellTarget) error {
+	switch target {
+	case ShellFish, ShellBash, ShellZsh, ShellNone:
+		return nil
+	default:
+		return fmt.Errorf("shell.default must be fish, bash, zsh or none")
+	}
 }
 
 func ValidateSource(source string) error {
