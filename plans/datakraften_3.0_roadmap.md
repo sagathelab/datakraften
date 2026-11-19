@@ -17,7 +17,7 @@ Målet er å bli en foretrukket løsning for utviklere fordi produktet er nyttig
 
 Datakraften skal både hjelpe utvikleren med **den lokale utviklermaskinen** og tilby **prosjektfunksjonalitet som en sentral del av produktet**. `dk` skal gjøre det enkelt å finne, sette opp og vedlikeholde utviklerverktøy, runtimes og rammeverk, og deretter bruke riktige versjoner, miljøvariabler og kommandoer i hvert prosjekt. Node er den første konkrete versjonsstyrte arbeidsflyten, ikke en begrensning på den langsiktige retningen.
 
-Repoet er førstevalget for delt prosjektoppsett: samme utvikler og team kan arbeide i flere repoer med ulike behov, uten å skifte global maskinkonfigurasjon. Maskinen har fortsatt et personlig grunnlag; en valgfri, felles teamstandard kan undersøkes for behov på tvers av repoer. Denne retningen er besluttet. Format, backender og detaljer i kommandolinjen skal utformes og testes før implementering.
+Repoet er førstevalget for delt prosjektoppsett: samme utvikler og team kan arbeide i flere repoer med ulike behov, uten å skifte global maskinkonfigurasjon. For arbeidsstasjonen kan `dk init` importere en ekstern YAML-fil som flettes med standardene og lagres lokalt; brukeren eier og kan endre resultatet. Hvert repo kan i tillegg ha en egen `datakraften.yaml` for prosjektmiljøet. Dette er besluttet produktretning, ikke funksjoner som allerede er implementert.
 
 ```text
 Personlig utviklermaskin: shell, editor, Git og personlige verktøy
@@ -183,8 +183,9 @@ Kommandoene og YAML-strukturen er illustrasjoner av ønsket resultat, ikke eksis
 
 ### Kontrakt som må utformes og testes
 
-- **Fil og søk:** Definer filnavn, skjemaversjon, prosjektrot, oppadgående søk og eksplisitt valg av fil. En prosjektfil og `~/.config/datakraften/config.yaml` har ulike roller; de skal ikke blandes eller overskrive hverandre.
-- **Presedens:** Spesifiser og test hvordan eksplisitte flagg, prosjektfil, eventuelle overordnede prosjektfiler, eksisterende miljøvariabler og standardverdier virker sammen. Dokumenter hvordan `.nvmrc`, `.node-version`, `package.json` og `mise.toml` oppdages, og hva som skjer ved motstrid. Ikke tolk `package.json` `engines` som et eksakt versjonsvalg uten en dokumentert regel.
+- **Fil og søk:** Prosjektfilen heter `datakraften.yaml`. `dk` skal oppdage den i gjeldende mappe; i et Git-repo søkes det også oppover til og med repoets rot, med nærmeste fil først. Ikke fortsett til et annet repo eller over repoets rot. Utenfor et repo brukes filen i gjeldende mappe; eksplisitt valg av fil kan vurderes separat. Dokumenter håndtering av undermapper, nestede repoer, worktrees og symboliske lenker, og test at prosjektfiler aldri forveksles med `~/.config/datakraften/config.yaml`.
+- **Oppdagelse kontra handling:** `dk` skal ved hver kommandoavvikling kunne finne ut om prosjektfilen finnes i den aktuelle konteksten. Dette innebærer ikke at alle kommandoer leser innstillinger som påvirker dem, kjører oppgaver, installerer eller endrer maskinen. Prosjektbevisste kommandoer skal bruke filen; maskinkommandoer som `dk init` og `dk apply` fortsetter å arbeide med den lokale maskinkonfigurasjonen. Ingen automatisk kjøring eller installasjon ved oppdagelse.
+- **Presedens:** Prosjektets eksplisitte versjonskrav og ikke-hemmelige miljøvariabler gjelder for prosjektprosessen. Verdier som ikke er angitt, arves fra miljøet der det er hensiktsmessig og trygt; eksplisitte, dokumenterte kommandoalternativer kan overstyre for den aktuelle kjøringen. Maskinens konfigurasjonsfil endres ikke. Spesifiser og test lokale tilpasninger, hemmeligheter og konfliktregler før implementering. Dokumenter hvordan `.nvmrc`, `.node-version`, `package.json` og `mise.toml` oppdages, og hva som skjer ved motstrid; ingen eksisterende filer skal endres i det skjulte. Ikke tolk `package.json` `engines` som et eksakt versjonsvalg uten en dokumentert regel.
 - **Versjonsoppløsning:** Skill ønsket versjon eller intervall fra faktisk versjon og installasjonskilde. Prosjektets valg påvirker prosessen og dens barn, ikke den globale maskinkonfigurasjonen. Vis tydelige feil for manglende versjon, utilgjengelig backend og uklar konflikt.
 - **Backend:** Evaluer fnm, mise og eventuelt flere adaptere mot et felles grensesnitt for oppdagelse, versjonsoppløsning, installasjon og kjøring. Ikke installer eller bytt versjonsbehandler automatisk. Første leveranse må støtte minst én eksplisitt valgt og testet Node-backend; flere språk og backender følger etter dokumentert behov.
 - **Oppgaver:** List oppgaver og vis hvilken kommando, arbeidsmappe og hvilke verktøy som vil brukes før kjøring. Videresend argumenter, signaler og avslutningskode korrekt. Definer eksplisitt om en oppgave kjøres via shell, og håndter sitering og plattformforskjeller.
@@ -248,16 +249,53 @@ Datakraften skal hjelpe med å oppdage og redusere konkrete risikoer innenfor si
 
 Det første dekningsområdet er eksplisitt dokumentert og testet fra deteksjon til funn og tiltak. Uten nettverk eller ved ukjent kilde presenteres ikke resultatet som en bestått sikkerhetskontroll. Hemmeligheter lekker ikke til testet utdata eller logger. Prosjektets egen utgivelsessikkerhet og varsling om sårbarheter har en dokumentert, praktiserbar prosess.
 
-## 9. Produktområde: Deling, team og tillit
+## 9. Produktområde: Initialisering, deling og tillit
 
-- **Repo først:** Prosjektets krav deles normalt i det enkelte repoet og kan være forskjellige fra andre repoer i samme team. Et felles teamgrunnlag er valgfritt og skal ikke erstatte repoets egne krav eller en utviklers personlige maskinoppsett.
-- Dagens `source: default | custom | team` er maskinorientert og skal fortsatt fungere mens prosjektmodellen utvikles. Kartlegg faktisk bruk og utform en migreringsvei før eventuell utfasing eller endring; det er ikke besluttet at dagens globale teammodell skal være den fremtidige prosjektmodellen.
-- Delte konfigurasjoner skal kunne inspiseres og valideres før de påvirker maskinen. Vis opprinnelse, innhold/endringer og hvilke installasjoner eller oppgaver som følger.
-- Definer hvordan teamkonfigurasjon festes til en bestemt versjon eller et innholdshash, hvordan oppdatering av tillit skjer, og hva som skjer når kilden er utilgjengelig eller innholdet er endret. HTTPS alene er ikke tilstrekkelig garanti for at innholdet er godkjent.
-- Ingen hemmeligheter i delte filer. Beskriv integrasjonspunkter for eksisterende hemmelighetshåndtering uten å lage en egen hemmelighetstjeneste som 3.0-krav.
-- Teamets anbefalinger skal kunne sameksistere med lokale valg gjennom dokumentert presedens og synlige avvik. Ikke hev at alle maskiner er identiske når kilder, versjoner eller plattformstøtte varierer.
-- Felles prosjektmaler eller delte konfigurasjoner på tvers av repoer er mulige senere tillegg, ikke et krav for å bruke et selvstendig repo. Definer versjonering, tillit og konflikthåndtering før slike avhengigheter innføres.
-- Før kommersielle teamfunksjoner eller sentral innsamling vurderes, dokumenter personvern, eierskap, nytte og eksplisitt samtykke.
+### Beslutning: Felles maskinoppsett importeres én gang
+
+`dk init` skal kunne ta en parameter med adressen til en YAML-fil i et Git-repository. Filen er en **valgfri startmal for maskinen**, ikke en løpende fjernstyrt konfigurasjon. Når brukeren initialiserer, leser `dk` filen én gang, fletter innholdet med Datakraftens standarder og lagrer resultatet som en fullstendig, lokal og redigerbar maskinkonfigurasjon. Eksterne innstillinger har forrang; standarder fyller inn felter som mangler. Etterpå er den lokale filen kilden til sannhet: brukeren kan endre den når som helst, og senere `dk apply`, `dk update` og andre ordinære kommandoer skal ikke hente malen på nytt.
+
+```bash
+# Foreslått parameter og URL-format; eksakt CLI-syntaks er ikke implementert
+dk init --from https://raw.githubusercontent.com/eksempel/oppsett/main/datakraften.yaml
+dk apply
+```
+
+`dk init` oppretter konfigurasjonen; det installerer ikke verktøy som en uannonsert bivirkning. Brukeren kan gjennomgå og redigere resultatet før `dk apply`. Om en fremtidig import støtter flere typer Git-leverandøradresser, private repoer eller en bestemt ref, skal dette dokumenteres og testes per støttet kilde. En vanlig nettleserside med HTML må ikke stille aksepteres som YAML; en rå filadresse er første tydelige mål. Ved tilgangs- eller henteproblemer skal brukeren få en handlingsrettet feil uten at legitimasjon, URL-tokens eller hemmeligheter logges.
+
+### Flettekontrakt for lokal maskinkonfigurasjon
+
+1. Generer samme plattformtilpassede standard som `dk init` uten ekstern fil ville brukt.
+2. Hent og parse den eksterne YAML-filen som en partiell maskinkonfigurasjon. Valider tillatte felter, typer, format og versjon før noe skrives eller kjøres.
+3. Flett objekter rekursivt: felter som finnes i den eksterne filen, overstyrer standardverdiene på samme nøkkel; manglende felter beholder standardverdiene. Eksplisitt `false`, `0` og tom streng er verdier, ikke manglende felter. Lister som er angitt, erstatter standardlisten; en eksplisitt tom liste blir tom. Et tomt objekt overstyrer ikke hele et eksisterende standardobjekt. `null` avvises med forklaring inntil en egen semantikk er definert, og ugyldige typer eller ukjente nøkler avvises med en presis feil.
+4. Valider den fullstendige flettede konfigurasjonen, vis kilden og et forståelig resultat eller en oversikt over endringene, og lagre først deretter atomisk i `~/.config/datakraften/config.yaml`. Ikke lagre hemmeligheter i kildemetadata eller vise dem i utdata.
+5. Den lagrede konfigurasjonen skal representere et lokalt redigerbart oppsett, med eksisterende `source: custom`-semantikk der den passer, og aldri en aktiv `source: team`-peker som fører til automatisk ny henting. Eventuell informasjon om hvor malen kom fra er kun metadata, uten automatisk synkronisering.
+
+Eksempel: Dersom standarden aktiverer Node og Python, mens den eksterne filen bare setter `runtimes.node.enabled: false`, skal den lokale filen beholde standardene for Python og øvrige Node-felter, men uttrykkelig slå av Node. Endrer utvikleren senere Python lokalt, skal den endringen fremdeles gjelde neste gang `dk apply` kjøres, selv om den eksterne filen er endret eller utilgjengelig.
+
+Eksisterende lokal konfigurasjon må aldri overskrives lydløst: `dk init` skal oppdage den, vise hva som vil skje og kreve et eksplisitt valg før eventuell erstatning. En mislykket henting, parsing, validering eller skriving skal gi en feil og bevare eksisterende konfigurasjon og tilstand. Ved repetert import skal `dk` ikke automatisk overskrive lokale tilpasninger eller stille slå sammen med en eksisterende fil; gjenimport krever et tydelig valg og en forhåndsvisning.
+
+### Overgang fra dagens `source: team`
+
+I dagens implementasjon lagrer `dk init --team` en URL-peker, og `dk apply` henter konfigurasjonen på nytt. Dette er nåværende atferd, ikke det nye målet. Eksisterende brukere skal ikke få endret oppsettet sitt lydløst: behold lesing og dagens virkemåte til en dokumentert, testet overgang er tilgjengelig. Tilby en eksplisitt migrering som henter og validerer valgt eksisterende kilde, viser flettingen med standardene, bevarer en sikkerhetskopi og skriver en lokal redigerbar konfigurasjon først etter brukerens valg. Etter vellykket migrering skal ordinære kommandoer ikke lenger hente fjernfilen. Ved utilgjengelig kilde eller mislykket migrering beholdes den opprinnelige filen og brukeren får en forklaring. Eksakt kommandonavn og eventuell utfasingsperiode fastsettes før lansering.
+
+### Repoets prosjektfil
+
+- `datakraften.yaml` i repoet er prosjektets delte krav til versjoner, prosjektmiljø og oppgaver. Den er ikke en fjernmal for arbeidsstasjonen og skal ikke lagres over maskinkonfigurasjonen.
+- Repoets konfigurasjon følger koden og kan gjennomgås i pull requests; to repoer fra samme team kan angi ulike versjoner og variabler. Krav til tillit, prosjektoppdagelse og prosessavgrensning er beskrevet i kapittel 7.
+- Prosjektspesifikke verdier overstyrer relevante maskin- og miljøstandarder **kun for prosjektprosessen** etter de dokumenterte presedensreglene. `dk init` skal alltid initialisere maskinkonfigurasjonen, selv om en prosjektfil finnes i gjeldende mappe.
+- En prosjektfil er ikke en sikkerhetssandkasse. Før prosjektoppgaver eller installasjoner kjøres, må brukeren forstå og godkjenne kodekjørende innhold og kilder. Ingen hemmeligheter skal legges i delte filer.
+
+### Akseptansekriterier for init og prosjekt
+
+- [ ] `dk init` uten adresse gir ordinære plattformstandarder; med en gyldig partiell ekstern fil gir den en komplett lokal fil med korrekte overstyringer og utfylte standarder.
+- [ ] Tester dekker rekursiv fletting, manglende felter, eksplisitt `false`, `0`, tom streng, tomme objekter og lister, ugyldige typer, `null` og ukjente felter.
+- [ ] En lokal redigering overlever gjentatt `dk apply`; verken endret eller utilgjengelig ekstern fil påvirker den importerte konfigurasjonen uten en ny, eksplisitt import.
+- [ ] Utilgjengelig kilde, HTML, ugyldig YAML og skrivefeil endrer ikke eksisterende konfigurasjon. Reinitialisering og migrering bevarer brukerens eksisterende data ved avslag eller feil.
+- [ ] Et eksisterende `source: team`-oppsett fortsetter å fungere til brukeren velger migrering; migrert oppsett bruker den lokale filen og henter ikke på nytt.
+- [ ] `datakraften.yaml` oppdages i gjeldende mappe og fra undermapper innenfor repoets grense; to repoer kan kjøre ulike Node-versjoner, variabler og oppgaver uten å overstyre hverandre eller maskinens globale standard.
+- [ ] Inspeksjon, `dk init` og `dk apply` kjører aldri en prosjektoppgave bare fordi en prosjektfil finnes; manglende fil betyr ordinær maskinatferd uten feil.
+- [ ] Hente-, tillits- og feilmeldinger eksponerer ikke passord, tokens eller hemmelige miljøvariabler; dokumentasjonen forklarer nøyaktig hva som er importert og hva som ikke synkroniseres.
 
 ## 10. Plattform og kompatibilitet
 
@@ -291,6 +329,8 @@ Fasene er avhengighetsstyrte, ikke kalenderløfter. Versjonsnumre før 3.0 og ek
 **Prioritet: må på plass før prosjektkjøring og sikkerhetsløfter bygges oppå.**
 
 - Pålitelig konfigurasjonsvalidering, feilmeldinger, tilstandsmodell og konsekvent oversikt over aktive og administrerte verktøy.
+- Implementer `dk init` med engangsimport fra ekstern Git-YAML, standardutfylling og lokal eierskap etter flettekontrakten i kapittel 9. Test alle feiltilstander før lokal fil erstattes.
+- Etabler og test eksplisitt migrering fra eksisterende `source: team`, med forhåndsvisning og sikkerhetskopi; bevar gammel atferd til brukeren velger migrering.
 - Sikre, idempotente endringer og reelle forhåndsvisninger. Test eksisterende shelloppsett og PATH-konflikter.
 - Korriger bredde og ordlyd for `dk update` slik at brukeren vet når andre pakker berøres.
 - Etabler trusselmodell, prosjektets sikkerhetsprosess og testbare tillitsgrenser.
@@ -301,7 +341,7 @@ Fasene er avhengighetsstyrte, ikke kalenderløfter. Versjonsnumre før 3.0 og ek
 
 **Prioritet: første produktutvidelse.**
 
-- Prosjektfil med definert søk, presedens, skjemaversjon og en avklart håndtering av eksisterende prosjektfiler.
+- Oppdag `datakraften.yaml` i gjeldende mappe og repoets undermapper etter reglene i kapittel 7; innfør skjemaversjon og avklart samspill med eksisterende prosjektfiler. Oppdagelse skal ikke utløse kommandoer eller installasjoner.
 - En sammenhengende flyt for prosjektinspeksjon, uttrykkelig oppsett og `dk run`, med én testet Node-adapter, prosjektlokalt prosessmiljø, ikke-hemmelige miljøvariabler og navngitte oppgaver.
 - Oversikt over planlagt kjøring, tillit for nytt eller endret kodekjørende innhold og eksplisitt håndtering av manglende versjoner.
 - Integrasjonstester for to uavhengige repoer med Node 22 og 24, egne miljøvariabler og oppgaver, samt feil, avbrudd, ukjente prosjektfiler og eksisterende versjonsbehandler.
@@ -345,6 +385,7 @@ Fasene er avhengighetsstyrte, ikke kalenderløfter. Versjonsnumre før 3.0 og ek
 - [ ] Visjonen og løftene på nettside og i dokumentasjon stemmer med det som faktisk er tilgjengelig.
 - [ ] En dokumentert og testet brukerreise dekker oppdagelse, oppsett, prosjektkjøring, diagnostikk og vedlikehold. Katalogen trenger ikke dekke alle verktøy.
 - [ ] Prosjektinspeksjon, oppsett og kjøring oppfyller kontrakten og akseptansekriteriene i kapittel 7, med minst én testet Node-backend og to repoer med ulike versjoner.
+- [ ] `dk init` oppfyller flette-, eierskaps-, feil- og migreringskravene i kapittel 9: ekstern YAML er en engangsimport, standarder fyller manglende felter, og resultatet er en lokal fil som brukeren kan endre.
 - [ ] Sikkerhetsfunksjonene oppfyller et begrenset, offentlig dokumentert dekningsområde med eksplisitt håndtering av ukjent, feil og utdatert informasjon.
 - [ ] Eksisterende brukere har en testet migreringsvei, og maskinens eksisterende verktøy og ikke-administrerte filer respekteres.
 - [ ] Testmatrisen dekker prioriterte distroer, WSL og aktuelle shell, med dokumenterte begrensninger for andre plattformer.
@@ -380,13 +421,13 @@ Målene under er forslag til evaluering, ikke påståtte resultater. Sett tallfe
 
 ## 14. Åpne beslutninger før implementering
 
-1. **Prosjektformat og filnavn:** Kan `datakraften.yaml` brukes uten å forveksles med arbeidsstasjonskonfigurasjonen? Hva er kompatibilitetsreglene og presedensen?
+1. **Prosjektformat:** Filnavnet `datakraften.yaml` er besluttet. Hvordan versjoneres skjemaet, hvordan løses konflikter med eksisterende prosjektformater, og hvordan håndteres nestede repoer og lokale tilpasninger i detalj?
 2. **Versjonsbackend:** Skal første Node-flyt bygge på eksisterende fnm-integrasjon, støtte eksisterende mise, eller tilby begge? Beslutningen krever en test av konflikter og brukeropplevelse.
 3. **Prosjekttillit:** Hvilket konkret innhold inngår i en godkjenning, hvor lagres den, og hvordan trekkes den tilbake? Hvilke handlinger tillates i CI?
 4. **Miljøvariabler og hemmeligheter:** Hva er standard for arv, overstyring, skjuling og `.env`-filer? Hvilke eksterne hemmelighetsløsninger er relevante uten å gjøre én obligatorisk?
 5. **Sikkerhetsdekning:** Hvilke konkrete verktøy/økosystemer og datakilder skal støttes først, og hvilke forhold gjør en kontroll ukjent?
 6. **Katalog:** Hvilke to kategorier gir mest verdi først? Hvem kvalitetssikrer dataene, og hvordan håndteres rettelser og utdatert informasjon?
-7. **Team:** Skal dagens maskinorienterte teamkonfigurasjon beholdes, migreres eller fases ut, og hvordan kan repoer eventuelt dele et felles grunnlag med tydelig tillit, versjonering og presedens?
+7. **Init og eldre teamoppsett:** Engangsimport og lokalt eierskap er besluttet. Hva skal init-parameteren og migreringskommandoen hete, hvilke Git-leverandør-URL-er og private kilder støttes, og hva er en rimelig utfasingsperiode for gamle fjernpekere?
 8. **Plattform:** Hvilke macOS- og WSL-miljøer kan faktisk testes før 3.0, og hvem har ansvar for testene?
 9. **Vedlikehold:** Hvilke eksisterende `dk update`-operasjoner kan avgrenses trygt, og hvor må bredere oppdatering forklares eller kreve særskilt valg?
 10. **Kapasitet og styring:** Hvem eier hvert område, hvem kan godkjenne sikkerhets- og produktbeslutninger, og hva må tas ut dersom kapasiteten ikke strekker til?

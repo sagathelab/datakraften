@@ -1,5 +1,7 @@
 # Datakraften 2.0
 
+> Historical plan. The current product direction and configuration decisions are in the [3.0 roadmap](datakraften_3.0_roadmap.md). References below to team configuration and project behavior describe earlier plans, not the 3.0 contract.
+
 > **The missing bootstrap layer for AI-native developer workstations.**
 
 Datakraften is the opinionated, declarative workstation bootstrapper that turns a fresh WSL/Linux environment into a complete, reproducible, AI-ready developer workstation in minutes.

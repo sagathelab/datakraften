@@ -1,5 +1,7 @@
 # Datakraften 1.0 Roadmap
 
+> Historical plan. The current product direction and configuration decisions are in the [3.0 roadmap](datakraften_3.0_roadmap.md). References below to team configuration and project behavior describe earlier plans, not the 3.0 contract.
+
 ## Vision
 
 Datakraften aims to become the preferred orchestration platform for developer environments — a YAML-driven bootstrapper delivering reproducible, AI-ready developer workstations across WSL, Linux, and macOS.
