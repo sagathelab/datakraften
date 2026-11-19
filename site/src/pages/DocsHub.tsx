@@ -47,8 +47,8 @@ export default function DocsHub() {
         <nav aria-label="Start here" className="flex flex-wrap gap-4 mb-8 text-magenta">
           <Link to="/docs/install">Get started</Link>
           <Link to="/docs/dk#apply">Preview changes</Link>
-          <Link to="/docs/config">Customize your setup</Link>
-          <Link to="/docs/teams">Share with your team</Link>
+          <Link to="/docs/config">Configure workstations and projects</Link>
+          <Link to="/docs/teams">Share a YAML template</Link>
         </nav>
 
         <div className="relative mb-8">

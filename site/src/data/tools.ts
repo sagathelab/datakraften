@@ -39,12 +39,12 @@ export const tools: Record<string, ToolDef> = {
       {
         title: 'dk init',
         id: 'init',
-        body: 'Create your workstation configuration in ~/.config/datakraften/config.yaml. Initialization writes configuration; run `dk apply` separately to make workstation changes.\n\nCreate the standard configuration:\n$ dk init\n\nImport a partial template from an HTTPS URL once:\n$ dk init --from https://example.com/workstation.yaml\n\nThe template overrides matching defaults; omitted settings keep their defaults. Nested maps merge recursively. The resulting source: custom file is local and editable. `dk apply` does not fetch the template again. Existing configuration requires confirmation before replacement; --yes explicitly approves replacement.\n\nConvert an existing legacy team pointer to a local configuration:\n$ dk init --migrate-team\n\nMigration imports the existing URL, merges defaults, and preserves the original in config.yaml.team.bak. Review the result before applying it.\n\n`dk init --team <url>` remains available for the legacy live-remote mode. `dk init --custom` creates an editable local configuration.',
+        body: 'Create a workstation configuration in `~/.config/datakraften/config.yaml`. This path does not use `XDG_CONFIG_HOME`. Initialization writes configuration; run `dk apply` separately to install and configure tools.\n\nGenerate the built-in defaults for this machine:\n$ dk init\n\nChoose a custom starting point interactively, or supply a local YAML file:\n$ dk init --custom\n$ dk init --custom ./workstation.yaml\n\nImport a template once from an HTTPS URL that serves raw YAML:\n$ dk init --from https://example.com/workstation.yaml\n\nDatakraften validates the template and recursively merges it into the built-in defaults for your OS, not into your existing file. It shows the template host and a summary of overrides, with text values hidden. The result is an editable local `source: custom` file. If a config already exists, dk asks before overwriting it unless you use `--yes`. Review the saved file before applying it.',
       },
       {
         title: 'dk apply',
         id: 'apply',
-        body: "Apply the workstation configuration from ~/.config/datakraften/config.yaml:\n$ dk apply\n\nPreview without applying changes:\n$ dk apply --dry-run\n\nApply uses the local file created by `dk init --from` or `dk init --migrate-team`; it does not refetch that template. Existing source: team configurations retain legacy behavior and fetch their configured URL during apply.\n\nThe apply flow checks system and Homebrew packages, runtimes, Fish configuration, editors, and configured AI tools. It may request sudo for system operations or an explicitly approved npm retry.\n\nNOTE: A repository's datakraften.yaml is a separate project configuration; `dk apply` does not execute its tasks.",
+        body: "Apply the workstation configuration from `~/.config/datakraften/config.yaml`:\n$ dk apply\n\nPreview without applying changes:\n$ dk apply --dry-run\n\nApply reads the local configuration. It does not fetch an imported template again, though installers can still download software.\n\nThe apply flow checks system and Homebrew packages, runtimes, Fish configuration, editors, and configured AI tools. It may request sudo for system operations or an explicitly approved npm retry.\n\nNOTE: A repository's `datakraften.yaml` is a separate project configuration; `dk apply` does not execute its tasks.",
       },
       {
         title: 'dk doctor',
@@ -58,12 +58,12 @@ export const tools: Record<string, ToolDef> = {
       {
         title: 'Config sources',
         id: 'sources',
-        body: 'The workstation configuration is stored at ~/.config/datakraften/config.yaml.\n\n- default — created from Datakraften defaults with `dk init`\n- custom — an editable local configuration, including files created with `dk init --from` and `dk init --migrate-team`\n- team — the legacy URL-pointer mode, still read and fetched by `dk apply`\n\nA from import fetches the template only during initialization. Later edits belong to the local file and later changes to the remote template are not automatically applied. A project datakraften.yaml is separate from all workstation sources.',
+        body: 'Both workstation workflows produce a local file at `~/.config/datakraften/config.yaml`:\n\n- `source: default` — the built-in defaults written by `dk init`\n- `source: custom` — an editable local config, including files created with `dk init --custom` and `dk init --from`\n\nChanges to a hosted template do not update a local copy. To use a newer template, import it explicitly or edit your local file. A repository’s `datakraften.yaml` is separate from the workstation config.',
       },
       {
         title: 'Project environments',
         id: 'project',
-        body: 'A repository can describe its project Node.js requirement, non-secret environment values, and tasks in datakraften.yaml:\n\n| version: 1\n| project:\n|   tools:\n|     node: "22"\n|   env:\n|     NODE_ENV: development\n|   tasks:\n|     dev: npm run dev\n|     test: npm test\n\nFrom the repository or a subdirectory, inspect the requirements:\n$ dk project status\n\nReview the file and approve its tasks and environment, then preview or install a missing Node version:\n$ dk project trust\n$ dk project setup --dry-run\n$ dk project setup\n\nRun a named task in the project directory:\n$ dk run dev\n$ dk run test\n\nProject tools currently support Node.js through fnm only. Use a numeric major, major.minor, or major.minor.patch version such as "22" or "22.11.0". fnm must already be available in PATH; setup can install a missing Node version.\n\nNOTE: Project configuration is not a security sandbox. Tasks execute as your user and may access files, the network, and inherited environment. Do not store secrets in a shared YAML file.',
+        body: 'A repository can describe its Node.js requirement, non-secret environment values, and tasks in `datakraften.yaml`:\n\n| version: 1\n| project:\n|   tools:\n|     node:\n|       version: "22"\n|       manager: nvm\n|   env:\n|     NODE_ENV: development\n|   tasks:\n|     dev: npm run dev\n|     test: npm test\n\nFrom the repository or a subdirectory, inspect the project without running its tasks or installing anything:\n$ dk project status\n\nReview the file before trusting it. Then preview or install a missing Node version:\n$ dk project trust\n$ dk project setup --dry-run\n$ dk project setup\n\nRun named tasks from the trusted configuration. They execute in the directory containing the project file:\n$ dk run dev\n$ dk run test\n\nNode.js is the only project runtime currently supported. The short `node: "22"` form uses fnm; the mapping above selects nvm. Use numeric major, major.minor, or major.minor.patch versions. Install the selected manager first: fnm must be on `PATH`, or dk must be able to find `nvm.sh` in `NVM_DIR` or a supported location. Setup installs missing versions in a Datakraften-managed tools directory without changing your normal Node default.\n\nNOTE: Tasks execute as your user and may access files, the network, and inherited environment. Do not store secrets in shared YAML.',
       },
       {
         title: 'dk upgrade',
@@ -79,7 +79,7 @@ export const tools: Record<string, ToolDef> = {
     website: 'https://github.com/sagathelab/datakraften',
     websiteLabel: 'GitHub repository',
     summary:
-      'Datakraften is a YAML-driven CLI that bootstraps and maintains developer workstations across WSL, Linux, and macOS.',
+      'Use dk to configure your workstation from local YAML, import an HTTPS template once, and run trusted project tasks with fnm or nvm.',
     supportedPlatforms: ['WSL', 'Linux', 'macOS (partial support)'],
     commonTasks: [
       {
@@ -107,9 +107,9 @@ export const tools: Record<string, ToolDef> = {
     ],
     troubleshooting: [
       {
-        question: 'Why does `dk apply` stop on a team config?',
+        question: 'Why did my workstation template import fail?',
         answer:
-          'If the remote YAML is invalid or unreachable, team configs abort by design. Validate the remote file and confirm the URL is accessible before rerunning `dk apply`.',
+          'Use an accessible HTTPS URL that returns raw YAML, not an HTML file preview. Check that the response contains one YAML mapping with valid workstation keys and values, then retry `dk init --from`.',
       },
       {
         question: 'Why does `dk update` fail on npm permissions?',
@@ -129,9 +129,9 @@ export const tools: Record<string, ToolDef> = {
           'Yes. The apply flow is designed to be idempotent and should only install or configure what is missing.',
       },
       {
-        question: 'Can I share one config across a team?',
+        question: 'Can I share workstation settings with my team?',
         answer:
-          'Share a partial HTTPS template and import it once with dk init --from. Each developer owns the resulting local configuration; later template changes are not applied automatically.',
+          'Share a raw YAML template over HTTPS. Each developer imports it once with dk init --from, reviews the result, and edits their own local configuration. Later template changes are not fetched by dk apply.',
       },
     ],
     keywords: [
@@ -140,6 +140,8 @@ export const tools: Record<string, ToolDef> = {
       'WSL setup',
       'Linux setup',
       'team onboarding',
+      'workstation template import',
+      'trusted project tasks',
     ],
   },
 
@@ -158,11 +160,11 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'How it works',
-        body: 'fnm manages multiple installed Node.js versions. Its shell integration can switch versions when you enter a project with a .nvmrc or .node-version file, provided fnm is activated in that shell. Datakraften configures this integration in its managed Fish setup; existing Bash and other shells may need their own setup.\n\nFor a Datakraften project, declare a numeric Node version in datakraften.yaml and use `dk project status`, `dk project setup`, and `dk run`. Project tasks use the selected Node version without changing the global default.',
+        body: 'fnm manages multiple installed Node.js versions. Its shell integration can switch versions when you enter a project with a .nvmrc or .node-version file, provided fnm is activated in that shell. Datakraften configures this integration in its managed Fish setup; existing Bash and other shells may need their own setup.\n\nWorkstation setup uses fnm. For a Datakraften project, declare a numeric Node version in `datakraften.yaml` and use `dk project status`, `dk project trust`, `dk project setup`, and `dk run`. The `manager` field selects fnm or nvm; the short version form defaults to fnm. dk puts the selected Node on the task’s `PATH` without changing the global default.',
       },
       {
         title: 'Tips',
-        body: 'TIP: Node.js is managed by fnm -- never install it via apt or brew directly. Only fnm should manage Node versions.\n\nTIP: Use fnm install --lts to always get the latest LTS release.',
+        body: 'TIP: For workstation Node versions managed by Datakraften, use fnm rather than installing Node directly via apt or brew.\n\nTIP: Use `fnm install --lts` to install the latest LTS release.',
       },
     ],
     website: 'https://nodejs.org/',
@@ -605,15 +607,15 @@ export const tools: Record<string, ToolDef> = {
     sections: [
       {
         title: 'Overview',
-        body: 'Datakraften uses two separate YAML files for different purposes. ~/.config/datakraften/config.yaml describes your workstation. A repository can contain datakraften.yaml for project tools, environment values, and tasks. Project commands do not rewrite your workstation configuration.',
+        body: 'Datakraften uses two separate YAML files:\n\n- `~/.config/datakraften/config.yaml` describes your workstation. This path is fixed under your home directory; `XDG_CONFIG_HOME` does not change it.\n- `datakraften.yaml` in a repository describes project tools, environment values, and tasks. Project commands do not rewrite the workstation configuration.',
       },
       {
         title: 'Importing workstation defaults',
-        body: 'Create defaults with `dk init`, or import a partial HTTPS template:\n\n$ dk init --from https://example.com/workstation.yaml\n\nThe template is fetched once and recursively merged into platform defaults. Supplied values override defaults, including false; omitted keys retain defaults. Unknown keys, invalid types, and null values are rejected. The resulting source: custom file is stored locally and can be edited.\n\nNOTE: The template is not fetched again during `dk apply`. Existing configurations require confirmation before replacement. Review the template and its source. Some accepted settings are saved but not yet used by `dk apply`; the importer warns about affected settings.',
+        body: 'Use an HTTPS URL that returns raw YAML, not an HTML file preview:\n\n$ dk init --from https://example.com/workstation.yaml\n\nDatakraften fetches the template during initialization and merges it recursively with the built-in defaults for your OS, not with your existing configuration. Supplied values override defaults, including `false`; omitted keys retain defaults. The importer validates the template and merged result. The template must be one YAML mapping; unknown settings, invalid types, and null values are rejected.\n\nThe CLI shows the template host and a summary of overrides with text values hidden. It warns about accepted settings that are saved but may not affect `dk apply`. Review the source and inspect the saved `source: custom` file before applying it.\n\nNOTE: If a config already exists, the import asks before replacing it unless you use `--yes`. Later `dk apply` runs read the local file without fetching the template again. Installing software may still use the network.',
       },
       {
-        title: 'Legacy team sources',
-        body: 'Existing source: team configurations point to a remote URL that `dk apply` fetches each time. To migrate an existing team pointer to an editable local configuration:\n\n$ dk init --migrate-team\n\nThe command imports its URL, merges defaults, asks before replacement, and preserves the original as config.yaml.team.bak. Review the resulting file before `dk apply`. `dk init --team` continues to create the legacy live-remote mode.',
+        title: 'Creating a local workstation configuration',
+        body: 'Run `dk init` to write the built-in defaults as `source: default`. Run `dk init --custom` to choose an empty skeleton or a starting point pre-filled with defaults. To supply settings from a local YAML file instead:\n\n$ dk init --custom ./workstation.yaml\n\nUnlike the HTTPS import, the local-file option merges supplied settings into the existing configuration, or starts from the supplied settings if there is no configuration yet. Nested maps merge recursively. If the file exists, dk asks before overwriting it unless you use `--yes`.',
       },
       {
         title: 'Workstation runtimes and AI tools',
@@ -621,25 +623,28 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'Project configuration',
-        body: 'Create datakraften.yaml at your project root:\n\n| version: 1\n| project:\n|   tools:\n|     node: "22"\n|   env:\n|     NODE_ENV: development\n|   tasks:\n|     test: npm test\n\nIn a Git repository, project commands search the current directory and its parents up to the nearest repository root; the nearest file wins. Git worktrees and nested repositories have their own boundary. Outside a repository, only the current directory is checked. The YAML file itself must be a regular file, not a symlink.\n\nProject runtime support currently covers Node.js via fnm. Use numeric major, major.minor, or major.minor.patch versions. Project values affect the task process and its children, not your parent shell or global Node default. `dk init` and `dk apply` continue to use the workstation configuration.',
+        body: 'Create datakraften.yaml at your project root:\n\n| version: 1\n| project:\n|   tools:\n|     node: "22"\n|   env:\n|     NODE_ENV: development\n|   tasks:\n|     test: npm test\n\nIn a Git repository, project commands search the current directory and its parents up to the nearest repository root; the nearest file wins. Git worktrees and nested repositories have their own boundary. Outside a repository, only the current directory is checked. The YAML file itself must be a regular file, not a symlink.\n\nProject runtime support currently covers Node.js via fnm or nvm. To select nvm, write node as a mapping with version: "22" and manager: nvm. The short node: "22" form uses fnm. Use numeric major, major.minor, or major.minor.patch versions. Project values affect the task process and its children, not your parent shell or global Node default. `dk init` and `dk apply` continue to use the workstation configuration.',
       },
       {
         title: 'Trust and tasks',
-        body: 'Review the project file before running commands. `dk project status` reads project requirements without executing project tasks. `dk project trust` shows the tasks and environment variable names and asks for approval. Trust is tied to the file location and contents; changing the file requires approval again.\n\n$ dk project status\n$ dk project trust\n$ dk project setup --dry-run\n$ dk project setup\n$ dk run test\n\nFor non-interactive use, review the file and explicitly run `dk project trust --yes` before setup or running tasks. `dk project setup --yes` approves installation but does not replace project trust.\n\nNOTE: Tasks run as your user, not in a sandbox. Do not store secrets in shared YAML. Tasks themselves can print inherited or project environment values.',
+        body: 'Use `dk project status` to see the discovered file, trust state, task names, and Node.js availability. It does not execute tasks, invoke the version manager, or install anything. `dk project trust` shows task commands and environment variable names, not values. Review the file, including its environment values, before approving it. Trust is tied to the file location and contents; moving or editing the file requires approval again.\n\n$ dk project status\n$ dk project trust\n$ dk project setup --dry-run\n$ dk project setup\n$ dk run test\n\nSetup checks for a usable Node version and, if one is missing, asks for trust and installation approval before installing it with the configured manager. `dk run` executes a named task only once the project is trusted and its declared Node version is available; it does not install Node for you. In a non-interactive session, review the file and use `dk project trust --yes` to grant trust explicitly. `dk project setup --yes` approves installation, not project trust.\n\nNOTE: Tasks run as your user, not in a sandbox. Do not store secrets in shared YAML. Tasks themselves can print inherited or project environment values.',
       },
     ],
     website: '',
+    summary:
+      'Configure dk with local workstation YAML, import a raw HTTPS template once, and use version 1 datakraften.yaml for trusted project tasks.',
+    keywords: ['dk init --from', 'workstation YAML', 'datakraften.yaml', 'fnm', 'nvm'],
     commonTasks: [
       {
         title: 'Import a shared workstation template',
-        command: 'dk init --from <url>',
+        command: 'dk init --from <https-url>',
         details:
           'Merge a partial HTTPS YAML template with defaults and save a local, editable config.',
       },
       {
-        title: 'Migrate a legacy team config',
-        command: 'dk init --migrate-team',
-        details: 'Convert an existing team URL into a local config, preserving a backup.',
+        title: 'Start from a local YAML file',
+        command: 'dk init --custom ./workstation.yaml',
+        details: 'Use a local file instead of downloading a template.',
       },
       {
         title: 'Inspect a project',
@@ -660,7 +665,7 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'System requirements',
-        body: 'Before installing, make sure your system meets these requirements:\n\n- **OS** — Windows 10+ with WSL2 enabled (recommended), or any Linux distro with APT/DNF/YUM/PACMAN\n- **Architecture** — x86_64 or ARM64\n- **Internet** — the bootstrap script downloads tools from GitHub, npm, and Homebrew\n- **sudo access** — system packages are installed with sudo\n- **curl or wget** — needed for the one-liner install\n\nMinimal disk usage: the dk CLI binary is ~15 MB. Total install (with all tools) can be 1-3 GB depending on the profile.',
+        body: 'Before installing, make sure your system meets these requirements:\n\n- **OS** — Windows 10+ with WSL2 enabled (recommended), or any Linux distro with APT/DNF/YUM/PACMAN\n- **Architecture** — x86_64 or ARM64\n- **Internet** — installing dk and workstation tools requires downloads\n- **sudo access** — system packages are installed with sudo\n- **curl or wget** — needed for the one-liner install\n\nMinimal disk usage: the dk CLI binary is ~15 MB. A workstation setup with tools can take 1–3 GB depending on your configuration.',
       },
       {
         title: 'Quick install (recommended)',
@@ -681,7 +686,7 @@ export const tools: Record<string, ToolDef> = {
     sections: [
       {
         title: 'Share a workstation starting point',
-        body: 'A team can share an HTTPS YAML template with the workstation settings it wants to suggest. Each developer imports it once; the result is an editable local file. Team members can adjust their own settings afterwards.\n\n$ dk init --from https://example.com/workstation.yaml\n$ dk apply\n\nThe URL must return YAML over HTTPS. Review the source and its contents before importing. Missing settings use Datakraften defaults; settings explicitly supplied by the template override those defaults.',
+        body: 'Host a partial workstation YAML file at an HTTPS URL that serves the raw file, not a web preview. Each developer can import it once:\n\n$ dk init --from https://example.com/workstation.yaml\n\nReview the source before importing. dk validates the YAML, merges it into the built-in defaults for the developer’s OS, and summarizes the overrides. The import does not install tools. Review the saved file, then preview and apply it:\n\n$ dk apply --dry-run\n$ dk apply',
       },
       {
         title: 'Example: partial workstation template',
@@ -689,18 +694,22 @@ export const tools: Record<string, ToolDef> = {
       },
       {
         title: 'Local ownership and updates',
-        body: 'After import, ~/.config/datakraften/config.yaml has source: custom and is owned by the developer. Edit it as needed. Later changes to the template are not automatically fetched or applied. Re-importing is an explicit operation and asks before replacing an existing config; keep a copy of local changes you want to retain.\n\nUse a versioned raw HTTPS URL when you need a specific template revision. Do not put passwords, tokens, or secrets in the YAML or URL.',
+        body: 'After import, `~/.config/datakraften/config.yaml` is an editable `source: custom` file. `dk apply` uses this local copy without contacting the template host again for the YAML. To pick up changes, edit the local file or explicitly re-import. A new import starts from built-in defaults and asks before replacing an existing config. Keep a copy of local changes you want to retain.\n\nUse a versioned raw HTTPS URL when you need a specific template revision. Do not put passwords, tokens, or secrets in the YAML or URL.',
       },
       {
         title: 'Project configuration for each repository',
-        body: 'A team can commit a separate datakraften.yaml to each repository. Projects can require different numeric Node versions and define their own tasks and non-secret environment values:\n\n| version: 1\n| project:\n|   tools:\n|     node: "22"\n|   env:\n|     NODE_ENV: development\n|   tasks:\n|     test: npm test\n\n$ dk project status\n$ dk project trust\n$ dk project setup\n$ dk run test\n\nNode is currently the only project runtime supported, using fnm. Review tasks and environment settings before trusting a project. Tasks run as your user with the project\'s process environment; they are not sandboxed.',
-      },
-      {
-        title: 'Legacy team configuration',
-        body: 'Existing `source: team` configurations and `dk init --team` still use the legacy live-remote mode: the URL is fetched during `dk apply`. To convert an existing team pointer into an editable local config:\n\n$ dk init --migrate-team\n\nMigration fetches the configured URL, merges it with defaults and asks before replacement. The old pointer is saved as config.yaml.team.bak. After migration, the imported template is not fetched again by `dk apply`.',
+        body: 'Commit a separate `datakraften.yaml` to each repository. It can declare a numeric Node version, tasks, and non-secret environment values:\n\n| version: 1\n| project:\n|   tools:\n|     node: "22"\n|   env:\n|     NODE_ENV: development\n|   tasks:\n|     test: npm test\n\n`dk project status` inspects the file without running tasks or installing tools. Review the file, then approve it with `dk project trust`. Use `dk project setup` to install the declared Node version if needed and `dk run` to execute a task from the trusted file:\n\n$ dk project status\n$ dk project trust\n$ dk project setup\n$ dk run test\n\nNode.js is the only project runtime currently supported. The short form uses fnm. To use nvm, set `node` to a mapping with `version: "22"` and `manager: nvm`. The selected manager must already be available. Tasks run as your user and are not sandboxed.',
       },
     ],
     website: '',
+    summary:
+      'Share a raw HTTPS workstation template for one-time import, and commit a separate datakraften.yaml for trusted project tasks.',
+    keywords: [
+      'workstation templates',
+      'team onboarding',
+      'dk init --from',
+      'project configuration',
+    ],
   },
 }
 
@@ -714,7 +723,7 @@ export const categories = [
   },
   {
     title: 'Guides',
-    desc: 'Configuration and team workflow guides',
+    desc: 'Local workstation setup, shared templates, and project workflows',
     ids: ['config', 'teams'],
   },
   {

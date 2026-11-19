@@ -27,7 +27,7 @@ func TestUpdateNpmPermissionFailure(t *testing.T) {
 	}
 	t.Setenv("PATH", dir)
 	captureStdout(t, func() {
-		err := updateNpm(false)
+		err := UpdateToolWithProgress("npm", false, nil)
 		if err == nil || !strings.Contains(err.Error(), "user-writable npm prefix") || !strings.Contains(err.Error(), "EACCES") {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -51,13 +51,13 @@ func TestUpdateNpmOnlyEnabledInstalledPackages(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(bin, "npm"), []byte(script), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := updateNpm(true); err != nil {
+	if err := UpdateToolWithProgress("npm", true, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(log); !os.IsNotExist(err) {
 		t.Fatal("dry run invoked npm update")
 	}
-	if err := updateNpm(false); err != nil {
+	if err := UpdateToolWithProgress("npm", false, nil); err != nil {
 		t.Fatal(err)
 	}
 	data, err := os.ReadFile(log)

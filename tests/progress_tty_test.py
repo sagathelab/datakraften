@@ -54,15 +54,13 @@ class ProgressTTYTest(unittest.TestCase):
         self.assertGreaterEqual(output.count(b'\x1b[2K'), 8)
         self.assertIn(b'Preview complete', output)
 
-    def test_failure_turns_heading_red(self):
+    def test_retired_team_config_stops_before_preview(self):
         status, output = self.run_preview('source: team\n')
         self.assertNotEqual(status, 0)
-        self.assertIn(b'\x1b[90m', output)
-        self.assertIn(b'\x1b[31m', output)
-        self.assertIn(b'\x1b[2K', output)
-        self.assertIn(b'Team source is active but no url is set', output)
+        self.assertIn(b'legacy team configuration is no longer supported', output)
+        self.assertNotIn(b'Checking system packages', output)
+        self.assertNotIn(b'Preview complete', output)
         self.assertNotIn(b'Usage:', output)
-        self.assertNotIn(b'Error: preview failed:', output)
 
     def test_no_color_uses_plain_text(self):
         status, output = self.run_preview('source: default\n', no_color=True)

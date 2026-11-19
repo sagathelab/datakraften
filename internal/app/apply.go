@@ -145,35 +145,16 @@ func RunApplyWithProgress(cfg *config.Config, dryRun bool, hook ProgressHook) *A
 			emitProgress(hook, ProgressEvent{Step: step, Status: ProgressCompleted})
 		}
 	}()
+	if cfg.Source != "" {
+		if err := config.ValidateSource(cfg.Source); err != nil {
+			start("configuration", "Validating workstation configuration")
+			fail(err.Error())
+			displayPrintf("  [ERROR] %s\n", err)
+			return report
+		}
+	}
 	pm := installers.DetectPackageManager()
 	verbosePrintf("packageManager=%s source=%s\n", pm, cfg.Source)
-
-	if cfg.Source == "team" {
-		start("configuration", "Fetching team configuration")
-		if cfg.URL == "" {
-			fail("team source requires a URL — set url in config")
-			displayPrintln("  [ERROR] Team source is active but no url is set.")
-			fmt.Fprintln(progressWriter(), "  Run 'dk init --team <url>' to configure.")
-			return report
-		}
-
-		fmt.Fprintf(progressWriter(), "  Fetching remote config from %s...\n", cfg.URL)
-
-		remoteCfg, err := config.FetchRemote(cfg.URL)
-		if err != nil {
-			fail(fmt.Sprintf("remote config: %s", err))
-			displayPrintf("    [ERROR] %s\n", err)
-			return report
-		}
-
-		displayPrintln("    [OK] Remote config loaded")
-
-		source := cfg.Source
-		url := cfg.URL
-		*cfg = *remoteCfg
-		cfg.Source = source
-		cfg.URL = url
-	}
 
 	if hook == nil {
 		fmt.Fprintln(progressWriter())

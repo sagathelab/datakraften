@@ -44,8 +44,8 @@ func projectTasks(p *project.Project) []string {
 
 func printProjectApproval(p *project.Project) {
 	fmt.Printf("  Project: %s\n  Configuration: %s\n", p.Root, p.Path)
-	if version := p.Config.Project.Tools["node"]; version != "" {
-		fmt.Printf("  Node.js: %s (fnm)\n", version)
+	if tool, ok := p.Config.Project.Tools["node"]; ok {
+		fmt.Printf("  Node.js: %s (%s)\n", tool.Version, tool.Manager)
 	}
 	for _, name := range projectTasks(p) {
 		fmt.Printf("  Task %q: %q\n", name, p.Config.Project.Tasks[name])
@@ -62,7 +62,7 @@ func printProjectApproval(p *project.Project) {
 	fmt.Println("  Trust allows these project commands to run. Review the configuration first.")
 }
 
-func approveProject(p *project.Project, explicit bool) error {
+func approveProject(p *project.Project, explicit bool, input *bufio.Reader) error {
 	trusted, err := project.Trusted(p)
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func approveProject(p *project.Project, explicit bool) error {
 			return fmt.Errorf("project is not trusted; review the file and run 'dk project trust --yes' explicitly")
 		}
 		fmt.Print("  Trust this configuration? [y/N]: ")
-		answer, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		answer, err := input.ReadString('\n')
 		if err != nil {
 			return fmt.Errorf("cannot read confirmation: %w", err)
 		}
@@ -107,14 +107,18 @@ func newProjectCmd() *cobra.Command {
 			Config        string   `json:"config"`
 			Trusted       bool     `json:"trusted"`
 			NodeRequested string   `json:"node_requested,omitempty"`
+			NodeManager   string   `json:"node_manager,omitempty"`
 			NodeVersion   string   `json:"node_version,omitempty"`
 			NodePath      string   `json:"node_path,omitempty"`
+			ManagerPath   string   `json:"node_manager_path,omitempty"`
+			NodeStore     string   `json:"node_store,omitempty"`
 			NodeStatus    string   `json:"node_status,omitempty"`
 			Tasks         []string `json:"tasks"`
 		}{Root: p.Root, Config: p.Path, Trusted: trusted, Tasks: projectTasks(p)}
-		if requested := p.Config.Project.Tools["node"]; requested != "" {
-			result.NodeRequested = requested
-			inst, err := projectnode.Resolve(requested)
+		if tool, ok := p.Config.Project.Tools["node"]; ok {
+			result.NodeRequested, result.NodeManager = tool.Version, tool.Manager
+			inst, err := projectnode.ResolveFor(tool.Manager, tool.Version)
+			result.ManagerPath, result.NodeStore = inst.ManagerPath, inst.StorePath
 			if err != nil {
 				result.NodeStatus = err.Error()
 			} else {
@@ -128,9 +132,12 @@ func newProjectCmd() *cobra.Command {
 		}
 		fmt.Printf("  Project: %s\n  Configuration: %s\n  Trusted: %t\n", result.Root, result.Config, result.Trusted)
 		if result.NodeRequested != "" {
-			fmt.Printf("  Node.js requested: %s\n", result.NodeRequested)
+			fmt.Printf("  Node.js requested: %s (%s)\n", result.NodeRequested, result.NodeManager)
+			if result.ManagerPath != "" {
+				fmt.Printf("  Manager: %s\n", result.ManagerPath)
+			}
 			if result.NodePath != "" {
-				fmt.Printf("  Node.js available: %s (%s)\n", result.NodeVersion, result.NodePath)
+				fmt.Printf("  Node.js available: %s (%s)\n  Store: %s\n", result.NodeVersion, result.NodePath, result.NodeStore)
 			} else {
 				fmt.Printf("  Node.js: %s\n", result.NodeStatus)
 			}
@@ -149,7 +156,7 @@ func newProjectCmd() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		if err := approveProject(p, trustYes); err != nil {
+		if err := approveProject(p, trustYes, bufio.NewReader(os.Stdin)); err != nil {
 			return err
 		}
 		fmt.Println("  Project configuration trusted.")
@@ -166,12 +173,12 @@ func newProjectCmd() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		requested := p.Config.Project.Tools["node"]
-		if requested == "" {
+		tool, ok := p.Config.Project.Tools["node"]
+		if !ok {
 			fmt.Println("  No project tools to install.")
 			return nil
 		}
-		inst, err := projectnode.Resolve(requested)
+		inst, err := projectnode.ResolveFor(tool.Manager, tool.Version)
 		if err == nil {
 			fmt.Printf("  Node.js %s is available at %s\n", inst.Version, inst.NodePath)
 			return nil
@@ -179,12 +186,14 @@ func newProjectCmd() *cobra.Command {
 		if !errors.Is(err, projectnode.ErrNotInstalled) {
 			return err
 		}
-		fmt.Printf("  Install Node.js %s using fnm into Datakraften's project tools directory.\n", requested)
+		fmt.Printf("  Install Node.js %s using %s (%s).\n  Source: %s\n  Destination: %s\n",
+			tool.Version, tool.Manager, inst.ManagerPath, inst.DownloadSource, inst.ManagedStore)
 		if setupDry {
 			fmt.Println("  Dry run: no changes made.")
 			return nil
 		}
-		if err := approveProject(p, false); err != nil {
+		input := bufio.NewReader(os.Stdin)
+		if err := approveProject(p, false, input); err != nil {
 			return err
 		}
 		if !setupYes {
@@ -192,7 +201,7 @@ func newProjectCmd() *cobra.Command {
 				return fmt.Errorf("interactive confirmation required; use --yes to approve installation")
 			}
 			fmt.Print("  Install this Node.js version? [y/N]: ")
-			answer, err := bufio.NewReader(os.Stdin).ReadString('\n')
+			answer, err := input.ReadString('\n')
 			if err != nil {
 				return fmt.Errorf("cannot read confirmation: %w", err)
 			}
@@ -203,10 +212,10 @@ func newProjectCmd() *cobra.Command {
 		if err := project.Verify(p); err != nil {
 			return err
 		}
-		if err := projectnode.Install(requested, os.Stdout, os.Stderr); err != nil {
+		if err := projectnode.InstallFor(tool.Manager, tool.Version, os.Stdout, os.Stderr); err != nil {
 			return err
 		}
-		inst, err = projectnode.Resolve(requested)
+		inst, err = projectnode.ResolveFor(tool.Manager, tool.Version)
 		if err != nil {
 			return fmt.Errorf("Node.js installation could not be verified: %w", err)
 		}
@@ -252,29 +261,25 @@ func newRunCmd() *cobra.Command {
 		if !ok {
 			return fmt.Errorf("unknown project task %q; available: %s", args[0], strings.Join(projectTasks(p), ", "))
 		}
-		env := projectEnvironment(os.Environ(), p.Config.Project.Env)
-		nodePath := ""
-		if requested := p.Config.Project.Tools["node"]; requested != "" {
-			inst, err := projectnode.Resolve(requested)
+		var inst projectnode.Installation
+		if tool, ok := p.Config.Project.Tools["node"]; ok {
+			inst, err = projectnode.ResolveFor(tool.Manager, tool.Version)
 			if err != nil {
 				if !dryRun {
-					return fmt.Errorf("project Node.js %s: %w; run 'dk project setup'", requested, err)
+					return fmt.Errorf("project Node.js %s (%s): %w", tool.Version, tool.Manager, err)
 				}
-				fmt.Fprintf(os.Stderr, "  Node.js %s: %v\n", requested, err)
-			} else {
-				env = projectnode.Environment(inst, env)
-				nodePath = inst.NodePath
+				fmt.Fprintf(os.Stderr, "  Node.js %s (%s): %v\n", tool.Version, tool.Manager, err)
 			}
 		}
 		fmt.Fprintf(os.Stderr, "  Project: %s\n  Task %q: %q\n", p.Root, args[0], task)
-		if nodePath != "" {
-			fmt.Fprintf(os.Stderr, "  Node.js: %s\n", nodePath)
+		if inst.NodePath != "" {
+			fmt.Fprintf(os.Stderr, "  Node.js %s (%s): %s\n", inst.Version, inst.Backend, inst.NodePath)
 		}
 		if dryRun {
 			fmt.Fprintln(os.Stderr, "  Dry run: no task executed and no trust stored.")
 			return nil
 		}
-		if err := approveProject(p, false); err != nil {
+		if err := approveProject(p, false, bufio.NewReader(os.Stdin)); err != nil {
 			return err
 		}
 		if err := project.Verify(p); err != nil {
@@ -287,7 +292,10 @@ func newRunCmd() *cobra.Command {
 		shellArgs := append([]string{"-c", script, "dk"}, args[1:]...)
 		process := osexec.Command("/bin/sh", shellArgs...)
 		process.Dir = p.Root
-		process.Env = env
+		process.Env = projectEnvironment(process.Environ(), p.Config.Project.Env)
+		if inst.NodePath != "" {
+			process.Env = projectnode.Environment(inst, process.Env)
+		}
 		process.Stdin, process.Stdout, process.Stderr = os.Stdin, os.Stdout, os.Stderr
 		err = runProjectProcess(process)
 		var exitErr *osexec.ExitError

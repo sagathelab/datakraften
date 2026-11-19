@@ -11,6 +11,8 @@ The bootstrap script is intentionally small and only installs the `dk` CLI. The 
 - **No secrets are collected** — we never ask for or store API keys, tokens, or credentials
 - **No destructive operations without clear user intent** — `dk apply` never runs without confirmation; `--dry-run` shows everything beforehand
 - **Third-party tools are installed from documented sources** — always from official channels (Homebrew, GitHub Releases, etc.)
+- **Shared workstation templates are imported once** — `dk init --from` validates and previews an HTTPS YAML template before saving local configuration. `dk apply` and `dk update` do not fetch it again.
+- **Project configuration is not trusted by default** — inspection does not run tasks or install tools. Approve a project's `datakraften.yaml` before using it to execute tasks. Approval is not sandboxing: tasks run with your user's permissions and can access inherited environment variables.
 - **The install script should be readable before execution** — review it at [datakraften.no/install](https://datakraften.no/install) before running it
 
 ## Reporting a Vulnerability

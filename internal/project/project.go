@@ -30,9 +30,58 @@ type Config struct {
 }
 
 type Settings struct {
-	Tools map[string]string `yaml:"tools"`
+	Tools map[string]Tool   `yaml:"tools"`
 	Env   map[string]string `yaml:"env"`
 	Tasks map[string]string `yaml:"tasks"`
+}
+
+type Tool struct {
+	Version string
+	Manager string
+}
+
+func (t *Tool) UnmarshalYAML(node *yaml.Node) error {
+	if isVersionScalar(node) {
+		t.Version = node.Value
+		t.Manager = "fnm"
+		return nil
+	}
+	if node.Kind != yaml.MappingNode {
+		return errors.New("project tool must be a version or a mapping with version and manager")
+	}
+	seen := map[string]bool{}
+	for i := 0; i < len(node.Content); i += 2 {
+		key, value := node.Content[i], node.Content[i+1]
+		if key.Kind != yaml.ScalarNode || key.Tag != "!!str" {
+			return errors.New("project tool field names must be strings")
+		}
+		if seen[key.Value] {
+			return fmt.Errorf("duplicate project tool field %q", key.Value)
+		}
+		seen[key.Value] = true
+		switch key.Value {
+		case "version":
+			if !isVersionScalar(value) {
+				return errors.New("project tool version must be a string or number")
+			}
+			t.Version = value.Value
+		case "manager":
+			if value.Kind != yaml.ScalarNode || value.Tag != "!!str" {
+				return errors.New("project tool manager must be a string")
+			}
+			t.Manager = value.Value
+		default:
+			return fmt.Errorf("unknown project tool field %q", key.Value)
+		}
+	}
+	if !seen["version"] || !seen["manager"] {
+		return errors.New("project tool mapping requires both version and manager; use a scalar version to default to fnm")
+	}
+	return nil
+}
+
+func isVersionScalar(node *yaml.Node) bool {
+	return node.Kind == yaml.ScalarNode && (node.Tag == "!!str" || node.Tag == "!!int" || node.Tag == "!!float")
 }
 
 var envName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
@@ -160,12 +209,15 @@ func load(path string) (*Project, error) {
 	if cfg.Version != 1 {
 		return nil, fmt.Errorf("unsupported project config version %d; expected 1", cfg.Version)
 	}
-	for name, version := range cfg.Project.Tools {
-		if !itemName.MatchString(name) || strings.TrimSpace(version) == "" || strings.ContainsAny(version, "\x00\r\n") {
+	for name, tool := range cfg.Project.Tools {
+		if !itemName.MatchString(name) || strings.TrimSpace(tool.Version) == "" || strings.ContainsAny(tool.Version, "\x00\r\n") {
 			return nil, fmt.Errorf("invalid tool or version for %q", name)
 		}
 		if name != "node" {
 			return nil, fmt.Errorf("unsupported project tool %q; only node is currently supported", name)
+		}
+		if tool.Manager != "fnm" && tool.Manager != "nvm" {
+			return nil, fmt.Errorf("unsupported Node version manager %q; choose fnm or nvm", tool.Manager)
 		}
 	}
 	for name, value := range cfg.Project.Env {

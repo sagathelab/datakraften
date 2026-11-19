@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	osexec "os/exec"
@@ -17,15 +18,16 @@ import (
 )
 
 type updateStep struct {
-	name string
-	run  func(bool) error
+	name       string
+	run        func(bool) error
+	configured func(*config.Config, bool) error
 }
 
 var updateSteps = []updateStep{
 	{name: "brew", run: updateBrew},
 	{name: "fnm", run: updateFnm},
 	{name: "uv", run: updateUv},
-	{name: "npm", run: updateNpm},
+	{name: "npm", configured: updateConfiguredNpm},
 }
 
 func newUpdateCmd() *cobra.Command {
@@ -94,20 +96,43 @@ func listUpdatable() error {
 
 func UpdateToolWithProgress(name string, dryRun bool, hook ProgressHook) error {
 	name = strings.ToLower(name)
-	var step updateStep
 	switch name {
-	case "brew":
-		step = updateStep{name: "brew", run: updateBrew}
-	case "fnm", "node":
-		step = updateStep{name: "fnm", run: updateFnm}
-	case "uv", "python":
-		step = updateStep{name: "uv", run: updateUv}
-	case "npm":
-		step = updateStep{name: "npm", run: updateNpm}
-	default:
-		return fmt.Errorf("unknown tool: %s — run 'dk update --list' to see available tools", name)
+	case "node":
+		name = "fnm"
+	case "python":
+		name = "uv"
 	}
-	return runUpdateStep(step, dryRun, hook)
+	for _, step := range updateSteps {
+		if step.name == name {
+			cfg, err := loadUpdateConfig(step.configured != nil)
+			if err != nil {
+				return err
+			}
+			return runUpdateStep(step.withConfig(cfg), dryRun, hook)
+		}
+	}
+	return fmt.Errorf("unknown tool: %s — run 'dk update --list' to see available tools", name)
+}
+
+func loadUpdateConfig(required bool) (*config.Config, error) {
+	cfg, err := config.Load()
+	if errors.Is(err, os.ErrNotExist) {
+		if required {
+			return nil, fmt.Errorf("no workstation configuration found; run 'dk init' first: %w", err)
+		}
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("cannot load configuration: %w", err)
+	}
+	return cfg, nil
+}
+
+func (s updateStep) withConfig(cfg *config.Config) updateStep {
+	if run := s.configured; run != nil {
+		s.run = func(dryRun bool) error { return run(cfg, dryRun) }
+	}
+	return s
 }
 
 func runUpdateStep(step updateStep, dryRun bool, hook ProgressHook) error {
@@ -138,6 +163,14 @@ func UpdateAllWithProgress(dryRun bool, hook ProgressHook) error {
 }
 
 func updateAllWithProgress(dryRun bool, hook ProgressHook, showTitle bool) error {
+	required := false
+	for _, step := range updateSteps {
+		required = required || step.configured != nil
+	}
+	cfg, err := loadUpdateConfig(required)
+	if err != nil {
+		return err
+	}
 	if showTitle {
 		updateTitle(dryRun)
 	}
@@ -148,7 +181,7 @@ func updateAllWithProgress(dryRun bool, hook ProgressHook, showTitle bool) error
 			fmt.Fprintln(progressWriter())
 			displayStep(progressWriter(), i+1, len(updateSteps), step.name)
 		}
-		if err := runUpdateStep(step, dryRun, hook); err != nil {
+		if err := runUpdateStep(step.withConfig(cfg), dryRun, hook); err != nil {
 			failures = append(failures, fmt.Sprintf("%s: %s", step.name, err))
 			displayPrintf("    [ERROR] %s failed; details below\n", step.name)
 		}
@@ -245,22 +278,12 @@ func updateUv(dryRun bool) error {
 	return nil
 }
 
-func updateNpm(dryRun bool) error {
+func updateConfiguredNpm(cfg *config.Config, dryRun bool) error {
 	if !exec.CommandExists("npm") {
 		displayPrintln("    [SKIP] npm not installed, skipping")
 		return nil
 	}
 
-	cfg, err := config.Load()
-	if err != nil {
-		return fmt.Errorf("cannot determine managed npm tools: %w", err)
-	}
-	if cfg.Source == "team" {
-		cfg, err = config.FetchRemote(cfg.URL)
-		if err != nil {
-			return fmt.Errorf("cannot load team configuration: %w", err)
-		}
-	}
 	r := exec.Run("npm", "list", "-g", "--depth=0", "--json")
 	var listed struct {
 		Dependencies map[string]json.RawMessage `json:"dependencies"`

@@ -38,13 +38,13 @@ func TestDiscoverGitBoundary(t *testing.T) {
 	}
 	writeFile(t, filepath.Join(root, "datakraften.yaml"), validConfig)
 	got, err := Discover(sub)
-	if err != nil || got == nil || got.Root != root || got.Config.Project.Tools["node"] != "22" {
+	if err != nil || got == nil || got.Root != root || got.Config.Project.Tools["node"].Version != "22" {
 		t.Fatalf("root project: %+v, %v", got, err)
 	}
 	near := filepath.Join(root, "a", "datakraften.yaml")
 	writeFile(t, near, strings.Replace(validConfig, "'22'", "'24'", 1))
 	got, err = Discover(sub)
-	if err != nil || got == nil || got.Path != near || got.Config.Project.Tools["node"] != "24" {
+	if err != nil || got == nil || got.Path != near || got.Config.Project.Tools["node"].Version != "24" {
 		t.Fatalf("nearest project: %+v, %v", got, err)
 	}
 	nested := filepath.Join(root, "nested")
@@ -52,6 +52,39 @@ func TestDiscoverGitBoundary(t *testing.T) {
 	got, err = Discover(nested)
 	if err != nil || got != nil {
 		t.Fatalf("crossed nested worktree: %+v, %v", got, err)
+	}
+}
+
+func TestNodeManagerConfiguration(t *testing.T) {
+	for _, tc := range []struct {
+		name, tool, version, manager string
+		invalid                      bool
+	}{
+		{"shorthand", `"22"`, "22", "fnm", false},
+		{"numeric shorthand", `22`, "22", "fnm", false},
+		{"nvm", "\n      version: '24'\n      manager: nvm", "24", "nvm", false},
+		{"fnm", "\n      version: 22.10\n      manager: fnm", "22.10", "fnm", false},
+		{"unknown", "\n      version: '22'\n      manager: other", "", "", true},
+		{"missing version", "\n      manager: nvm", "", "", true},
+		{"missing manager", "\n      version: '22'", "", "", true},
+		{"numeric manager", "\n      version: '22'\n      manager: 1", "", "", true},
+		{"duplicate manager", "\n      version: '22'\n      manager: fnm\n      manager: nvm", "", "", true},
+		{"unknown option", "\n      version: '22'\n      option: value", "", "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			writeFile(t, filepath.Join(dir, "datakraften.yaml"), "version: 1\nproject:\n  tools:\n    node: "+tc.tool+"\n")
+			p, err := Discover(dir)
+			if tc.invalid {
+				if err == nil {
+					t.Fatal("invalid configuration accepted")
+				}
+				return
+			}
+			if err != nil || p.Config.Project.Tools["node"].Version != tc.version || p.Config.Project.Tools["node"].Manager != tc.manager {
+				t.Fatalf("got %+v, %v", p, err)
+			}
+		})
 	}
 }
 
@@ -65,9 +98,18 @@ func TestDiscoverOutsideGitAndSymlinks(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeFile(t, filepath.Join(base, "datakraften.yaml"), validConfig)
-	if got, err := Discover(child); err != nil || got != nil {
-		t.Fatalf("searched outside standalone directory: %+v, %v", got, err)
-	}
+	t.Run("outside git", func(t *testing.T) {
+		gitRoot, err := findGitRoot(child)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if gitRoot != "" {
+			t.Skip("test scratch directory is inside a Git repository")
+		}
+		if got, err := Discover(child); err != nil || got != nil {
+			t.Fatalf("searched outside standalone directory: %+v, %v", got, err)
+		}
+	})
 	if err := os.Symlink(filepath.Join(base, "datakraften.yaml"), filepath.Join(child, "datakraften.yaml")); err != nil {
 		t.Fatal(err)
 	}

@@ -11,6 +11,8 @@ const dkLinks: Record<string, string> = {
   update: '/docs/dk#update',
   upgrade: '/docs/dk#upgrade',
   sources: '/docs/dk#sources',
+  project: '/docs/dk#project',
+  run: '/docs/dk#project',
 }
 
 interface ToolGuideProps {

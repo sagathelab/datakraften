@@ -2,6 +2,7 @@ package app
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -21,12 +22,11 @@ func newApplyCmd() *cobra.Command {
 		Long:         `Install missing tools, configure shell, runtimes, editors, and AI tooling based on your configuration.`,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) (runErr error) {
-			state := LoadState()
-
 			cfg, err := config.Load()
 			if err != nil {
-				fmt.Println("  No configuration found. Run 'dk init' first.")
-				fmt.Println()
+				if errors.Is(err, os.ErrNotExist) {
+					return fmt.Errorf("no workstation configuration found; run 'dk init' first: %w", err)
+				}
 				return fmt.Errorf("cannot load configuration: %w", err)
 			}
 
@@ -65,6 +65,7 @@ func newApplyCmd() *cobra.Command {
 			}
 
 			if len(report.Errors) == 0 {
+				state := LoadState()
 				state.RecordApply(cfg.Source)
 				WriteLog("apply", fmt.Sprintf("Applied source: %s\n", cfg.Source))
 			}

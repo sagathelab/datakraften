@@ -1,11 +1,9 @@
 package app
 
 import (
+	"errors"
 	"fmt"
-	neturl "net/url"
 	"os"
-	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -13,7 +11,6 @@ import (
 	"github.com/sagathelab/datakraften/internal/installers"
 	"github.com/sagathelab/datakraften/internal/system"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var defaultConfigYAML = `version: 1
@@ -130,15 +127,10 @@ ai_tools: {}
 ai_apps: {}
 `
 
-var teamConfigYAML = `source: team
-url: %s
-`
-
 func newInitCmd() *cobra.Command {
-	var customFlag string
-	var teamURLFlag string
-	var fromURL string
-	var migrateTeam, yes bool
+	var customFlag, fromURL string
+	var yes bool
+	const customPrompt = "-"
 
 	cmd := &cobra.Command{
 		Use:   "init",
@@ -146,88 +138,87 @@ func newInitCmd() *cobra.Command {
 		Long: `Initialize Datakraften by creating a configuration file.
 
 No arguments creates a default config (source: default).
-Use --custom to create a custom config (source: custom) that you own.
-Use --from to import a remote YAML once and merge it with defaults.
-Use --migrate-team to convert an existing team configuration into a local config.
-Use --team for the legacy remote team configuration.`,
-		Args: cobra.NoArgs,
+Use --custom to choose a built-in starting point, or --custom <file> to merge a local YAML file.
+Use --from <HTTPS URL> to import a raw YAML template once and merge it with defaults.`,
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 1 && cmd.Flags().Changed("custom") && customFlag == customPrompt {
+				return nil
+			}
+			return cobra.NoArgs(cmd, args)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			displayTitle(os.Stdout, "init", "Configure your workstation")
-			home, _ := os.UserHomeDir()
-			configDir := filepath.Join(home, ".config", "datakraften")
-			configPath := filepath.Join(configDir, "config.yaml")
-
 			hasCustom := cmd.Flags().Changed("custom")
-			hasTeam := cmd.Flags().Changed("team")
-
-			choices := 0
-			for _, selected := range []bool{hasCustom, hasTeam, cmd.Flags().Changed("from"), migrateTeam} {
-				if selected {
-					choices++
-				}
+			hasFrom := cmd.Flags().Changed("from")
+			if hasCustom && hasFrom {
+				return fmt.Errorf("specify only one of --custom or --from")
 			}
-			if choices > 1 {
-				return fmt.Errorf("specify only one of --custom, --team, --from or --migrate-team")
+			configPath := config.DefaultConfigPath()
+			if configPath == "" {
+				return fmt.Errorf("cannot determine home directory for workstation configuration")
 			}
-
-			existing := false
-			if _, err := os.Stat(configPath); err == nil {
-				existing = true
+			info, err := os.Lstat(configPath)
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("inspect workstation configuration: %w", err)
 			}
-
-			if cmd.Flags().Changed("from") || migrateTeam {
-				return initFromURL(configPath, configDir, fromURL, existing, migrateTeam, yes)
+			existing := err == nil
+			if existing && !info.Mode().IsRegular() {
+				return fmt.Errorf("cannot replace workstation configuration %s: not a regular file", configPath)
 			}
-			if !hasCustom && !hasTeam {
-				return initDefault(configPath, configDir, existing)
+			displayTitle(os.Stdout, "init", "Configure your workstation")
+			switch {
+			case hasFrom:
+				return initFromURL(configPath, fromURL, existing, yes)
+			case !hasCustom:
+				return initDefault(configPath, existing, yes)
+			case len(args) == 1:
+				return initCustomMerge(configPath, args[0], existing, yes)
+			case customFlag != customPrompt && customFlag != "":
+				return initCustomMerge(configPath, customFlag, existing, yes)
+			default:
+				return initCustomPrompt(configPath, existing, yes)
 			}
-
-			if hasCustom {
-				return initCustom(configPath, configDir, existing, customFlag)
-			}
-
-			return initTeam(configPath, configDir, existing, teamURLFlag)
 		},
 	}
 
-	cmd.Flags().StringVarP(&customFlag, "custom", "c", "", "Path to a YAML file with custom tool configuration")
-	cmd.Flags().StringVarP(&teamURLFlag, "team", "t", "", "Team config URL (creates a thin config pointing to a remote YAML)")
+	cmd.Flags().StringVarP(&customFlag, "custom", "c", "", "Choose a built-in custom config or merge a local YAML file")
+	cmd.Flags().Lookup("custom").NoOptDefVal = customPrompt
 	cmd.Flags().StringVar(&fromURL, "from", "", "Import an HTTPS YAML template once and merge it with defaults")
-	cmd.Flags().BoolVar(&migrateTeam, "migrate-team", false, "Migrate an existing team config to a local config")
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Confirm replacement when importing or migrating")
-
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Confirm overwriting the existing workstation configuration")
 	return cmd
 }
 
-func initDefault(configPath, configDir string, existing bool) error {
-	if existing {
-		var overwrite bool
-		prompt := &survey.Confirm{
-			Message: "Config already exists. Overwrite with default config?",
-			Default: false,
+func builtInConfig(template string) string {
+	return fmt.Sprintf(template, installers.DetectPackageManager())
+}
+
+func saveInitConfig(path string, data []byte, existing, yes bool) (bool, error) {
+	if _, err := config.Decode(data); err != nil {
+		return false, fmt.Errorf("invalid configuration: %w", err)
+	}
+	if existing && !yes {
+		var confirmed bool
+		prompt := &survey.Confirm{Message: "Overwrite the existing workstation configuration?", Default: false}
+		if err := survey.AskOne(prompt, &confirmed); err != nil {
+			return false, fmt.Errorf("confirmation required (use --yes to overwrite non-interactively): %w", err)
 		}
-		survey.AskOne(prompt, &overwrite)
-		if !overwrite {
-			fmt.Println()
-			fmt.Println("  Run 'dk apply' to apply the configuration.")
-			return nil
+		if !confirmed {
+			fmt.Println("  Cancelled; existing configuration preserved.")
+			return false, nil
 		}
 	}
-
-	pm := installers.DetectPackageManager()
-	cfg := fmt.Sprintf(defaultConfigYAML, string(pm))
-
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create config dir: %w", err)
+	if err := writeInitAtomic(path, data, existing); err != nil {
+		return false, err
 	}
-	if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
+	return true, nil
+}
+
+func initDefault(configPath string, existing, yes bool) error {
+	cfg := builtInConfig(defaultConfigYAML)
+	printConfigPreview(cfg)
+	saved, err := saveInitConfig(configPath, []byte(cfg), existing, yes)
+	if err != nil || !saved {
+		return err
 	}
-
-	state := LoadState()
-	state.ActiveSource = "default"
-	state.Save()
-
 	wsl, wslVer := system.DetectWSL()
 	distro, distroVer := system.Distro()
 
@@ -240,13 +231,7 @@ func initDefault(configPath, configDir string, existing bool) error {
 	if distro != "" {
 		displayPrintf("    [OK] %s %s\n", distro, distroVer)
 	}
-	fmt.Printf("    Source: default\n")
-	fmt.Println()
-
-	displayHeading(os.Stdout, "Config preview")
-	for _, line := range strings.Split(cfg, "\n") {
-		fmt.Printf("    %s\n", line)
-	}
+	fmt.Println("    Source: default")
 	fmt.Println()
 	fmt.Printf("  Config: %s\n", configPath)
 	fmt.Println()
@@ -256,32 +241,10 @@ func initDefault(configPath, configDir string, existing bool) error {
 	fmt.Println("    1. Run 'dk apply' to install tools")
 	fmt.Println("    2. Run 'dk doctor' to verify")
 	fmt.Println()
-
 	return nil
 }
 
-func initCustom(configPath, configDir string, existing bool, customFile string) error {
-	if customFile == "" {
-		return initCustomPrompt(configPath, configDir, existing)
-	}
-	return initCustomMerge(configPath, configDir, existing, customFile)
-}
-
-func initCustomPrompt(configPath, configDir string, existing bool) error {
-	if existing {
-		var overwrite bool
-		prompt := &survey.Confirm{
-			Message: "Config already exists. Overwrite with custom config?",
-			Default: false,
-		}
-		survey.AskOne(prompt, &overwrite)
-		if !overwrite {
-			fmt.Println()
-			fmt.Println("  Run 'dk apply' to apply the configuration.")
-			return nil
-		}
-	}
-
+func initCustomPrompt(configPath string, existing, yes bool) error {
 	var templateChoice int
 	templatePrompt := &survey.Select{
 		Message: "Create config as:",
@@ -290,238 +253,65 @@ func initCustomPrompt(configPath, configDir string, existing bool) error {
 			"Pre-filled with defaults — edit what you need",
 		},
 	}
-	survey.AskOne(templatePrompt, &templateChoice)
-
-	pm := installers.DetectPackageManager()
-	var cfg string
-	if templateChoice == 0 {
-		cfg = fmt.Sprintf(skeletonConfigYAML, string(pm))
-	} else {
-		cfg = fmt.Sprintf(defaultConfigYAML, string(pm))
-		cfg = strings.Replace(cfg, "source: default", "source: custom", 1)
+	if err := survey.AskOne(templatePrompt, &templateChoice); err != nil {
+		return fmt.Errorf("choose a custom configuration: %w", err)
 	}
-
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create config dir: %w", err)
+	cfg := builtInConfig(skeletonConfigYAML)
+	if templateChoice == 1 {
+		cfg = strings.Replace(builtInConfig(defaultConfigYAML), "source: default", "source: custom", 1)
 	}
-	if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
+	printConfigPreview(cfg)
+	saved, err := saveInitConfig(configPath, []byte(cfg), existing, yes)
+	if err != nil || !saved {
+		return err
 	}
+	printCustomInitResult(configPath)
+	return nil
+}
 
-	state := LoadState()
-	state.ActiveSource = "custom"
-	state.Save()
+func initCustomMerge(configPath, customFile string, existing, yes bool) error {
+	partial, err := config.ReadFile(customFile)
+	if err != nil {
+		return fmt.Errorf("cannot load custom input: %w", err)
+	}
+	base := make(map[string]any)
+	if existing {
+		base, err = config.ReadFile(configPath)
+		if err != nil {
+			return err
+		}
+	}
+	result, paths, err := mergeConfig(base, partial)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("  Merge local YAML %s into %s (source: custom).\n", customFile, configPath)
+	if len(paths) > 0 {
+		fmt.Printf("  Settings supplied: %s\n", strings.Join(paths, ", "))
+	}
+	warnUnusedConfig(paths)
+	saved, err := saveInitConfig(configPath, result, existing, yes)
+	if err != nil || !saved {
+		return err
+	}
+	printCustomInitResult(configPath)
+	return nil
+}
 
-	fmt.Println()
+func printConfigPreview(cfg string) {
 	displayHeading(os.Stdout, "Config preview")
 	for _, line := range strings.Split(cfg, "\n") {
 		fmt.Printf("    %s\n", line)
 	}
 	fmt.Println()
-	fmt.Printf("  Config: %s\n", configPath)
-	fmt.Println()
-	displayComplete(os.Stdout, fmt.Sprintf("Custom config created at %s", configPath))
+}
+
+func printCustomInitResult(configPath string) {
+	displayComplete(os.Stdout, fmt.Sprintf("Custom config saved: %s", configPath))
 	fmt.Println()
 	displayNextSteps(os.Stdout)
 	fmt.Println("    1. Edit the config file to customize your toolset")
 	fmt.Println("    2. Run 'dk apply' to install tools")
 	fmt.Println("    3. Run 'dk doctor' to verify")
 	fmt.Println()
-
-	return nil
-}
-
-func initCustomMerge(configPath, configDir string, existing bool, customFile string) error {
-	data, err := os.ReadFile(customFile)
-	if err != nil {
-		displayPrintf("  [ERROR] Cannot read file: %s\n", customFile)
-		return nil
-	}
-
-	if len(strings.TrimSpace(string(data))) == 0 {
-		displayPrintln("  [ERROR] File is empty.")
-		return nil
-	}
-
-	v := viper.New()
-	v.SetConfigType("yaml")
-	if err := v.ReadConfig(strings.NewReader(string(data))); err != nil {
-		displayPrintf("  [ERROR] Invalid YAML: %s\n", err)
-		return nil
-	}
-
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create config dir: %w", err)
-	}
-
-	var finalCfg string
-	if existing {
-		existingData, err := os.ReadFile(configPath)
-		if err == nil {
-			ev := viper.New()
-			ev.SetConfigType("yaml")
-			ev.ReadConfig(strings.NewReader(string(existingData)))
-
-			keys := []string{"system", "tooling", "shell", "runtimes", "tools", "editors", "ai_tools", "ai_apps"}
-			for _, key := range keys {
-				if v.IsSet(key) {
-					ev.Set(key, v.Get(key))
-				}
-			}
-			ev.Set("source", "custom")
-
-			out := yamlFromViper(ev)
-			finalCfg = string(out)
-		}
-	}
-
-	if finalCfg == "" {
-		finalCfg = fmt.Sprintf("source: custom\nversion: 1\n%s\n", string(data))
-	}
-
-	if err := os.WriteFile(configPath, []byte(finalCfg), 0644); err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
-	}
-
-	state := LoadState()
-	state.ActiveSource = "custom"
-	state.Save()
-
-	fmt.Println()
-	displayHeading(os.Stdout, "Config preview")
-	for _, line := range strings.Split(finalCfg, "\n") {
-		fmt.Printf("    %s\n", line)
-	}
-	fmt.Println()
-	fmt.Printf("  Config: %s\n", configPath)
-	fmt.Println()
-	displayComplete(os.Stdout, fmt.Sprintf("Custom config created from %s", customFile))
-	fmt.Println()
-	displayNextSteps(os.Stdout)
-	fmt.Println("    1. Edit the config file to customize your toolset")
-	fmt.Println("    2. Run 'dk apply' to install tools")
-	fmt.Println("    3. Run 'dk doctor' to verify")
-	fmt.Println()
-
-	return nil
-}
-
-func yamlFromViper(v *viper.Viper) []byte {
-	allSettings := v.AllSettings()
-	if len(allSettings) == 0 {
-		return []byte{}
-	}
-	var b strings.Builder
-	b.WriteString("version: 1\n")
-	if s, ok := allSettings["source"]; ok {
-		b.WriteString(fmt.Sprintf("source: %v\n", s))
-		delete(allSettings, "source")
-		delete(allSettings, "version")
-	}
-	for key, val := range allSettings {
-		if key == "version" || key == "source" {
-			continue
-		}
-		b.WriteString(fmt.Sprintf("%s:\n", key))
-		writeYAMLValue(&b, val, 2)
-	}
-	return []byte(b.String())
-}
-
-func writeYAMLValue(b *strings.Builder, val interface{}, indent int) {
-	prefix := strings.Repeat(" ", indent)
-	switch v := val.(type) {
-	case map[string]interface{}:
-		for k, vv := range v {
-			switch inner := vv.(type) {
-			case map[string]interface{}:
-				b.WriteString(fmt.Sprintf("%s%s:\n", prefix, k))
-				writeYAMLValue(b, inner, indent+2)
-			default:
-				b.WriteString(fmt.Sprintf("%s%s: ", prefix, k))
-				writeYAMLValue(b, vv, indent)
-			}
-		}
-	case bool:
-		b.WriteString(fmt.Sprintf("%v\n", v))
-	case string:
-		b.WriteString(fmt.Sprintf("%s\n", v))
-	case int:
-		b.WriteString(fmt.Sprintf("%d\n", v))
-	case nil:
-		b.WriteString("\n")
-	default:
-		b.WriteString(fmt.Sprintf("%v\n", v))
-	}
-}
-
-func initTeam(configPath, configDir string, existing bool, url string) error {
-	if url == "" {
-		var input string
-		urlPrompt := &survey.Input{
-			Message: "Team config URL:",
-		}
-		if err := survey.AskOne(urlPrompt, &input, survey.WithValidator(survey.Required)); err != nil {
-			return err
-		}
-		url = input
-	}
-	if existing {
-		var overwrite bool
-		prompt := &survey.Confirm{Message: "Config already exists. Replace it with a legacy team config?", Default: false}
-		if err := survey.AskOne(prompt, &overwrite); err != nil {
-			return fmt.Errorf("confirmation required: %w", err)
-		}
-		if !overwrite {
-			fmt.Println("  Cancelled; existing configuration preserved.")
-			return nil
-		}
-	}
-
-	remoteHost := "remote server"
-	if parsed, err := neturl.Parse(url); err == nil && parsed.Hostname() != "" {
-		remoteHost = parsed.Hostname()
-	}
-	fmt.Printf("  Fetching remote config from %s...\n", remoteHost)
-
-	_, err := config.FetchRemote(url)
-	if err != nil {
-		displayPrintln("  [ERROR] Could not fetch or validate the remote configuration")
-		return fmt.Errorf("failed to load remote config")
-	}
-	displayPrintln("  [OK] Remote config validated")
-
-	thinCfg := fmt.Sprintf(teamConfigYAML, strconv.Quote(url))
-
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create config dir: %w", err)
-	}
-	if err := os.WriteFile(configPath, []byte(thinCfg), 0644); err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
-	}
-
-	state := LoadState()
-	state.ActiveSource = "team"
-	state.Save()
-
-	fmt.Println()
-	displayHeading(os.Stdout, "Config preview")
-	for _, line := range strings.Split(thinCfg, "\n") {
-		if strings.HasPrefix(line, "url:") {
-			fmt.Printf("    url: (hidden)\n")
-		} else if strings.TrimSpace(line) != "" {
-			fmt.Printf("    %s\n", line)
-		}
-	}
-	fmt.Println()
-	fmt.Printf("  Config: %s\n", configPath)
-	fmt.Println()
-	displayComplete(os.Stdout, "Team config created")
-	fmt.Println()
-	displayNextSteps(os.Stdout)
-	fmt.Println("    1. Run 'dk apply' to install tools (fetches remote config)")
-	fmt.Println("    2. Run 'dk doctor' to verify")
-	fmt.Println()
-
-	return nil
 }

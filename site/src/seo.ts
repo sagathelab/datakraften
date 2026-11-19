@@ -105,7 +105,7 @@ function landingSchemas() {
       operatingSystem: 'WSL, Linux, macOS',
       softwareVersion: 'current',
       description:
-        'Datakraften bootstraps developer workstations for WSL, Linux, and macOS with a YAML-driven CLI.',
+        'Datakraften configures developer workstations from local YAML, imports HTTPS templates once, and runs trusted repository tasks.',
       url: siteUrl,
       downloadUrl: toAbsoluteUrl('/install'),
       publisher: {
@@ -120,10 +120,10 @@ function docsMeta() {
   return {
     title: 'Datakraften Documentation',
     description:
-      'Documentation for Datakraften, dk CLI, supported tools, runtimes, shell setup, editors, and AI tooling.',
+      'Learn to configure a workstation with dk, import a YAML template once over HTTPS, and set up and run trusted project tasks.',
     path: '/docs',
     type: 'website' as const,
-    keywords: ['Datakraften docs', 'dk CLI docs', 'developer workstation docs', 'WSL setup docs'],
+    keywords: ['Datakraften docs', 'dk CLI docs', 'workstation YAML', 'datakraften.yaml'],
     structuredData: [
       breadcrumbSchema([
         { name: 'Datakraften', path: '/' },
@@ -184,7 +184,7 @@ export function getPageMeta(path: string): PageMeta {
     return {
       title: 'Datakraften — Developer Workstation Bootstrap for WSL, Linux, and macOS',
       description:
-        'Bootstrap a developer workstation for WSL, Linux, and macOS with Datakraften — a YAML-driven CLI for runtimes, shell setup, editors, cloud tools, and AI tooling.',
+        'Bootstrap a workstation on WSL, Linux, or macOS with local YAML. Import shared templates once and run trusted tasks from datakraften.yaml.',
       path: '/',
       type: 'website',
       keywords: [
@@ -192,6 +192,8 @@ export function getPageMeta(path: string): PageMeta {
         'WSL setup tool',
         'Linux developer environment',
         'AI-ready developer workstation',
+        'HTTPS workstation templates',
+        'trusted project tasks',
         'Datakraften',
       ],
       structuredData: landingSchemas(),

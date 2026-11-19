@@ -9,8 +9,10 @@ export default function Privacy() {
 
         <h2 className="text-xl font-bold text-text-primary mt-8 mb-2">Information We Collect</h2>
         <p>
-          Datakraften CLI installs and configures tools you choose. It may connect to external
-          services to download software, check for updates, or retrieve a team configuration.
+          Datakraften CLI may connect to external services to download software or check for
+          updates. If you choose to import an HTTPS workstation template, dk requests it during
+          initialization and saves the merged configuration locally. Applying that configuration
+          does not request the template again.
         </p>
         <p>
           The website (datakraften.no) is a static site hosted on GitHub Pages and does not use
@@ -33,9 +35,10 @@ export default function Privacy() {
 
         <h2 className="text-xl font-bold text-text-primary mt-8 mb-2">Data Storage</h2>
         <p>
-          Datakraften stores only local configuration files in ~/.config/datakraften/ and state in
-          ~/.local/state/datakraften/. Network requests to external services may disclose connection
-          information such as your IP address to those services.
+          Datakraften stores the workstation configuration at{' '}
+          <code>~/.config/datakraften/config.yaml</code> and records project trust locally. Tasks
+          you approve run as your user and can access files, inherited environment values, and the
+          network. Network requests may disclose connection information such as your IP address.
         </p>
 
         <h2 className="text-xl font-bold text-text-primary mt-8 mb-2">Contact</h2>

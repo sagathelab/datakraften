@@ -6,7 +6,7 @@ Two independent sub-projects in this repo: a **Go CLI** (`cmd/dk/`) and a **webs
 
 - **Go 1.23**, module `github.com/sagathelab/datakraften`
 - Entrypoint: `cmd/dk/main.go`, all logic in `internal/`
-- Dependencies: Cobra, Viper, survey (no other major frameworks)
+- Dependencies: Cobra, survey, and `go.yaml.in/yaml/v3` (no other major frameworks)
 - `make build` → `go build -o bin/dk ./cmd/dk/`
 - `make test` → `go test ./...`
 - `make lint` → `golangci-lint run ./...`
@@ -16,10 +16,11 @@ Two independent sub-projects in this repo: a **Go CLI** (`cmd/dk/`) and a **webs
 - **No comments** in code unless logic is genuinely non-obvious
 - Every install/configure function must be idempotent (safe to re-run)
 - `internal/profiles/` and `internal/tools/` are **empty** (planned, not yet wired)
-- Config uses `source: default | custom | team`, not `profile:` (old `profile:` key is transparently mapped)
+- Workstation config is local and uses `source: default | custom`. `dk init --from` imports a template once; ordinary commands never refetch it.
+- Repo `datakraften.yaml` is separate from workstation config. Discovery is read-only and project tasks require approval.
 - Config keys: `ai_tools`, `ai_apps` (not the old `ai:` key)
 - Managed shell blocks use `# >>> datakraften >>>` / `# <<< datakraften <<<` markers
-- `--dry-run` and `--json` are global flags on all commands
+- `--json` is registered globally, but output support varies by command. `--dry-run` is command-specific.
 
 ## Website (`site/`)
 

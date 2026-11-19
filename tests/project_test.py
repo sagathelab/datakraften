@@ -1,3 +1,4 @@
+import json
 import os
 import pathlib
 import pty
@@ -11,7 +12,105 @@ import time
 import unittest
 
 
+def project_env(home, **overrides):
+    return dict(HOME=str(home), PATH='/usr/bin:/bin', XDG_CONFIG_HOME=str(home / 'config'),
+                XDG_DATA_HOME=str(home / 'data'), **overrides)
+
+
 class ProjectTest(unittest.TestCase):
+    def test_nvm_project_uses_configured_manager_without_changing_default(self):
+        binary = os.environ.get('DK_TEST_BINARY')
+        if not binary:
+            self.skipTest('set DK_TEST_BINARY to the built dk executable')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp).resolve()
+            home = root / 'home'
+            nvm = home / 'my nvm'
+            (nvm / 'alias').mkdir(parents=True)
+            (nvm / 'alias' / 'default').write_text('original\n')
+            managed = home / 'data' / 'datakraften' / 'nvm'
+            startup = home / 'bash-startup'
+            startup.write_text('touch "$HOME/bash-startup-ran"\n')
+            (nvm / 'nvm.sh').write_text('''
+printf 'sourced\\n' >> "$HOME/nvm-sourced"
+[ "$1" = --no-use ] || return 2
+nvm() {
+  [ "$1" = install ] && [ "$2" = --no-progress ] && [ "$3" = 24 ] || return 3
+  [ "$NVM_DIR" = "$EXPECTED_NVM_DIR" ] && [ "$PWD" = "$EXPECTED_NVM_DIR" ] || return 4
+  [ -z "$PREFIX$npm_config_prefix$NVM_INSTALL_THIRD_PARTY_HOOK" ] || return 5
+  mkdir -p "$NVM_DIR/alias"
+  printf '%s\\n' '24' > "$NVM_DIR/alias/default"
+  mkdir -p "$NVM_DIR/versions/node/v24.1.0/bin"
+  printf '#!/bin/sh\\necho v24.1.0\\n' > "$NVM_DIR/versions/node/v24.1.0/bin/node"
+  chmod 755 "$NVM_DIR/versions/node/v24.1.0/bin/node"
+}
+''')
+            repo = root / 'repo'
+            (repo / '.git').mkdir(parents=True)
+            (repo / 'datakraften.yaml').write_text('''version: 1
+project:
+  tools:
+    node:
+      version: "24"
+      manager: nvm
+  tasks:
+    version: node --version
+''')
+            env = project_env(home, NVM_DIR=str(nvm), EXPECTED_NVM_DIR=str(managed),
+                              BASH_ENV=str(startup), PREFIX=str(home / 'global-node'),
+                              npm_config_prefix=str(home / 'global-node'),
+                              NVM_INSTALL_THIRD_PARTY_HOOK='unexpected',
+                              NVM_NODEJS_ORG_MIRROR='https://invalid.example/private-token')
+            mock_fnm = root / 'fnm'
+            mock_fnm.write_text('#!/bin/sh\ntouch "$HOME/fnm-ran"\nexit 9\n')
+            mock_fnm.chmod(0o755)
+            env['PATH'] = str(root) + ':' + env['PATH']
+
+            def dk(*args):
+                return subprocess.run([binary, *args], cwd=repo, env=env, stdin=subprocess.DEVNULL,
+                                      capture_output=True, text=True, timeout=15)
+
+            status = dk('project', 'status', '--json')
+            self.assertEqual(status.returncode, 0, status.stderr)
+            data = json.loads(status.stdout)
+            self.assertEqual(data['node_manager'], 'nvm')
+            self.assertEqual(data['node_manager_path'], str(nvm / 'nvm.sh'))
+            self.assertFalse(data['trusted'])
+            self.assertIn('not installed', data['node_status'])
+
+            preview = dk('project', 'setup', '--dry-run', '--yes')
+            self.assertEqual(preview.returncode, 0, preview.stderr)
+            self.assertIn(str(managed), preview.stdout)
+            self.assertIn('NVM_NODEJS_ORG_MIRROR', preview.stdout)
+            self.assertNotIn('private-token', preview.stdout + preview.stderr)
+            preview = dk('run', 'version', '--dry-run')
+            self.assertEqual(preview.returncode, 0, preview.stderr)
+            self.assertIn('24 (nvm)', preview.stderr)
+
+            denied = dk('project', 'setup', '--yes')
+            self.assertNotEqual(denied.returncode, 0)
+            self.assertIn('not trusted', denied.stderr)
+            self.assertFalse((home / 'nvm-sourced').exists())
+            self.assertFalse((home / 'config').exists())
+            self.assertFalse(managed.exists())
+
+            self.assertEqual(dk('project', 'trust', '--yes').returncode, 0)
+            denied = dk('project', 'setup')
+            self.assertNotEqual(denied.returncode, 0)
+            self.assertIn('use --yes', denied.stderr)
+            self.assertFalse(managed.exists())
+            setup = dk('project', 'setup', '--yes')
+            self.assertEqual(setup.returncode, 0, setup.stderr)
+            self.assertEqual(dk('project', 'setup', '--yes').returncode, 0)
+            run = dk('run', 'version')
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(run.stdout.strip(), 'v24.1.0')
+            self.assertFalse((home / 'bash-startup-ran').exists())
+            self.assertFalse((home / 'fnm-ran').exists())
+            self.assertEqual((home / 'nvm-sourced').read_text(), 'sourced\n')
+            self.assertEqual((nvm / 'alias' / 'default').read_text(), 'original\n')
+            self.assertFalse((nvm / 'versions').exists())
+
     def test_dry_run_does_not_execute_or_trust(self):
         binary = os.environ.get('DK_TEST_BINARY')
         if not binary:
@@ -23,12 +122,12 @@ class ProjectTest(unittest.TestCase):
             repo = root / 'repo'
             (repo / '.git').mkdir(parents=True)
             (repo / 'datakraften.yaml').write_text('version: 1\nproject:\n  tasks:\n    test: touch executed\n')
-            env = dict(os.environ, HOME=str(home), XDG_CONFIG_HOME=str(home / '.config'))
-            preview = subprocess.run([binary, 'run', '--dry-run', 'test'], cwd=repo, env=env,
-                                     text=True, capture_output=True, timeout=10)
+            env = project_env(home)
+            preview = subprocess.run([binary, 'run', '--dry-run', 'test'], cwd=repo, env=env, stdin=subprocess.DEVNULL,
+                                      text=True, capture_output=True, timeout=10)
             self.assertEqual(preview.returncode, 0, preview.stderr)
             self.assertFalse((repo / 'executed').exists())
-            run = subprocess.run([binary, 'run', 'test'], cwd=repo, env=env,
+            run = subprocess.run([binary, 'run', 'test'], cwd=repo, env=env, stdin=subprocess.DEVNULL,
                                  text=True, capture_output=True, timeout=10)
             self.assertNotEqual(run.returncode, 0)
             self.assertIn('not trusted', run.stderr)
@@ -62,7 +161,7 @@ while True:
 ''')
                 task = 'exec ' + ' '.join(shlex.quote(s) for s in (sys.executable, str(script), str(root), 'parent'))
                 (repo / 'datakraften.yaml').write_text('version: 1\nproject:\n  tasks:\n    wait: ' + task + '\n')
-                env = dict(os.environ, HOME=str(home), XDG_CONFIG_HOME=str(home / '.config'))
+                env = project_env(home)
                 trust = subprocess.run([binary, 'project', 'trust', '--yes'], cwd=repo, env=env,
                                        capture_output=True, text=True, timeout=10)
                 self.assertEqual(trust.returncode, 0, trust.stderr)
@@ -108,7 +207,7 @@ project:
   tasks:
     interactive: 'test -t 0 && printf "input: " && read answer && printf "got %s\\n" "$answer"'
 ''')
-            env = dict(os.environ, HOME=str(home), XDG_CONFIG_HOME=str(home / '.config'))
+            env = project_env(home)
             trust = subprocess.run([binary, 'project', 'trust', '--yes'], cwd=repo, env=env,
                                    capture_output=True, text=True, timeout=10)
             self.assertEqual(trust.returncode, 0, trust.stderr)
@@ -153,11 +252,14 @@ project:
         if not binary:
             self.skipTest('set DK_TEST_BINARY to the built dk executable')
         with tempfile.TemporaryDirectory() as tmp:
-            root = pathlib.Path(tmp)
+            root = pathlib.Path(tmp).resolve()
             home = root / 'home'
             bin_dir = root / 'bin'
             home.mkdir()
             bin_dir.mkdir()
+            fallback_node = bin_dir / 'node'
+            fallback_node.write_text('#!/bin/sh\nprintf "global|%s\\n" "$PROJECT_VALUE"\n')
+            fallback_node.chmod(0o755)
             fnm = bin_dir / 'fnm'
             fnm.write_text(f'''#!{sys.executable}
 import os, pathlib, sys
@@ -171,35 +273,40 @@ node.write_text('#!/bin/sh\\nprintf "%s|%s|%s|%s\\\\n" "' + version + '" "$PROJE
 node.chmod(0o755)
 ''')
             fnm.chmod(0o755)
-            env = dict(os.environ, HOME=str(home), XDG_CONFIG_HOME=str(home / '.config'),
-                       XDG_DATA_HOME=str(home / '.local' / 'share'), PATH=str(bin_dir) + ':/usr/bin:/bin')
-            env.pop('FNM_DIR', None)
+            env = project_env(home, PROJECT_VALUE='inherited')
+            env['PATH'] = str(bin_dir) + ':' + env['PATH']
             repos = []
             for version in ('22', '24'):
                 repo = root / ('repo-' + version)
                 (repo / '.git').mkdir(parents=True)
                 (repo / 'subdir').mkdir()
+                tool = '"22"' if version == '22' else '{version: "24", manager: fnm}'
                 (repo / 'datakraften.yaml').write_text(f'''version: 1
 project:
   tools:
-    node: "{version}"
+    node: {tool}
   env:
     PROJECT_VALUE: "project-{version}"
   tasks:
     test: node
     fail: exit 7
 ''')
+                (repo / '.nvmrc').write_text('18\n')
+                (repo / '.node-version').write_text('20\n')
+                (repo / 'package.json').write_text('{"engines":{"node":"26"}}\n')
+                (repo / 'mise.toml').write_text('[tools]\nnode = "30"\n')
                 repos.append(repo)
 
             def dk(repo, *args):
                 return subprocess.run([binary, *args], cwd=repo / 'subdir', env=env,
-                                      text=True, capture_output=True, timeout=15)
+                                      stdin=subprocess.DEVNULL, text=True, capture_output=True, timeout=15)
 
             for repo in repos:
                 denied = dk(repo, 'run', 'test')
                 self.assertNotEqual(denied.returncode, 0)
+                self.assertIn('not installed', denied.stderr)
                 version = repo.name.removeprefix('repo-')
-                self.assertFalse((home / '.local' / 'share' / 'datakraften' / 'fnm' / 'node-versions' / ('v' + version + '.0.0')).exists())
+                self.assertFalse((home / 'data' / 'datakraften' / 'fnm' / 'node-versions' / ('v' + version + '.0.0')).exists())
                 status = dk(repo, 'project', 'status')
                 self.assertEqual(status.returncode, 0, status.stderr)
                 trust = dk(repo, 'project', 'trust', '--yes')
@@ -214,6 +321,14 @@ project:
                 failed = dk(repo, 'run', 'fail')
                 self.assertEqual(failed.returncode, 7, failed.stderr)
                 self.assertNotIn('Usage:', failed.stderr)
+
+            outside = subprocess.run(['node'], cwd=root, env=env, stdin=subprocess.DEVNULL,
+                                     text=True, capture_output=True, timeout=10)
+            self.assertEqual(outside.stdout.strip(), 'global|inherited')
+            unknown = subprocess.run([binary, 'project', 'status'], cwd=root, env=env, stdin=subprocess.DEVNULL,
+                                     text=True, capture_output=True, timeout=10)
+            self.assertNotEqual(unknown.returncode, 0)
+            self.assertIn('no datakraften.yaml found', unknown.stderr)
 
             config = repos[0] / 'datakraften.yaml'
             config.write_text(config.read_text().replace('project-22', 'changed'))

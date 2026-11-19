@@ -60,9 +60,14 @@ func TestImportConfigMergesAndValidates(t *testing.T) {
 func TestInitFromURLIsLocalSnapshot(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	bin := t.TempDir()
+	t.Setenv("PATH", bin)
+	if err := os.WriteFile(filepath.Join(bin, "npm"), []byte("#!/bin/sh\n[ \"$1\" = list ] || exit 1\nprintf '%s\\n' '{\"dependencies\":{\"@openai/codex\":{}}}'\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
 	withTemplate(t, "runtimes:\n  node:\n    enabled: false\n", http.StatusOK)
 	path := config.DefaultConfigPath()
-	if err := initFromURL(path, filepath.Dir(path), "https://example.com/config.yaml?token=secret", false, false, false); err != nil {
+	if err := initFromURL(path, "https://example.com/config.yaml?token=secret", false, false); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := config.Load()
@@ -72,18 +77,45 @@ func TestInitFromURLIsLocalSnapshot(t *testing.T) {
 	if cfg.Source != "custom" || cfg.Runtimes.Node.Enabled || !cfg.Runtimes.Python.Enabled {
 		t.Fatalf("unexpected config: %+v", cfg)
 	}
-	bytes, err := os.ReadFile(path)
+	original, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(bytes), "secret") || strings.Contains(string(bytes), "example.com") {
-		t.Fatalf("URL persisted: %s", bytes)
+	if strings.Contains(string(original), "secret") || strings.Contains(string(original), "example.com") {
+		t.Fatalf("URL persisted: %s", original)
+	}
+	http.DefaultTransport = initTransport(func(*http.Request) (*http.Response, error) {
+		t.Fatal("apply must not fetch template")
+		return nil, nil
+	})
+	applyPreview := func() string {
+		return captureStdout(t, func() {
+			cmd := newApplyCmd()
+			cmd.SetArgs([]string{"--dry-run"})
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+	if got := applyPreview(); !strings.Contains(got, "Would install Python via uv") {
+		t.Fatalf("original config was not used: %s", got)
+	}
+	updatePreview := func() string {
+		return captureStdout(t, func() {
+			if err := UpdateToolWithProgress("npm", true, nil); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+	if got := updatePreview(); !strings.Contains(got, "Would update npm packages: @openai/codex") {
+		t.Fatalf("original config was not used: %s", got)
 	}
 	var local map[string]interface{}
-	if err := yaml.Unmarshal(bytes, &local); err != nil {
+	if err := yaml.Unmarshal(original, &local); err != nil {
 		t.Fatal(err)
 	}
 	local["runtimes"].(map[string]interface{})["python"].(map[string]interface{})["enabled"] = false
+	local["ai_tools"].(map[string]interface{})["codex"] = false
 	modified, err := yaml.Marshal(local)
 	if err != nil {
 		t.Fatal(err)
@@ -91,44 +123,58 @@ func TestInitFromURLIsLocalSnapshot(t *testing.T) {
 	if err := os.WriteFile(path, modified, 0600); err != nil {
 		t.Fatal(err)
 	}
-	http.DefaultTransport = initTransport(func(*http.Request) (*http.Response, error) { return nil, fmt.Errorf("network unavailable") })
-	if localCfg, err := config.Load(); err != nil || localCfg.Runtimes.Python.Enabled {
-		t.Fatalf("local config should not need remote: %v", err)
+	for range 2 {
+		if got := applyPreview(); !strings.Contains(got, "Python (disabled in config)") {
+			t.Fatalf("local edit was not used: %s", got)
+		}
+	}
+	if got := updatePreview(); !strings.Contains(got, "No enabled npm tools installed") {
+		t.Fatalf("local npm edit was not used: %s", got)
+	}
+	if got, err := os.ReadFile(path); err != nil || string(got) != string(modified) {
+		t.Fatalf("apply changed local config: %s, %v", got, err)
 	}
 }
 
-func TestInitFailurePreservesExistingAndMigrationBacksUp(t *testing.T) {
+func TestInitFailurePreservesExistingConfigAndState(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	path := config.DefaultConfigPath()
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		t.Fatal(err)
 	}
-	original := "source: team\nurl: https://example.com/config.yaml\n"
+	original := "source: custom\nruntimes: {node: {enabled: false}}\n"
 	if err := os.WriteFile(path, []byte(original), 0600); err != nil {
 		t.Fatal(err)
 	}
-	withTemplate(t, "<html>not yaml</html>", http.StatusOK)
-	if err := initFromURL(path, filepath.Dir(path), "", true, true, true); err == nil {
-		t.Fatal("invalid template accepted")
-	}
-	data, _ := os.ReadFile(path)
-	if string(data) != original {
-		t.Fatal("existing config was modified")
-	}
-	http.DefaultTransport = initTransport(func(*http.Request) (*http.Response, error) {
-		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader("runtimes:\n  node:\n    enabled: false\n")), Header: make(http.Header)}, nil
-	})
-	if err := initFromURL(path, filepath.Dir(path), "", true, true, true); err != nil {
+	if err := (&State{ActiveSource: "custom", LastApply: "previous"}).Save(); err != nil {
 		t.Fatal(err)
 	}
-	backup, err := os.ReadFile(path + ".team.bak")
-	if err != nil || string(backup) != original {
-		t.Fatalf("backup: %s %v", backup, err)
+	for _, tc := range []struct {
+		data string
+		code int
+		want string
+	}{
+		{"<html>not yaml</html>", http.StatusOK, "YAML mapping"},
+		{"runtimes: [", http.StatusOK, "invalid YAML"},
+		{"", http.StatusForbidden, "HTTP 403"},
+		{"url: https://other.example/template?token=payload-secret", http.StatusOK, "legacy team configuration"},
+	} {
+		withTemplate(t, tc.data, tc.code)
+		err := initFromURL(path, "https://example.com/config.yaml?token=request-secret", true, true)
+		if err == nil || !strings.Contains(err.Error(), tc.want) || strings.Contains(err.Error(), "-secret") {
+			t.Fatalf("wanted safe %q error, got %v", tc.want, err)
+		}
 	}
-	cfg, err := config.Load()
-	if err != nil || cfg.Source != "custom" || cfg.Runtimes.Node.Enabled {
-		t.Fatalf("migrated config: %+v %v", cfg, err)
+	if err := writeInitAtomic(path, []byte("{}"), false); err == nil {
+		t.Fatal("new config unexpectedly overwrote existing config")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil || string(data) != original {
+		t.Fatalf("existing config was modified: %s, %v", data, err)
+	}
+	if state := LoadState(); state.ActiveSource != "custom" || state.LastApply != "previous" {
+		t.Fatalf("state was modified: %+v", state)
 	}
 }
 
@@ -149,7 +195,7 @@ func TestImportPreviewMasksValuesAndWarnsOnUnsupportedSettings(t *testing.T) {
 	withTemplate(t, "shell:\n  prompt: secret-value\nruntimes:\n  node:\n    enabled: false\n    version: '22'\n", http.StatusOK)
 	path := config.DefaultConfigPath()
 	output := captureStdout(t, func() {
-		if err := initFromURL(path, filepath.Dir(path), "https://example.com/config?token=secret-token", false, false, false); err != nil {
+		if err := initFromURL(path, "https://example.com/config?token=secret-token", false, false); err != nil {
 			t.Fatal(err)
 		}
 	})

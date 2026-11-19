@@ -11,8 +11,9 @@ export default function Landing() {
             <p className="product-eyebrow">OPEN SOURCE · LINUX · MACOS · WSL</p>
             <h1>A better starting point for your development machine.</h1>
             <p className="product-lead">
-              Datakraften brings your runtimes, shell, editors and AI tools together in a
-              configuration you can understand and share.
+              Datakraften brings your runtimes, shell, editors and AI tools together in a local
+              workstation configuration. Repositories can declare their own Node.js requirements and
+              tasks separately.
             </p>
             <div className="product-actions">
               <a className="product-primary" href="#get-started">
@@ -84,15 +85,16 @@ export default function Landing() {
             <p className="product-eyebrow">BUILT FOR PEOPLE AND TEAMS</p>
             <h2>A shared starting point. Room to make it yours.</h2>
             <p>
-              Import a shared YAML template once, then make the resulting local configuration your
-              own. Platform support and installed tools can still vary between machines.
+              Import a shared YAML template over HTTPS once. dk merges it with your platform’s
+              defaults. Review and edit the local result before applying it; dk won’t fetch the
+              template again when you apply.
             </p>
-            <Link to="/docs/teams">Explore team configuration →</Link>
+            <Link to="/docs/teams">Share a workstation template →</Link>
           </div>
           <pre>
             <code>
               {
-                '# Import a shared starting point\ndk init --from https://example.com/workstation.yaml\n\n# The resulting local config is yours to edit\nsource: custom\nai_tools:\n  codex:\n    enabled: true\n    manager: npm'
+                '# Import a shared starting point\ndk init --from https://example.com/workstation.yaml\n\n# Review ~/.config/datakraften/config.yaml\n# Then preview workstation changes\ndk apply --dry-run'
               }
             </code>
           </pre>
@@ -108,7 +110,7 @@ export default function Landing() {
           </p>
           <div className="product-actions">
             <Link to="/docs/dk">Read the CLI guide →</Link>
-            <Link to="/docs/config">Explore configuration →</Link>
+            <Link to="/docs/config#project-configuration">Configure a repository →</Link>
             <a href="https://github.com/sagathelab/datakraften">Inspect the source →</a>
           </div>
         </section>

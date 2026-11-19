@@ -45,7 +45,6 @@ func newApp() *App {
 	rootCmd.AddCommand(newApplyCmd())
 	rootCmd.AddCommand(newDoctorCmd())
 	rootCmd.AddCommand(newStatusCmd())
-	// profile command removed in favor of dk init --custom and --team
 	rootCmd.AddCommand(newUpgradeCmd())
 	rootCmd.AddCommand(newUpdateCmd())
 	rootCmd.AddCommand(newNpmCmd())

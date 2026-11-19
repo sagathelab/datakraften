@@ -20,13 +20,15 @@ dk update          # Update managed tools
 
 ## What is Datakraften?
 
-Datakraften (`dk`) is a CLI that orchestrates existing tools — including `apt`, `brew`, `fnm` and `uv` — to set up a development workstation and run project tasks with a project-specific Node.js version.
+Datakraften (`dk`) uses existing tools like `apt`, `brew`, `fnm`, `nvm`, and `uv` to set up a development workstation and run project tasks with a project-specific Node.js version.
 
 It uses existing package and version managers, with workstation configuration and diagnostics.
 
 ## Configuration
 
-`dk init` creates a local workstation configuration. `dk init --from <https-url>` imports a partial YAML template once, merges it with the built-in defaults and saves the result locally; later edits are yours and the URL is not fetched again. `dk init --migrate-team` explicitly converts an existing legacy team configuration and preserves a backup. Review the import warnings: some existing workstation settings are not yet used by `dk apply`.
+`dk init` creates a local workstation configuration in `~/.config/datakraften/config.yaml`. To share a starting point, run `dk init --from <https-url>` with a link to a raw YAML template. The template's settings override the built-in defaults where specified. The CLI shows which settings change and asks before replacing an existing configuration unless you pass `--yes`. Review and edit the local result before running `dk apply`. Datakraften does not save the URL or fetch the template again during `dk apply` or `dk update`. There is no live team configuration or migration command.
+
+Workstation configuration and the repository's `datakraften.yaml` are separate. Do not put credentials in either file.
 
 ## Commands
 
@@ -83,9 +85,20 @@ project:
     test: npm test
 ```
 
-Run `dk project status`, review and trust the configuration with `dk project trust`, then run `dk project setup` and `dk run dev`. Project tasks run through `/bin/sh` from the directory containing the configuration. `dk project trust --yes` explicitly approves the current file without an interactive prompt; any change requires renewed trust. Project variables are passed to the task; do not put secrets in a shared YAML file or print them in tasks.
+Run `dk project status`, review and trust the configuration with `dk project trust`, then run `dk project setup` and `dk run dev`. Project tasks run through `/bin/sh` from the directory containing the configuration. For non-interactive use, `dk project trust --yes` explicitly approves the reviewed file; `dk project setup --yes` approves only the installation. Editing or moving the file requires renewed trust. Project variables are passed to the task; do not put secrets in shared YAML.
 
-The first project backend supports Node.js through `fnm` in `PATH`, with numeric major, major.minor or exact versions. `dk project setup` installs a missing version into a separate Datakraften-managed fnm store without changing your fnm default. Only Node is supported as a project tool in this release; other tools are rejected. Existing `.nvmrc` and `mise.toml` files are not used for version selection yet. Project tasks inherit the process environment; this is not a security sandbox.
+For Node.js, choose `fnm` or `nvm` in the project YAML:
+
+```yaml
+version: 1
+project:
+  tools:
+    node:
+      version: "22"
+      manager: nvm
+```
+
+The short `node: "22"` form uses `fnm`. Use a numeric major, major.minor or exact version. `fnm` must be available in `PATH`, or `nvm.sh` must exist in `NVM_DIR` or a supported location. `dk project setup` reuses installed versions or installs a missing one in a separate Datakraften-managed store without changing the user's default. Only Node is supported as a project tool. `dk` does not use `.nvmrc`, `.node-version`, `package.json` engines, or `mise.toml` for project version selection. Project tasks inherit the process environment; this is not a security sandbox.
 
 ## AI tooling
 
@@ -114,9 +127,7 @@ See the [Datakraften 3.0 roadmap](plans/datakraften_3.0_roadmap.md) for the prod
 
 ## Platform targets
 
-1. **WSL (Ubuntu/Debian)** — primary target
-2. **Native Linux** — future (Fedora, Arch)
-3. **macOS** — future
+Ubuntu/Debian on WSL is the primary target. CI builds and runs tests on Linux and macOS, but that does not verify every tool or installation workflow on those platforms. See the [3.0 platform matrix](plans/datakraften_3.0_roadmap.md#10-plattform-og-kompatibilitet) for targets and how support will be verified.
 
 ## Contributing
 

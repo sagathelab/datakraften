@@ -1,56 +1,44 @@
 package config
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 
-	"github.com/spf13/viper"
+	"go.yaml.in/yaml/v3"
 )
 
 type RuntimeConfig struct {
-	Enabled bool   `mapstructure:"enabled"`
-	Manager string `mapstructure:"manager"`
-	Version string `mapstructure:"version"`
-}
-
-type CustomConfig struct{}
-
-type TeamConfig struct {
-	URL string `mapstructure:"url"`
+	Enabled bool   `yaml:"enabled"`
+	Manager string `yaml:"manager"`
+	Version string `yaml:"version"`
 }
 
 type Config struct {
-	Version string `mapstructure:"version"`
-	Source  string `mapstructure:"source"`
-	URL     string `mapstructure:"url"`
+	Version string `yaml:"version"`
+	Source  string `yaml:"source"`
 	System  struct {
-		PackageManager string `mapstructure:"package_manager"`
-	} `mapstructure:"system"`
+		PackageManager string `yaml:"package_manager"`
+	} `yaml:"system"`
 	Tooling struct {
-		PackageManager string `mapstructure:"package_manager"`
-	} `mapstructure:"tooling"`
+		PackageManager string `yaml:"package_manager"`
+	} `yaml:"tooling"`
 	Shell struct {
-		Default     string `mapstructure:"default"`
-		Prompt      string `mapstructure:"prompt"`
-		History     string `mapstructure:"history"`
-		FuzzyFinder string `mapstructure:"fuzzy_finder"`
-	} `mapstructure:"shell"`
+		Default     string `yaml:"default"`
+		Prompt      string `yaml:"prompt"`
+		History     string `yaml:"history"`
+		FuzzyFinder string `yaml:"fuzzy_finder"`
+	} `yaml:"shell"`
 	Runtimes struct {
-		Node   RuntimeConfig `mapstructure:"node"`
-		Python RuntimeConfig `mapstructure:"python"`
-		Go     RuntimeConfig `mapstructure:"go"`
-		Dotnet RuntimeConfig `mapstructure:"dotnet"`
-	} `mapstructure:"runtimes"`
-	Tools   map[string]bool          `mapstructure:"tools"`
-	Editors map[string]string        `mapstructure:"editors"`
-	AITools map[string]RuntimeConfig `mapstructure:"ai_tools"`
-	AIApps  map[string]RuntimeConfig `mapstructure:"ai_apps"`
-	Custom  CustomConfig             `mapstructure:"custom"`
-	Team    TeamConfig               `mapstructure:"team"`
+		Node   RuntimeConfig `yaml:"node"`
+		Python RuntimeConfig `yaml:"python"`
+		Go     RuntimeConfig `yaml:"go"`
+		Dotnet RuntimeConfig `yaml:"dotnet"`
+	} `yaml:"runtimes"`
+	Tools   map[string]bool          `yaml:"tools"`
+	Editors map[string]string        `yaml:"editors"`
+	AITools map[string]RuntimeConfig `yaml:"ai_tools"`
+	AIApps  map[string]RuntimeConfig `yaml:"ai_apps"`
 }
 
 func DefaultConfigPath() string {
@@ -60,100 +48,62 @@ func DefaultConfigPath() string {
 	return ""
 }
 
-func ConfigPaths() []string {
-	return []string{
-		"datakraften.yaml",
-		filepath.Join(os.Getenv("HOME"), ".config", "datakraften", "config.yaml"),
-	}
-}
-
 func Load() (*Config, error) {
-	v := viper.New()
-	v.SetConfigName("config")
-	v.SetConfigType("yaml")
-
-	for _, p := range ConfigPaths() {
-		v.AddConfigPath(filepath.Dir(p))
+	path := DefaultConfigPath()
+	if path == "" {
+		return nil, fmt.Errorf("cannot determine home directory for workstation configuration")
 	}
-
-	v.SetConfigFile(DefaultConfigPath())
-
-	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			return nil, fmt.Errorf("no config file found (%s)", DefaultConfigPath())
-		}
-		return nil, fmt.Errorf("error reading config: %w", err)
+	settings, err := ReadFile(path)
+	if err != nil {
+		return nil, err
 	}
-
-	normalizeAI(v)
-	var cfg Config
-	if err := v.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("error parsing config: %w", err)
+	var node yaml.Node
+	if err := node.Encode(settings); err != nil {
+		return nil, fmt.Errorf("cannot encode workstation configuration: %w", err)
 	}
-
-	// Backward compat: map old profile: field to source:
-	if cfg.Source == "" {
-		profile := v.GetString("profile")
-		switch profile {
-		case "custom":
-			cfg.Source = "custom"
-		case "team":
-			cfg.Source = "team"
-		default:
-			cfg.Source = "default"
-		}
+	cfg := Config{Source: "default"}
+	if err := node.Decode(&cfg); err != nil {
+		return nil, fmt.Errorf("cannot decode workstation configuration: %w", err)
 	}
-
-	// Backward compat: map old team.url: to flat url:
-	if cfg.URL == "" && cfg.Team.URL != "" {
-		cfg.URL = cfg.Team.URL
-	}
-
 	return &cfg, nil
 }
 
-func FetchRemote(url string) (*Config, error) {
-	resp, err := http.Get(url)
+func ReadFile(path string) (map[string]any, error) {
+	info, err := os.Lstat(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch remote config: %w", err)
+		return nil, fmt.Errorf("read workstation configuration: %w", err)
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("remote config returned HTTP %d", resp.StatusCode)
+	if info.Mode()&os.ModeSymlink != 0 {
+		info, err = os.Stat(path)
+		if err != nil {
+			return nil, fmt.Errorf("cannot follow workstation configuration symlink: %v", err)
+		}
 	}
-
-	body, err := io.ReadAll(resp.Body)
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("workstation configuration %s must be a regular file", path)
+	}
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read remote config: %w", err)
+		return nil, fmt.Errorf("read workstation configuration: %w", err)
 	}
-
-	v := viper.New()
-	v.SetConfigType("yaml")
-
-	if err := v.ReadConfig(bytes.NewReader(body)); err != nil {
-		return nil, fmt.Errorf("failed to parse remote config: %w", err)
+	settings, err := Decode(data)
+	if err != nil {
+		return nil, fmt.Errorf("invalid workstation configuration %s: %w", path, err)
 	}
-
-	normalizeAI(v)
-	var cfg Config
-	if err := v.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal remote config: %w", err)
-	}
-
-	return &cfg, nil
+	return settings, nil
 }
 
-func normalizeAI(v *viper.Viper) {
-	for _, key := range []string{"ai_tools", "ai_apps"} {
-		entries := v.GetStringMap(key)
-		for name, value := range entries {
-			if enabled, ok := value.(bool); ok {
-				entries[name] = map[string]interface{}{"enabled": enabled}
-			}
-		}
-		if len(entries) > 0 {
-			v.Set(key, entries)
-		}
+func ValidateSource(source string) error {
+	switch source {
+	case "default", "custom":
+		return nil
+	case "team":
+		return retiredTeamError()
+	default:
+		return fmt.Errorf("source must be default or custom")
 	}
+}
+
+func retiredTeamError() error {
+	return fmt.Errorf("legacy team configuration is no longer supported; use 'dk init' or explicitly import a raw YAML template with 'dk init --from <HTTPS URL>'")
 }
